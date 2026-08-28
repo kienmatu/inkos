@@ -243,7 +243,7 @@ export function buildShortFictionWriterSystemPrompt(language: ShortFictionLangua
     return [
       "You are an English short-fiction BatchWriter. You write short-story prose following the story plan.",
       "Write natural, native English prose. Vary sentence length; mix short punchy sentences with longer flowing ones, and keep the narrative voice consistent throughout.",
-      "This is not serialized-novel continuation and not chapter synopsis. Every chapter needs drama happening on the page: character action, dialogue or reaction, a shift in the situation, and a reason to keep reading at the chapter break.",
+      "This is not serialized-novel continuation and not chapter synopsis. Every chapter needs drama happening on the page: character action, dialogue or reaction, a shift in the situation, and a reason to keep reading at the chapter break — that reason need not be a cliffhanger; a decision, an opened question, a discovery or dread all qualify.",
       "Keep the drama dialed up, web-fiction style: real-world pressure may be amplified as far as readers will still believe, but never so absurd that immersion breaks.",
       "The story title and chapter titles must read like platform content, not literary summaries. Keep the prose paced for mobile reading — short paragraphs, but never telegram-style fragments.",
       "The word count is a calibration, not an averaging exercise. Big scenes may run long and transitions short; a clearly short chapter usually means you wrote a synopsis and must add real scenes.",
@@ -252,7 +252,7 @@ export function buildShortFictionWriterSystemPrompt(language: ShortFictionLangua
   }
   return [
     "你是中文短篇 BatchWriter。你要根据故事方案写短篇正文。",
-    "这不是长篇连载续写，也不是章节梗概。每章都要有当场发生的戏：人物行动、对话或反应、局面变化、章尾继续读的理由。",
+    "这不是长篇连载续写，也不是章节梗概。每章都要有当场发生的戏：人物行动、对话或反应、局面变化、章尾继续读的理由——这个理由不一定是悬崖式断章，一个决定、一个被打开的疑问、一处发现或一股不安都算。",
     "网文戏剧性要足：现实压力可以放大到读者愿意信的程度，但不能荒诞到失去代入。",
     "标题和章节标题要像平台内容，不要文艺化总结。正文保持移动端节奏，段落短但不要写成电报体。",
     "字数是校准，不是平均数学题。大场面可略长，过渡章可略短；明显偏短通常说明写成了梗概，必须补有效场面。",
@@ -342,6 +342,11 @@ export function buildShortFictionDraftContinuationUserPrompt(
         : `The previous draft was truncated or skipped chapters. Write ONLY the missing chapters: ${missing}.`,
       `Stay calibrated to the complete ${input.chapterCount}-chapter short at about ${input.charsPerChapter} words per chapter.`,
       "Do not rewrite finished chapters, do not write summary notes, do not apologize, do not output review comments.",
+      ...(input.mode === "batch" ? [
+        "Before writing, find these chapter entries in the story plan above and follow them: this batch's job is that specific beat, not a generic escalation.",
+        "Vary how the chapter earns its ending. Every chapter still needs a reason to read on — but that reason can be a decision just made, a question just opened, a small discovery, or dread, not only a cliffhanger. Ten consecutive cliffhangers read as exhausting rather than gripping; the hook is the reason, not the bang.",
+        "Do not open a chapter by summarizing what already happened. Continue from inside the story; the reader has just read the previous chapter.",
+      ] : []),
       "",
       buildShortFictionCraftPrompt("en"),
       "",
@@ -370,6 +375,11 @@ export function buildShortFictionDraftContinuationUserPrompt(
       : `上一次正文被截断或漏章。现在只补写缺失章节：${missing}。`,
     `仍然按完整短篇 ${input.chapterCount} 章、每章约 ${input.charsPerChapter} 字校准。`,
     "不要重写已完成章节，不要写总结说明，不要道歉，不要输出审稿意见。",
+    ...(input.mode === "batch" ? [
+      "动笔前先在上面的故事方案里找到这几章的条目并照着写：这一批的任务是那个具体的节拍，不是泛泛地加码。",
+      "章尾的写法要有变化。每一章仍然要给出继续读的理由，但那个理由可以是刚做出的决定、刚打开的疑问、一处小发现或一股不安，不是只有悬崖式断章。连着十章都用悬崖结尾读起来只会累，不会抓人；钩子是那个理由，不是那声炸响。",
+      "不要用回顾前情开场。直接从故事内部接着写，读者刚读完上一章。",
+    ] : []),
     "",
     buildShortFictionCraftPrompt(),
     "",

@@ -12,6 +12,10 @@ import {
   resolveChaptersPerBatch,
 } from "../agents/short-fiction.js";
 import { ShortRunActionPayloadSchema } from "../interaction/action-envelope.js";
+import {
+  buildShortFictionDraftContinuationUserPrompt,
+  buildShortFictionWriterSystemPrompt,
+} from "../prompts/short-fiction.js";
 
 describe("English format re-cut", () => {
   it("puts English chapters in the range real platforms use", () => {
@@ -116,5 +120,73 @@ describe("short_run envelope schema tracks the re-cut constants", () => {
       language: "en",
       charsPerChapter: 1600,
     }).success).toBe(false);
+  });
+});
+
+const CONTINUATION = {
+  direction: "A courier discovers the parcels are evidence",
+  outlineMarkdown: "## Plan\nChapter 4 is the midpoint reversal.",
+  chapterCount: 10,
+  charsPerChapter: 1200,
+  existingDraftMarkdown: "# Parcel\n\n## Chapter 1 Intake\nprose",
+  missingChapters: [4],
+};
+
+describe("batch-mode chapter shaping", () => {
+  it("varies the kind of hook without ever dropping the hook", () => {
+    const en = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION, mode: "batch" }, "en");
+    const zh = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION, mode: "batch" }, "zh");
+
+    // The instruction must offer alternative devices...
+    expect(en).toMatch(/not only a cliffhanger/i);
+    expect(zh).toContain("不是只有悬崖式断章");
+    // ...while restating that a reason to read on is still mandatory.
+    expect(en).toMatch(/still needs a reason to read on/i);
+    expect(zh).toContain("仍然要给出继续读的理由");
+  });
+
+  it("does not contradict the writer system prompt's hook requirement", () => {
+    const system = buildShortFictionWriterSystemPrompt("en");
+    const batch = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION, mode: "batch" }, "en");
+
+    // The system prompt makes a chapter-break hook mandatory. The batch
+    // instruction must narrow HOW that hook is achieved, never license
+    // dropping it — otherwise the model receives opposed instructions at two
+    // levels of authority.
+    expect(system).toMatch(/reason to keep reading at the chapter break/i);
+    expect(system).toMatch(/need not be a cliffhanger/i);
+    expect(batch).not.toMatch(/may (end|close) without/i);
+    expect(batch).not.toMatch(/no hook/i);
+  });
+
+  it("forbids opening a chapter by recapping earlier ones", () => {
+    const en = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION, mode: "batch" }, "en");
+    const zh = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION, mode: "batch" }, "zh");
+
+    expect(en).toMatch(/do not (re)?open .* by summari[sz]ing/i);
+    expect(zh).toContain("不要用回顾前情开场");
+  });
+
+  it("points the batch at this chapter's own beat in the plan", () => {
+    const en = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION, mode: "batch" }, "en");
+    const zh = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION, mode: "batch" }, "zh");
+
+    expect(en).toMatch(/find (these|this) chapters? entr/i);
+    expect(zh).toContain("在上面的故事方案里找到这几章的条目");
+  });
+
+  it("leaves the repair path byte-identical", () => {
+    const repairDefault = buildShortFictionDraftContinuationUserPrompt(CONTINUATION, "en");
+    const repairExplicit = buildShortFictionDraftContinuationUserPrompt(
+      { ...CONTINUATION, mode: "repair" }, "en",
+    );
+    const batch = buildShortFictionDraftContinuationUserPrompt(
+      { ...CONTINUATION, mode: "batch" }, "en",
+    );
+
+    expect(repairDefault).toBe(repairExplicit);
+    expect(repairDefault).not.toMatch(/not every (chapter )?break is a bang/i);
+    expect(repairDefault).not.toMatch(/do not (re)?open .* by summari[sz]ing/i);
+    expect(batch).not.toBe(repairDefault);
   });
 });
