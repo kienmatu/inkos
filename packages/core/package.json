@@ -1,6 +1,6 @@
 {
   "name": "@kienmatu/inkos-core",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "InkOS pi-agent production harness for story creation, governed context, retrieval, review, and interactive worlds",
   "keywords": [
     "story-creation-ai-agent",
