@@ -44,6 +44,7 @@ vi.mock("@actalk/inkos-core", async () => ({
     constructor(_config: unknown) {}
   },
   runAgentSession: runAgentSessionMock,
+  toWritingLanguage: (lang: string | undefined) => (lang === "zh" ? "zh" : "en"),
 }));
 
 vi.mock("../utils.js", () => ({

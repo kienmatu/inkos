@@ -67,6 +67,21 @@ describe("ProjectConfigSchema.language", () => {
   });
 });
 
+describe("project language never falls through to Chinese", () => {
+  // This is the exact expression that used to appear at agent-input.ts:51 and
+  // server.ts:4686. It is the bug toWritingLanguage exists to remove.
+  const legacyCoercion = (lang: string) => (lang === "en" ? "en" : "zh");
+
+  it("the legacy ternary maps vi to Chinese", () => {
+    expect(legacyCoercion("vi")).toBe("zh");
+  });
+
+  it("toWritingLanguage maps vi to English instead", () => {
+    expect(toWritingLanguage("vi")).toBe("en");
+    expect(toWritingLanguage("vi")).not.toBe(legacyCoercion("vi"));
+  });
+});
+
 describe("BookConfigSchema.language", () => {
   it("still rejects Vietnamese — books are never written in Vietnamese", () => {
     expect(() =>

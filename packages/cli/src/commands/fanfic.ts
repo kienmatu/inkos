@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join, resolve, basename } from "node:path";
-import { deriveBookIdFromTitle, normalizePlatformOrOther, PipelineRunner, type BookConfig, type FanficMode } from "@actalk/inkos-core";
+import { deriveBookIdFromTitle, normalizePlatformOrOther, PipelineRunner, toWritingLanguage, type BookConfig, type FanficMode } from "@actalk/inkos-core";
 import { loadConfig, buildPipelineConfig, findProjectRoot, resolveBookId, log, logError } from "../utils.js";
 import {
   formatFanficCanonMissingError,
@@ -55,7 +55,7 @@ fanficCommand
         status: "outlining",
         targetChapters: parseInt(opts.targetChapters, 10),
         chapterWordCount: parseInt(opts.chapterWords, 10),
-        language: opts.lang ?? config.language,
+        language: toWritingLanguage(opts.lang ?? config.language),
         createdAt: now,
         updatedAt: now,
         fanficMode: mode,

@@ -6,6 +6,7 @@ import {
   RequestedIntentSchema,
   runAgentSession,
   SessionKindSchema,
+  toWritingLanguage,
   type ActionPayload,
   type ActionSource,
   type InteractionSession,
@@ -48,7 +49,7 @@ export async function processTuiAgentInput(params: {
   );
   const userTimestamp = Date.now();
   const currentBookId = params.activeBookId ?? params.session.activeBookId ?? null;
-  const language = config.language === "en" ? "en" : "zh";
+  const language = toWritingLanguage(config.language);
   const route = resolveTuiAgentRoute(params.input, params.session, currentBookId, language);
   const resolvedBookId = route.detachBook ? null : currentBookId;
   const initialMessages = params.session.messages

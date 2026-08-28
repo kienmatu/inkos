@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { PipelineRunner, runAgentSession } from "@actalk/inkos-core";
+import { PipelineRunner, runAgentSession, toWritingLanguage } from "@actalk/inkos-core";
 import { buildPipelineConfig, loadConfig, createClient, findProjectRoot, resolveBookId, resolveContext, log, logError } from "../utils.js";
 
 export const agentCommand = new Command("agent")
@@ -48,7 +48,7 @@ export const agentCommand = new Command("agent")
           sessionKind,
           actionSource,
           requestedIntent,
-          language: config.language ?? "zh",
+          language: toWritingLanguage(config.language),
           pipeline,
           projectRoot: root,
           model: client._piModel

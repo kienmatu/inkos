@@ -66,6 +66,7 @@ import {
   normalizeRequestedIntent as normalizeCoreRequestedIntent,
   normalizeSkillIdList as normalizeCoreSkillIdList,
   inferLanguage,
+  toWritingLanguage,
   ingestMaterial,
   createSkillRegistry,
   loadAvailableAgentSkills,
@@ -4683,7 +4684,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
           throw new ApiError(404, "BOOK_NOT_FOUND", `Book not found: ${agentBookId}`);
         }
       }
-      const configLanguage = config.language === "en" ? "en" : "zh";
+      const configLanguage = toWritingLanguage(config.language);
       const bookLanguage = activeBookConfig?.language === "en" ? "en" : activeBookConfig?.language === "zh" ? "zh" : undefined;
       const requestedLanguage = actionPayload?.shortRun?.language ?? actionPayload?.createBook?.language;
       const surfaceLanguage = agentBookId
