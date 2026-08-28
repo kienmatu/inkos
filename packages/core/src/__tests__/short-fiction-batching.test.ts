@@ -4,6 +4,7 @@ import {
   buildShortFictionWriterUserPrompt,
   buildShortFictionDraftContinuationUserPrompt,
   buildShortFictionDraftRevisionFollowup,
+  buildShortFictionPackageUserPrompt,
 } from "../prompts/short-fiction.js";
 
 const BASE = {
@@ -48,10 +49,22 @@ describe("writer prompt chapter range", () => {
     const zh = buildShortFictionWriterUserPrompt({ ...BASE, chapterCount: 13, chapterRange: [13, 13] }, "zh");
     const en = buildShortFictionWriterUserPrompt({ ...BASE, chapterCount: 13, chapterRange: [13, 13] }, "en");
 
-    expect(zh).toContain("只写第 13 章");
+    expect(zh).toContain("只写第 13 章，每章约 1000 字。整篇共 13 章");
     expect(zh).not.toContain("13-13");
-    expect(en).toContain("Write ONLY chapter 13");
+    // Pins the full clause, not just "chapter 13" — the old wording put "each"
+    // outside the singular/plural ternary, so a single-chapter batch rendered
+    // "Write ONLY chapter 13, about 1000 words each." This assertion fails
+    // against that wording because it requires the sentence to end right
+    // after "words", with no "each" and no space before the period.
+    expect(en).toContain("Write ONLY chapter 13, about 1000 words. The complete story is 13 chapters");
     expect(en).not.toContain("13-13");
+    expect(en).not.toContain("words each. The complete story is 13 chapters");
+  });
+
+  it("renders the plural case with 'each' intact (en)", () => {
+    const en = buildShortFictionWriterUserPrompt({ ...BASE, chapterRange: [1, 3] }, "en");
+
+    expect(en).toContain("Write ONLY chapters 1-3, about 1000 words each. The complete story is 12 chapters");
   });
 
   it("is unchanged when no chapterRange is given", () => {
@@ -85,11 +98,9 @@ describe("continuation prompt batch mode", () => {
     const en = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION_BASE, mode: "batch" }, "en");
 
     expect(zh).not.toContain("被截断");
-    expect(zh).toContain("继续同一篇的写作");
-    expect(zh).toContain("第 4-6 章");
+    expect(zh).toContain("继续同一篇的写作：现在写第 4-6 章，只写这几章。");
     expect(en).not.toContain("was truncated");
-    expect(en).toContain("Continue the same story");
-    expect(en).toContain("chapters 4-6");
+    expect(en).toContain("Continue the same story: now write chapters 4-6, and only those.");
   });
 
   it("keeps the repair framing by default", () => {
@@ -118,10 +129,50 @@ describe("continuation prompt batch mode", () => {
       { ...CONTINUATION_BASE, missingChapters: [12], mode: "batch" }, "en",
     );
 
-    expect(zh).toContain("第 12 章");
+    // Pins the full clause, not just "chapter 12" — the old wording used a
+    // plural pronoun ("and only those") outside the singular/plural ternary,
+    // so a single-chapter batch rendered "现在写第 12 章，只写这几章。" (zh)
+    // and "now write chapter 12, and only those." (en). These assertions
+    // fail against that old wording because they require the singular
+    // pronoun ("只写这一章" / "and only that one.").
+    expect(zh).toContain("继续同一篇的写作：现在写第 12 章，只写这一章。");
     expect(zh).not.toContain("12-12");
-    expect(en).toContain("chapter 12");
+    expect(en).toContain("Continue the same story: now write chapter 12, and only that one.");
     expect(en).not.toContain("12-12");
+  });
+});
+
+describe("opening hook and synopsis word counts", () => {
+  it("asks for a ~240-word en opening hook, proportional to the 1,200-word chapter it precedes, in both the writer and revision prompts", () => {
+    const writer = buildShortFictionWriterUserPrompt({ ...BASE, chapterRange: [1, 3] }, "en");
+    const revision = buildShortFictionDraftRevisionFollowup(
+      { ...BASE, review: "note", chapterRange: [1, 3] }, "en",
+    );
+
+    expect(writer).toContain("An optional pre-story hook of about 240 words");
+    expect(revision).toContain("An optional pre-story hook of about 240 words");
+  });
+
+  it("keeps the zh opening hook at its own ~200-character figure, unconverted", () => {
+    const writer = buildShortFictionWriterUserPrompt({ ...BASE, chapterRange: [1, 3] }, "zh");
+
+    expect(writer).toContain("约 200 字");
+  });
+
+  it("asks for a 100-150 word en synopsis, anchored to storefront descriptions rather than converted from the zh figure", () => {
+    const prompt = buildShortFictionPackageUserPrompt(
+      { direction: "revenge", outlineMarkdown: "## plan", draftMarkdown: "prose", draftTitle: "Title" }, "en",
+    );
+
+    expect(prompt).toContain("A 100-150 word platform synopsis");
+  });
+
+  it("keeps the zh synopsis at its own 100-180-character figure, unconverted", () => {
+    const prompt = buildShortFictionPackageUserPrompt(
+      { direction: "复仇", outlineMarkdown: "## 方案", draftMarkdown: "正文", draftTitle: "标题" }, "zh",
+    );
+
+    expect(prompt).toContain("100-180字平台简介");
   });
 });
 

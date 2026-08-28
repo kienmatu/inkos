@@ -283,7 +283,7 @@ export function buildShortFictionWriterUserPrompt(
     return [
       "## Task",
       input.chapterRange
-        ? `Write ONLY ${input.chapterRange[0] === input.chapterRange[1] ? `chapter ${input.chapterRange[0]}` : `chapters ${chapterRangeLabel(input.chapterRange[0], input.chapterRange[1])}`}, about ${input.charsPerChapter} words each. The complete story is ${input.chapterCount} chapters — calibrate pacing to the whole story, not to this batch.`
+        ? `Write ONLY ${input.chapterRange[0] === input.chapterRange[1] ? `chapter ${input.chapterRange[0]}, about ${input.charsPerChapter} words` : `chapters ${chapterRangeLabel(input.chapterRange[0], input.chapterRange[1])}, about ${input.charsPerChapter} words each`}. The complete story is ${input.chapterCount} chapters — calibrate pacing to the whole story, not to this batch.`
         : `Write the complete ${input.chapterCount}-chapter story in one pass, about ${input.charsPerChapter} words per chapter.`,
       "Read the full story plan before writing. The prose must carry the plan's pressure chain, evidence chain, reversal chain, and emotional payoff — do not swerve into a different story midway.",
       "",
@@ -300,7 +300,11 @@ export function buildShortFictionWriterUserPrompt(
         "=== SHORT_FICTION_TITLE ===",
         "The story title — plain text, platform-ready, nothing else",
         "=== SHORT_FICTION_OPENING_HOOK ===",
-        "An optional pre-story hook of about 130 words; if no standalone teaser is needed, still write the small first-screen scene that opens chapter 1",
+        // Basis: proportion to the chapter it precedes, not a word-count
+        // conversion. The zh format's ~200-character hook sits in front of
+        // ~1,000-character chapters — about one fifth. One fifth of a
+        // 1,200-word en chapter is 240.
+        "An optional pre-story hook of about 240 words; if no standalone teaser is needed, still write the small first-screen scene that opens chapter 1",
       ] : []),
       ...rangeChapters(input).map((chapter) => [
         `=== CHAPTER ${chapter} TITLE ===`,
@@ -353,7 +357,9 @@ export function buildShortFictionDraftContinuationUserPrompt(
     return [
       "## Task",
       input.mode === "batch"
-        ? `Continue the same story: now write ${first === last ? `chapter ${label}` : `chapters ${label}`}, and only those.`
+        ? first === last
+          ? `Continue the same story: now write chapter ${label}, and only that one.`
+          : `Continue the same story: now write chapters ${label}, and only those.`
         : `The previous draft was truncated or skipped chapters. Write ONLY the missing chapters: ${missing}.`,
       `Stay calibrated to the complete ${input.chapterCount}-chapter short at about ${input.charsPerChapter} words per chapter.`,
       "Do not rewrite finished chapters, do not write summary notes, do not apologize, do not output review comments.",
@@ -386,7 +392,9 @@ export function buildShortFictionDraftContinuationUserPrompt(
   return [
     "## 任务",
     input.mode === "batch"
-      ? `继续同一篇的写作：现在写第 ${label} 章，只写这几章。`
+      ? first === last
+        ? `继续同一篇的写作：现在写第 ${label} 章，只写这一章。`
+        : `继续同一篇的写作：现在写第 ${label} 章，只写这几章。`
       : `上一次正文被截断或漏章。现在只补写缺失章节：${missing}。`,
     `仍然按完整短篇 ${input.chapterCount} 章、每章约 ${input.charsPerChapter} 字校准。`,
     "不要重写已完成章节，不要写总结说明，不要道歉，不要输出审稿意见。",
@@ -503,7 +511,11 @@ export function buildShortFictionDraftRevisionFollowup(
         "=== SHORT_FICTION_TITLE ===",
         "The story title — plain text, platform-ready, nothing else",
         "=== SHORT_FICTION_OPENING_HOOK ===",
-        "An optional pre-story hook of about 130 words; if no standalone teaser is needed, still write the small first-screen scene that opens chapter 1",
+        // Basis: proportion to the chapter it precedes, not a word-count
+        // conversion. The zh format's ~200-character hook sits in front of
+        // ~1,000-character chapters — about one fifth. One fifth of a
+        // 1,200-word en chapter is 240.
+        "An optional pre-story hook of about 240 words; if no standalone teaser is needed, still write the small first-screen scene that opens chapter 1",
       ] : []),
       ...rangeChapters(input).map((chapter) => [
         `=== CHAPTER ${chapter} TITLE ===`,
@@ -586,7 +598,11 @@ export function buildShortFictionPackageUserPrompt(
       "=== SHORT_FICTION_PACKAGE_TITLE ===",
       input.draftTitle,
       "=== SHORT_FICTION_INTRO ===",
-      "A 70-120 word platform synopsis that grabs the conflict, the pressure, and the payoff — never a spoiler-filled play-by-play.",
+      // Basis: English storefront product descriptions (Kindle/Amazon book
+      // descriptions run roughly 100-200 words, with ~150 a common working
+      // target) — a market anchor, not a conversion of the zh 100-180-
+      // character figure.
+      "A 100-150 word platform synopsis that grabs the conflict, the pressure, and the payoff — never a spoiler-filled play-by-play.",
       "=== SHORT_FICTION_SELLING_POINTS ===",
       "- 3 to 6 one-line hooks for the product description's bullet list, one per line — each names a concrete promise (a reversal, a stake, a question), not a genre label",
       "=== SHORT_FICTION_COVER_PROMPT ===",
