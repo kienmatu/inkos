@@ -23,14 +23,13 @@ import { StoryPlayer } from "./pages/StoryPlayer";
 import { StoryGraphTree } from "./pages/StoryGraphTree";
 const FlowView = lazy(() => import("./pages/FlowView"));
 const FilmWizard = lazy(() => import("./pages/FilmWizard"));
-import { LanguageSelector } from "./pages/LanguageSelector";
 import { BookSidebar, BookSidebarToggle } from "./components/chat/BookSidebar";
 import { useSSE } from "./hooks/use-sse";
 import { useSessionEvents } from "./hooks/use-session-events";
 import { useTheme } from "./hooks/use-theme";
 import { useI18n } from "./hooks/use-i18n";
 import { setAppLanguage, tr } from "./lib/app-language";
-import { postApi, putApi, useApi } from "./hooks/use-api";
+import { putApi, useApi } from "./hooks/use-api";
 import { Sun, Moon } from "lucide-react";
 import { House } from "lucide-react";
 
@@ -58,8 +57,7 @@ export function App() {
   const sse = useSSE();
   const { theme, setTheme } = useTheme();
   const { t, lang: currentLang } = useI18n();
-  const { data: project, error: projectError, refetch: refetchProject } = useApi<{ language: string; languageExplicit: boolean }>("/project");
-  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const { data: project, error: projectError, refetch: refetchProject } = useApi<{ language: string }>("/project");
   const [ready, setReady] = useState(false);
 
   const isDark = theme === "dark";
@@ -80,9 +78,6 @@ export function App() {
 
   useEffect(() => {
     if (project) {
-      if (!project.languageExplicit) {
-        setShowLanguageSelector(true);
-      }
       setReady(true);
     }
   }, [project]);
@@ -161,18 +156,6 @@ export function App() {
     );
   }
 
-  if (showLanguageSelector) {
-    return (
-      <LanguageSelector
-        onSelect={async (lang) => {
-          await postApi("/project/language", { language: lang });
-          setShowLanguageSelector(false);
-          refetchProject();
-        }}
-      />
-    );
-  }
-
   return (
     <div className="h-screen bg-background text-foreground flex overflow-hidden font-sans">
       {/* Left Sidebar */}
@@ -198,12 +181,12 @@ export function App() {
             <div className="flex gap-0.5 bg-muted/50 rounded-lg p-0.5">
               <button
                 onClick={async () => {
-                  await putApi("/project", { language: "zh" });
+                  await putApi("/project", { language: "vi" });
                   refetchProject();
                 }}
-                className={`px-2.5 py-1 text-[16px] font-medium rounded-md ${currentLang === "zh" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                className={`px-2.5 py-1 text-[16px] font-medium rounded-md ${currentLang === "vi" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
               >
-                中
+                VI
               </button>
               <button
                 onClick={async () => {
