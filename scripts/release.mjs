@@ -47,7 +47,7 @@ Flags
 
 Steps
   1. preflight   clean working tree, unused tag, print the plan, confirm
-  2. bump        root + every package manifest, including internal dep ranges
+  2. bump        root + every package manifest (internal deps stay workspace:*)
   3. verify      pnpm build, pnpm test, publish-manifest check
                  (a failure here reverts the bump)
   4. commit      "chore: bump version to X.Y.Z" + tag vX.Y.Z
@@ -167,8 +167,10 @@ async function main() {
     process.exit(1);
   }
 
-  // 2. Bump every manifest, including internal dependency ranges.
-  run("node", [join(root, "scripts", "set-package-versions.mjs"), version, "--root", root]);
+  // 2. Bump every manifest. Internal deps keep workspace:* — this tree gets committed,
+  //    and prepack resolves the specifier at publish time.
+  run("node", [join(root, "scripts", "set-package-versions.mjs"), version, "--root", root,
+    "--keep-workspace-protocol"]);
 
   // 3. Build and test against the bumped versions. On failure, roll the bump back.
   try {
