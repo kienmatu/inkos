@@ -15,3 +15,15 @@ export function inferLanguage(text?: string | null): WritingLanguage {
   if (latin > 0 && cjk * 4 < latin) return "en";
   return "zh";
 }
+
+/**
+ * Narrow a project-level language (which may be a UI-only language such as "vi")
+ * down to a language the writing pipeline can actually produce.
+ *
+ * Vietnamese is a UI language only: a Vietnamese interface writes English prose.
+ * Anything that is not exactly "zh" resolves to "en", so an unrecognised value
+ * can never silently fall through to Chinese.
+ */
+export function toWritingLanguage(lang: string | undefined): WritingLanguage {
+  return lang === "zh" ? "zh" : "en";
+}
