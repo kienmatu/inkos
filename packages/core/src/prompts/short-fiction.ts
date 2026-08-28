@@ -54,6 +54,10 @@ function chapterRangeLabel(from: number, to: number): string {
 export interface ShortFictionDraftContinuationPromptInput extends ShortFictionDraftPromptInput {
   readonly existingDraftMarkdown: string;
   readonly missingChapters: readonly number[];
+  // "repair" (default) frames this as filling gaps in a truncated draft.
+  // "batch" frames it as the next batch of a normal write — same body, honest
+  // opening line, so the model is not primed to write in a corrective voice.
+  readonly mode?: "repair" | "batch";
 }
 
 export interface ShortFictionDraftReviewPromptInput extends ShortFictionDraftPromptInput {
@@ -324,10 +328,15 @@ export function buildShortFictionDraftContinuationUserPrompt(
   language: ShortFictionLanguage = "zh",
 ): string {
   const missing = input.missingChapters.join(", ");
+  const first = input.missingChapters[0] ?? 1;
+  const last = input.missingChapters[input.missingChapters.length - 1] ?? first;
+  const label = chapterRangeLabel(first, last);
   if (language === "en") {
     return [
       "## Task",
-      `The previous draft was truncated or skipped chapters. Write ONLY the missing chapters: ${missing}.`,
+      input.mode === "batch"
+        ? `Continue the same story: now write ${first === last ? `chapter ${label}` : `chapters ${label}`}, and only those.`
+        : `The previous draft was truncated or skipped chapters. Write ONLY the missing chapters: ${missing}.`,
       `Stay calibrated to the complete ${input.chapterCount}-chapter short at about ${input.charsPerChapter} words per chapter.`,
       "Do not rewrite finished chapters, do not write summary notes, do not apologize, do not output review comments.",
       "",
@@ -353,7 +362,9 @@ export function buildShortFictionDraftContinuationUserPrompt(
   }
   return [
     "## 任务",
-    `上一次正文被截断或漏章。现在只补写缺失章节：${missing}。`,
+    input.mode === "batch"
+      ? `继续同一篇的写作：现在写第 ${label} 章，只写这几章。`
+      : `上一次正文被截断或漏章。现在只补写缺失章节：${missing}。`,
     `仍然按完整短篇 ${input.chapterCount} 章、每章约 ${input.charsPerChapter} 字校准。`,
     "不要重写已完成章节，不要写总结说明，不要道歉，不要输出审稿意见。",
     "",

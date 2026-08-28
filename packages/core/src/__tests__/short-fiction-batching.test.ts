@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildShortFictionWriterSystemPrompt,
   buildShortFictionWriterUserPrompt,
+  buildShortFictionDraftContinuationUserPrompt,
 } from "../prompts/short-fiction.js";
 
 const BASE = {
@@ -68,5 +69,57 @@ describe("writer prompt chapter range", () => {
   it("no longer claims the story is written in one API pass", () => {
     expect(buildShortFictionWriterSystemPrompt("zh")).not.toContain("一次 API");
     expect(buildShortFictionWriterSystemPrompt("en")).not.toContain("in one API pass");
+  });
+});
+
+const CONTINUATION_BASE = {
+  ...BASE,
+  existingDraftMarkdown: "# 电梯多一层\n\n## 第1章 入局\n第一章正文",
+  missingChapters: [4, 5, 6],
+};
+
+describe("continuation prompt batch mode", () => {
+  it("does not claim a truncation in batch mode", () => {
+    const zh = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION_BASE, mode: "batch" }, "zh");
+    const en = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION_BASE, mode: "batch" }, "en");
+
+    expect(zh).not.toContain("被截断");
+    expect(zh).toContain("继续同一篇的写作");
+    expect(zh).toContain("第 4-6 章");
+    expect(en).not.toContain("was truncated");
+    expect(en).toContain("Continue the same story");
+    expect(en).toContain("chapters 4-6");
+  });
+
+  it("keeps the repair framing by default", () => {
+    const zh = buildShortFictionDraftContinuationUserPrompt(CONTINUATION_BASE, "zh");
+    const explicit = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION_BASE, mode: "repair" }, "zh");
+
+    expect(zh).toContain("被截断");
+    expect(zh).toBe(explicit);
+  });
+
+  it("still carries the existing prose and the do-not-rewrite guard in batch mode", () => {
+    const zh = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION_BASE, mode: "batch" }, "zh");
+
+    expect(zh).toContain("第一章正文");
+    expect(zh).toContain("不要重写已完成章节");
+    expect(zh).toContain("=== CHAPTER 4 CONTENT ===");
+    expect(zh).toContain("=== CHAPTER 6 CONTENT ===");
+    expect(zh).not.toContain("=== CHAPTER 7 CONTENT ===");
+  });
+
+  it("reads as a single chapter for a one-chapter batch", () => {
+    const zh = buildShortFictionDraftContinuationUserPrompt(
+      { ...CONTINUATION_BASE, missingChapters: [12], mode: "batch" }, "zh",
+    );
+    const en = buildShortFictionDraftContinuationUserPrompt(
+      { ...CONTINUATION_BASE, missingChapters: [12], mode: "batch" }, "en",
+    );
+
+    expect(zh).toContain("第 12 章");
+    expect(zh).not.toContain("12-12");
+    expect(en).toContain("chapter 12");
+    expect(en).not.toContain("12-12");
   });
 });
