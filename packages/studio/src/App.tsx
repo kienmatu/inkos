@@ -127,12 +127,12 @@ export function App() {
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="max-w-md w-full rounded-2xl border border-destructive/30 bg-destructive/5 p-6 space-y-4">
           <div>
-            <h1 className="text-lg font-semibold text-destructive">无法加载项目配置 / Failed to load project config</h1>
+            <h1 className="text-lg font-semibold text-destructive">Không tải được cấu hình dự án / Failed to load project config</h1>
             <p className="mt-2 text-sm text-muted-foreground break-all">{projectError}</p>
           </div>
-          {/* 项目配置没加载出来，语言未知，所以这屏中英双语并排展示。 */}
+          {/* 项目配置没加载出来，语言未知，所以这屏越英双语并排展示。 */}
           <p className="text-sm text-muted-foreground">
-            请检查项目根目录下的 inkos.json 是否存在且为合法 JSON，然后重试。
+            Kiểm tra xem inkos.json trong thư mục gốc của dự án có tồn tại và có phải JSON hợp lệ không, rồi thử lại.
             <br />
             Check that inkos.json in the project root exists and is valid JSON, then retry.
           </p>
@@ -141,7 +141,7 @@ export function App() {
             onClick={() => refetchProject()}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
           >
-            重试 / Retry
+            Thử lại / Retry
           </button>
         </div>
       </div>
@@ -349,12 +349,12 @@ export function App() {
             </div>
           )}
           {route.page === "film-studio" && (
-            <Suspense fallback={<div className="p-6 text-sm">{tr("加载创作向导…", "Loading creation wizard…")}</div>}>
+            <Suspense fallback={<div className="p-6 text-sm">{tr("加载创作向导…", "Loading creation wizard…", "Đang tải trình tạo…")}</div>}>
               <FilmWizard projectId={route.projectId} nav={nav} theme={theme} t={t} sse={sse} />
             </Suspense>
           )}
           {route.page === "flow" && (
-            <Suspense fallback={<div className="p-6 text-sm">{tr("加载流程图…", "Loading flow view…")}</div>}>
+            <Suspense fallback={<div className="p-6 text-sm">{tr("加载流程图…", "Loading flow view…", "Đang tải sơ đồ…")}</div>}>
               <FlowView projectId={route.projectId} nav={nav} theme={theme} t={t} />
             </Suspense>
           )}

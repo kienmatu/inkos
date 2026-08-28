@@ -20,7 +20,7 @@ export const strings = {
   "nav.createSpinoff": { zh: "番外创作", en: "Side-story", vi: "Ngoại truyện" },
   "nav.createImitation": { zh: "仿写创作", en: "Imitation", vi: "Phỏng bút" },
   "nav.createTranslation": { zh: "翻译译介", en: "Translation", vi: "Dịch thuật" },
-  "nav.config": { zh: "模型配置", en: "Model Config", vi: "Cấu hình mô hình" },
+  "nav.config": { zh: "模型配置", en: "Model Config", vi: "Cấu hình model" },
   "nav.projectSettings": { zh: "项目设置", en: "Project Settings", vi: "Cài đặt dự án" },
   "nav.connected": { zh: "已连接", en: "Connected", vi: "Đã kết nối" },
   "nav.disconnected": { zh: "未连接", en: "Disconnected", vi: "Chưa kết nối" },
