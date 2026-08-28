@@ -66,6 +66,9 @@ export interface ShortFictionDraftReviewPromptInput extends ShortFictionDraftPro
 
 export interface ShortFictionDraftRevisionPromptInput extends ShortFictionDraftPromptInput {
   readonly review: string;
+  // Second-version chapters already rewritten in earlier batches, rendered as
+  // Markdown. Used for voice and continuity only — never rewritten.
+  readonly revisedSoFarMarkdown?: string;
 }
 
 export interface ShortFictionPackagePromptInput {
@@ -448,9 +451,13 @@ export function buildShortFictionDraftRevisionFollowup(
 ): string {
   if (language === "en") {
     return [
-      "Based on the review notes, write the complete second-version draft.",
+      input.chapterRange
+        ? `Based on the review notes, write the second-version prose for ${input.chapterRange[0] === input.chapterRange[1] ? `chapter ${input.chapterRange[0]}` : `chapters ${chapterRangeLabel(input.chapterRange[0], input.chapterRange[1])}`} ONLY.`
+        : "Based on the review notes, write the complete second-version draft.",
       "This is round two of the same story: keep what worked in the last version, fix what breaks immersion or kills the desire to keep reading.",
-      "Do not output a list of suggested edits, and do not patch just a few chapters — output the complete draft.",
+      input.chapterRange
+        ? "Do not output a list of suggested edits, and do not rewrite chapters outside this range — output the full prose of these chapters."
+        : "Do not output a list of suggested edits, and do not patch just a few chapters — output the complete draft.",
       "",
       "## Review Notes",
       input.review.trim(),
@@ -461,26 +468,34 @@ export function buildShortFictionDraftRevisionFollowup(
       "- Keep the title, opening, chapter titles, and main title consistent with the prose, though the title may be re-sharpened from the final draft for platform click appeal.",
       "- Word count is calibration only: pad short chapters with real scenes; trim long ones by cutting explanation and repeated reactions.",
       "",
+      ...(input.revisedSoFarMarkdown ? [
+        "## Second-Version Chapters Already Written (for continuity — do not rewrite)",
+        input.revisedSoFarMarkdown,
+        "",
+      ] : []),
       "## Output Format",
-      "=== SHORT_FICTION_TITLE ===",
-      "The story title — plain text, platform-ready, nothing else",
-      "=== SHORT_FICTION_OPENING_HOOK ===",
-      "An optional pre-story hook of about 130 words; if no standalone teaser is needed, still write the small first-screen scene that opens chapter 1",
-      ...Array.from({ length: input.chapterCount }, (_, index) => {
-        const chapter = index + 1;
-        return [
-          `=== CHAPTER ${chapter} TITLE ===`,
-          "Chapter title — plain text only, no #, no \"Chapter N\" prefix",
-          `=== CHAPTER ${chapter} CONTENT ===`,
-          `Chapter ${chapter} prose — full scenes, no synopsis, no author notes`,
-        ].join("\n");
-      }),
+      ...(isFirstBatch(input) ? [
+        "=== SHORT_FICTION_TITLE ===",
+        "The story title — plain text, platform-ready, nothing else",
+        "=== SHORT_FICTION_OPENING_HOOK ===",
+        "An optional pre-story hook of about 130 words; if no standalone teaser is needed, still write the small first-screen scene that opens chapter 1",
+      ] : []),
+      ...rangeChapters(input).map((chapter) => [
+        `=== CHAPTER ${chapter} TITLE ===`,
+        "Chapter title — plain text only, no #, no \"Chapter N\" prefix",
+        `=== CHAPTER ${chapter} CONTENT ===`,
+        `Chapter ${chapter} prose — full scenes, no synopsis, no author notes`,
+      ].join("\n")),
     ].join("\n");
   }
   return [
-    "根据审稿意见，继续写第二版完整正文。",
+    input.chapterRange
+      ? `根据审稿意见，只写第 ${chapterRangeLabel(input.chapterRange[0], input.chapterRange[1])} 章的第二版正文。`
+      : "根据审稿意见，继续写第二版完整正文。",
     "这是同一篇的第二轮写作：保留上一版能打的地方，修掉会让读者出戏或不想读的问题。",
-    "不要只列修改建议，不要只改几章片段，输出完整正文。",
+    input.chapterRange
+      ? "不要只列修改建议，不要改这个区间以外的章节，把这几章的完整正文写出来。"
+      : "不要只列修改建议，不要只改几章片段，输出完整正文。",
     "",
     "## 审稿意见",
     input.review.trim(),
@@ -491,20 +506,24 @@ export function buildShortFictionDraftRevisionFollowup(
     "- 保持标题、开篇、章节标题和正文主标题一致，但标题可以基于正文重新压得更有平台点击感。",
     "- 字数只做校准：偏短补有效场面，偏长删解释和重复反应。",
     "",
+    ...(input.revisedSoFarMarkdown ? [
+      "## 第二版已完成章节（只用于承接，不要重写）",
+      input.revisedSoFarMarkdown,
+      "",
+    ] : []),
     "## 输出格式",
-    "=== SHORT_FICTION_TITLE ===",
-    "短篇标题，只写纯文本平台标题",
-    "=== SHORT_FICTION_OPENING_HOOK ===",
-    "可选正文前小钩子，约 200 字；如果不需要独立引子，也要写第 1 章第一屏的入局小场面",
-    ...Array.from({ length: input.chapterCount }, (_, index) => {
-      const chapter = index + 1;
-      return [
-        `=== CHAPTER ${chapter} TITLE ===`,
-        "章节标题，只写纯文本，不要 #，不要第几章前缀",
-        `=== CHAPTER ${chapter} CONTENT ===`,
-        `第${chapter}章正文，写完整场面，不要梗概，不要作者备注`,
-      ].join("\n");
-    }),
+    ...(isFirstBatch(input) ? [
+      "=== SHORT_FICTION_TITLE ===",
+      "短篇标题，只写纯文本平台标题",
+      "=== SHORT_FICTION_OPENING_HOOK ===",
+      "可选正文前小钩子，约 200 字；如果不需要独立引子，也要写第 1 章第一屏的入局小场面",
+    ] : []),
+    ...rangeChapters(input).map((chapter) => [
+      `=== CHAPTER ${chapter} TITLE ===`,
+      "章节标题，只写纯文本，不要 #，不要第几章前缀",
+      `=== CHAPTER ${chapter} CONTENT ===`,
+      `第${chapter}章正文，写完整场面，不要梗概，不要作者备注`,
+    ].join("\n")),
   ].join("\n");
 }
 

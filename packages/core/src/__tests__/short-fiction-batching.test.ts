@@ -3,6 +3,7 @@ import {
   buildShortFictionWriterSystemPrompt,
   buildShortFictionWriterUserPrompt,
   buildShortFictionDraftContinuationUserPrompt,
+  buildShortFictionDraftRevisionFollowup,
 } from "../prompts/short-fiction.js";
 
 const BASE = {
@@ -121,5 +122,54 @@ describe("continuation prompt batch mode", () => {
     expect(zh).not.toContain("12-12");
     expect(en).toContain("chapter 12");
     expect(en).not.toContain("12-12");
+  });
+});
+
+const REVISION_BASE = { ...BASE, review: "第六章反扑不够" };
+
+describe("revision followup chapter range", () => {
+  it("revises only the ranged chapters", () => {
+    const prompt = buildShortFictionDraftRevisionFollowup(
+      { ...REVISION_BASE, chapterRange: [4, 6] }, "zh",
+    );
+
+    expect(prompt).toContain("=== CHAPTER 4 CONTENT ===");
+    expect(prompt).toContain("=== CHAPTER 6 CONTENT ===");
+    expect(prompt).not.toContain("=== CHAPTER 7 CONTENT ===");
+    expect(prompt).not.toContain("=== SHORT_FICTION_TITLE ===");
+    expect(prompt).toContain("第六章反扑不够");
+  });
+
+  it("includes the already-revised chapters for continuity on later batches", () => {
+    const withPrior = buildShortFictionDraftRevisionFollowup(
+      { ...REVISION_BASE, chapterRange: [4, 6], revisedSoFarMarkdown: "## 第1章 电梯\n第二版第一章正文" }, "zh",
+    );
+    const withoutPrior = buildShortFictionDraftRevisionFollowup(
+      { ...REVISION_BASE, chapterRange: [4, 6] }, "zh",
+    );
+
+    expect(withPrior).toContain("第二版第一章正文");
+    expect(withPrior).toContain("第二版已完成章节");
+    expect(withoutPrior).not.toContain("第二版已完成章节");
+  });
+
+  it("keeps title and hook on the first revision batch only", () => {
+    const first = buildShortFictionDraftRevisionFollowup({ ...REVISION_BASE, chapterRange: [1, 3] }, "en");
+    const later = buildShortFictionDraftRevisionFollowup({ ...REVISION_BASE, chapterRange: [4, 6] }, "en");
+
+    expect(first).toContain("=== SHORT_FICTION_TITLE ===");
+    expect(first).toContain("=== CHAPTER 3 CONTENT ===");
+    expect(first).not.toContain("=== CHAPTER 4 CONTENT ===");
+    expect(later).not.toContain("=== SHORT_FICTION_TITLE ===");
+  });
+
+  it("is unchanged when no chapterRange is given", () => {
+    for (const language of ["zh", "en"] as const) {
+      const prompt = buildShortFictionDraftRevisionFollowup(REVISION_BASE, language);
+      expect(prompt).toContain("=== SHORT_FICTION_TITLE ===");
+      expect(prompt).toContain("=== CHAPTER 12 CONTENT ===");
+      const heading = language === "en" ? "## Output Format" : "## 输出格式";
+      expect(prompt.split(heading)).toHaveLength(2);
+    }
   });
 });
