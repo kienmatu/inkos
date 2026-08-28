@@ -14,7 +14,7 @@ import {
   type PlayMode,
   type RequestedIntent,
   type SessionKind,
-} from "@actalk/inkos-core";
+} from "@kienmatu/inkos-core";
 import { persistProjectSession } from "./session-store.js";
 import { buildPipelineConfig, loadConfig } from "../utils.js";
 
@@ -44,7 +44,7 @@ export async function processTuiAgentInput(params: {
     ...(params.session.modelOverride ? { cli: { model: params.session.modelOverride } } : {}),
   });
   const client = createLLMClient(config.llm);
-  const pipeline = new (await import("@actalk/inkos-core")).PipelineRunner(
+  const pipeline = new (await import("@kienmatu/inkos-core")).PipelineRunner(
     buildPipelineConfig(config, params.projectRoot, { quiet: true }),
   );
   const userTimestamp = Date.now();

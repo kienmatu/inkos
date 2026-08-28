@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { defaultChapterLength } from "@actalk/inkos-core";
+import { defaultChapterLength } from "@kienmatu/inkos-core";
 import { buildStudioBookConfig, normalizeStudioPlatform, waitForStudioBookReady } from "./book-create";
 
 describe("normalizeStudioPlatform", () => {

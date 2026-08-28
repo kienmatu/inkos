@@ -20,9 +20,9 @@ export interface GenreInfo {
 // Vietnamese-UI project still sees its (English) built-in genres instead of
 // an empty list.
 //
-// This mirrors @actalk/inkos-core's toWritingLanguage(zh -> zh, everything
+// This mirrors @kienmatu/inkos-core's toWritingLanguage(zh -> zh, everything
 // else including "vi"/undefined -> en) inline rather than importing it:
-// importing toWritingLanguage from the "@actalk/inkos-core" barrel into this
+// importing toWritingLanguage from the "@kienmatu/inkos-core" barrel into this
 // file was verified to break the production client bundle (`pnpm --filter
 // studio build`), because it pulls the server-only atomic-file-set.js module
 // (which uses node:fs/node:path) into the vite client build. See

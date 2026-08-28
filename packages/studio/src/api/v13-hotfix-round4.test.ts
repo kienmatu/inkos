@@ -24,8 +24,8 @@ const logger = {
   error: vi.fn(),
 };
 
-vi.mock("@actalk/inkos-core", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@actalk/inkos-core")>();
+vi.mock("@kienmatu/inkos-core", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@kienmatu/inkos-core")>();
 
   class MockStateManager {
     constructor(private readonly root: string) {}
