@@ -32,7 +32,10 @@
     "audit:semantic-patterns": "node scripts/audit-semantic-patterns.mjs",
     "verify:publish-manifests": "node scripts/verify-no-workspace-protocol.mjs packages/core packages/cli packages/studio",
     "benchmark:studio-e2e": "node scripts/studio-e2e-benchmark.mjs",
-    "release": "pnpm build && pnpm test"
+    "release": "node scripts/release.mjs",
+    "release:minor": "node scripts/release.mjs minor",
+    "release:major": "node scripts/release.mjs major",
+    "release:dry": "node scripts/release.mjs --dry-run"
   },
   "engines": {
     "node": ">=22.0.0",
