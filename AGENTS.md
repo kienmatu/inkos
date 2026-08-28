@@ -1,0 +1,84 @@
+# AGENTS.md
+
+Guidance for AI agents and contributors working in this repository.
+
+## Language policy
+
+**English is the target language of this project.** The ultimate purpose of InkOS is
+writing in English: English prose, English genres, English-facing product surfaces,
+English docs, and English commit messages, plans, and specs.
+
+Chinese is **read-only legacy**. It is kept so existing Chinese material stays readable
+and existing Chinese users are not broken, but it is **no longer maintained**:
+
+- Do **not** write new Chinese docs, prompts, or UI strings.
+- Do **not** translate new English content into Chinese "for parity" — `README.zh.md`,
+  `CHANGELOG.zh.md`, and other `*.zh.*` files are frozen and may drift.
+- Do **not** answer, plan, or write specs in Chinese. Use English.
+- Existing Chinese code paths, genre profiles, and prompt packs keep working; fix them
+  only when they are actually broken, and write the fix and its docs in English.
+- When touching a file that mixes both, keep the Chinese as-is and add new content in
+  English rather than expanding the Chinese side.
+
+## Answer structure
+
+Answer technical questions with a visible line of reasoning, not a pile of near-synonymous
+restatements.
+
+1. **Classify first** — group the problem into a few categories and say what core tension
+   each one resolves.
+2. **Then build the chain** — explain along `problem context -> key data structures ->
+   execution steps -> resulting impact`.
+3. **Back claims with evidence** — cite the concrete function, field, call chain, or file
+   path so the conclusion can be verified.
+4. **Explain causality** — say why a design produces its effect, and what failure it
+   triggers when it is missing.
+5. **Avoid empty comparisons** — a comparison can be a conclusion, never the proof.
+6. **Control density** — each layer carries only what supports the current conclusion.
+
+## TypeScript practice
+
+When writing or reviewing TypeScript, explain how data moves from *untrusted input* to
+*trusted domain object*. Every decision should answer four things: which illegal state it
+removes; which type, schema, or function guarantees that; what precondition downstream
+code gains; and what failure occurs without it.
+
+### Categories
+
+1. **Boundary narrowing** — external input is untrusted. Files, network, JSON, database
+   rows, and third-party return values may start as `unknown`, but must be narrowed at the
+   module boundary by a schema, parser, or type guard.
+2. **Domain modeling** — business states must be distinguishable. When the field set
+   changes with `role`, `type`, or `kind`, use a discriminated union rather than a wide
+   interface of optional fields.
+3. **Legal-state constraints have an owner** — rules a single object can check itself
+   belong in the type or schema; rules that need event order, context, or external state
+   belong in a clearly named validate / transform / clean function.
+4. **Evolution safety** — new branches must not be silently dropped. Handle unions
+   exhaustively and cover illegal states with tests.
+
+### Reasoning chain
+
+```text
+Problem context:    which inputs are untrusted, or which business states blur together.
+Key data structures: what raw input, validated event, domain message, cleaned message are.
+Execution steps:     which function reads, which narrows, which validates legality,
+                     which returns the trusted result.
+Resulting impact:    what downstream no longer re-checks; where illegal state explodes
+                     without this design.
+```
+
+### Code rules
+
+1. Wide types stop at the boundary: `unknown`, `any`, and `Record<string, unknown>` do not
+   reach core business flow.
+2. Model mutually exclusive states as unions, not a swarm of optional fields.
+3. Implement legal-state constraints in one place instead of scattering ad hoc `if`s.
+4. Type assertions need evidence: an `as SomeType` must sit behind a schema, parser, or
+   guard.
+5. Handle branches exhaustively — `switch`, explicit narrowing, and `assertNever`.
+6. Function names carry trust level: `parse*` may fail, `normalize*` reshapes, `clean*`
+   repairs legality.
+7. Test illegal states: restore, migration, IO, LLM messages, and tool loops must cover bad
+   data, missing fields, uncommitted requests, orphaned `toolResult`, empty assistant
+   messages, and trailing thinking.

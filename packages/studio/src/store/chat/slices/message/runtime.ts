@@ -38,6 +38,14 @@ const TOOL_LABELS: Record<string, readonly [string, string, string]> = {
   play_start: ["启动互动世界", "Start interactive world", "Khởi động thế giới tương tác"],
   play_revise: ["重做互动回合", "Redo play turn", "Làm lại lượt chơi"],
   play_step: ["推进互动世界", "Advance interactive world", "Tiến triển thế giới tương tác"],
+  translation_create: ["翻译项目", "Translation", "Dự án dịch thuật"],
+  fanfic_create: ["同人创作", "Fanfiction", "Sáng tác đồng nhân"],
+  continuation_import: ["导入续写", "Continuation import", "Nhập truyện viết tiếp"],
+  spinoff_create: ["番外创作", "Side story", "Sáng tác ngoại truyện"],
+  imitation_create: ["仿写创作", "Style imitation", "Sáng tác phỏng bút"],
+  create_narrative_forecast: ["剧情多线推演", "Narrative forecast", "Dự đoán cốt truyện"],
+  get_narrative_forecast: ["核验剧情推演", "Recheck forecast", "Kiểm tra lại dự đoán"],
+  select_narrative_branch: ["采用候选分支", "Select candidate branch", "Chọn nhánh đề xuất"],
 };
 
 export function bookKey(bookId: string | null | undefined): string {
@@ -49,13 +57,14 @@ export function extractErrorMessage(error: string | { code?: string; message?: s
   return localizeKnownRuntimeMessage(error.message ?? "Unknown error");
 }
 
+// Localized label for a tool, or undefined when we have no entry for it.
+function lookupToolLabel(tool: string, agent?: string): string | undefined {
+  const label = tool === "sub_agent" && agent ? AGENT_LABELS[agent] : TOOL_LABELS[tool];
+  return label ? tr(label[0], label[1], label[2]) : undefined;
+}
+
 export function resolveToolLabel(tool: string, agent?: string): string {
-  if (tool === "sub_agent" && agent) {
-    const label = AGENT_LABELS[agent];
-    return label ? tr(label[0], label[1], label[2]) : agent;
-  }
-  const label = TOOL_LABELS[tool];
-  return label ? tr(label[0], label[1], label[2]) : tool;
+  return lookupToolLabel(tool, agent) ?? (tool === "sub_agent" && agent ? agent : tool);
 }
 
 export function summarizeResult(result: unknown): string {
@@ -371,11 +380,18 @@ export function markRunningToolsFailed(
   }));
 }
 
+function relabelForCurrentLanguage(executions: ToolExecution[]): ToolExecution[] {
+  return executions.map((execution) => {
+    const label = lookupToolLabel(execution.tool, execution.agent);
+    return label && label !== execution.label ? { ...execution, label } : execution;
+  });
+}
+
 function extractSessionToolExecutions(message: SessionMessage): ToolExecution[] | undefined {
   const direct = (message as any).toolExecutions;
-  if (Array.isArray(direct)) return direct as ToolExecution[];
+  if (Array.isArray(direct)) return relabelForCurrentLanguage(direct as ToolExecution[]);
   const legacy = (message as any).legacyDisplay?.toolExecutions;
-  return Array.isArray(legacy) ? legacy as ToolExecution[] : undefined;
+  return Array.isArray(legacy) ? relabelForCurrentLanguage(legacy as ToolExecution[]) : undefined;
 }
 
 type ProposalResolution = "confirmed" | "rejected";

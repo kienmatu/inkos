@@ -334,3 +334,31 @@ describe("markRunningToolsFailed", () => {
     });
   });
 });
+
+describe("deserializeMessages tool labels", () => {
+  const restored = [{
+    role: "assistant",
+    content: "",
+    timestamp: 1,
+    // A transcript written under zh bakes the zh label into the message.
+    toolExecutions: [exec({ id: "1", tool: "propose_action", label: "确认动作" })],
+  }] as any;
+
+  it("relabels a restored execution into the current language", () => {
+    setAppLanguage("vi");
+    expect(deserializeMessages(restored)[0]!.toolExecutions?.[0]?.label).toBe("Xác nhận hành động");
+    setAppLanguage("en");
+    expect(deserializeMessages(restored)[0]!.toolExecutions?.[0]?.label).toBe("Confirm action");
+  });
+
+  it("keeps the persisted label for a tool it has no entry for", () => {
+    setAppLanguage("vi");
+    const unknown = [{
+      role: "assistant",
+      content: "",
+      timestamp: 1,
+      toolExecutions: [exec({ id: "1", tool: "some_future_tool", label: "自定义标签" })],
+    }] as any;
+    expect(deserializeMessages(unknown)[0]!.toolExecutions?.[0]?.label).toBe("自定义标签");
+  });
+});

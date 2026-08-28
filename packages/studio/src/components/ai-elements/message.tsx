@@ -327,7 +327,10 @@ export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
     <Streamdown
       className={cn(
+        // Headings sit 15% below the global h1/h2/h3 scale: chat prose is read in
+        // a narrow column, where the page-title scale overpowers the body text.
         "size-full font-sans text-[17px] leading-[1.72] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&>p+p]:mt-4",
+        "[&_h1]:text-[1.9125rem] [&_h2]:text-[1.4875rem] [&_h3]:text-[1.0625rem]",
         className
       )}
       plugins={streamdownPlugins}
