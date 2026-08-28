@@ -20,12 +20,15 @@ export const ChatMessage = memo(function ChatMessage({
 }: ChatMessageProps) {
   const isUser = role === "user";
   const isError = content.startsWith("\u2717");
+  // Keep the author's line breaks, but collapse runs of 3+ newlines so a
+  // pasted prompt with big gaps doesn't stretch the bubble.
+  const userText = isUser ? content.replace(/\n{3,}/g, "\n\n") : content;
 
   return (
     <Message from={role}>
       <MessageContent>
         {isUser ? (
-          <div className="text-[17px] leading-[1.72]">{content}</div>
+          <div className="whitespace-pre-wrap break-words text-[17px] leading-[1.72]">{userText}</div>
         ) : isError ? (
           <div className="flex items-center gap-2 text-[17px] leading-[1.72] text-destructive">
             <XCircle size={14} className="shrink-0" />
