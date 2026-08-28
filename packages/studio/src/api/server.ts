@@ -4143,8 +4143,9 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
       if (updates.stream !== undefined) {
         existing.llm.stream = updates.stream;
       }
-      if (updates.language === "zh" || updates.language === "en") {
-        existing.language = updates.language;
+      const STUDIO_LANGUAGES: readonly StudioLanguage[] = ["zh", "en", "vi"];
+      if (typeof updates.language === "string" && (STUDIO_LANGUAGES as readonly string[]).includes(updates.language)) {
+        existing.language = updates.language as StudioLanguage;
       }
       const { writeFile: writeFileFs } = await import("node:fs/promises");
       await writeFileFs(configPath, JSON.stringify(existing, null, 2), "utf-8");
