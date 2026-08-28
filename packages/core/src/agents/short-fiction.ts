@@ -34,12 +34,28 @@ export const SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER = 650;
 export const SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER = 600;
 export const SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER = 800;
 
-// One LLM call per 3 chapters. Sized so a batch stays under the output cap of
-// endpoints that ignore max_tokens and enforce their own (~4k tokens observed),
-// including English shorts at 800 words per chapter. This is a starting guess,
-// not a load-bearing assumption: a batch that still hits the cap is split in
-// half and retried, down to a single chapter.
-export const SHORT_FICTION_CHAPTERS_PER_BATCH = 3;
+// Conservative per-call output budget. Endpoints that ignore max_tokens and
+// enforce their own have been observed cutting at roughly 1,300-2,000 tokens.
+// Sizing below that keeps the common case single-shot; adaptive halving in
+// runChapterBatches covers any endpoint stricter than this.
+const SHORT_FICTION_BATCH_OUTPUT_TOKEN_BUDGET = 1_400;
+
+// Upper clamp. Never batch more than this many chapters even when they are
+// short enough to fit, so one failed batch never costs too much rework.
+export const SHORT_FICTION_MAX_CHAPTERS_PER_BATCH = 3;
+
+// zh chapters are measured in characters (~1.44 chars/token), en chapters in
+// words (~1.3 tokens/word). See length-metrics.ts for the units.
+export function resolveChaptersPerBatch(
+  charsPerChapter: number,
+  language: ShortFictionLanguage = "zh",
+): number {
+  const tokensPerChapter = language === "en"
+    ? charsPerChapter * 1.3
+    : charsPerChapter * 0.7;
+  const fitted = Math.floor(SHORT_FICTION_BATCH_OUTPUT_TOKEN_BUDGET / tokensPerChapter);
+  return Math.min(Math.max(fitted, 1), SHORT_FICTION_MAX_CHAPTERS_PER_BATCH);
+}
 
 export interface ShortFictionBatchProgress {
   readonly batch: number;
@@ -223,7 +239,7 @@ export class ShortFictionWriterAgent extends BaseAgent {
 
   async writeDraft(input: ShortFictionDraftInput): Promise<ShortFictionBatchDraft> {
     const allChapters = Array.from({ length: input.chapterCount }, (_, index) => index + 1);
-    const groups = chunkChapters(allChapters, SHORT_FICTION_CHAPTERS_PER_BATCH);
+    const groups = chunkChapters(allChapters, resolveChaptersPerBatch(input.charsPerChapter, input.language));
 
     const fragments = await runChapterBatches({
       agentName: this.name,
@@ -278,7 +294,7 @@ export class ShortFictionWriterAgent extends BaseAgent {
     const missingChapters = findEmptyShortFictionChapters(input.draft);
     if (missingChapters.length === 0) return input.draft;
 
-    const groups = chunkChapters(missingChapters, SHORT_FICTION_CHAPTERS_PER_BATCH);
+    const groups = chunkChapters(missingChapters, resolveChaptersPerBatch(input.charsPerChapter, input.language));
     const baseRaw = input.draft.rawContent.trim();
 
     const fragments = await runChapterBatches({
@@ -341,7 +357,7 @@ export class ShortFictionDraftReviserAgent extends BaseAgent {
 
   async reviseDraft(input: ShortFictionDraftRevisionInput): Promise<ShortFictionBatchDraft> {
     const allChapters = Array.from({ length: input.chapterCount }, (_, index) => index + 1);
-    const groups = chunkChapters(allChapters, SHORT_FICTION_CHAPTERS_PER_BATCH);
+    const groups = chunkChapters(allChapters, resolveChaptersPerBatch(input.charsPerChapter, input.language));
     const v1Markdown = input.draft.rawContent.trim()
       || renderShortFictionDraftMarkdown(input.draft, input.language);
 
