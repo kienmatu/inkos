@@ -241,6 +241,33 @@ describe("stripOuterCodeFence", () => {
     expect(stripOuterCodeFence("=== CHAPTER 1 CONTENT ===\n正文")).toBe("=== CHAPTER 1 CONTENT ===\n正文");
     expect(stripOuterCodeFence("正文\n```js\ncode\n```\n更多正文")).toBe("正文\n```js\ncode\n```\n更多正文");
   });
+
+  it("strips an outer wrapper that legitimately contains its own inner fenced block", () => {
+    // The outer fence uses 4 backticks — the standard, unambiguous way to nest
+    // a 3-backtick fenced block inside another — so only the wrapper is removed.
+    const wrapped = [
+      "````markdown",
+      "=== CHAPTER 1 CONTENT ===",
+      "```js",
+      "code",
+      "```",
+      "=== CHAPTER 2 CONTENT ===",
+      "````",
+    ].join("\n");
+
+    expect(stripOuterCodeFence(wrapped)).toBe(
+      ["=== CHAPTER 1 CONTENT ===", "```js", "code", "```", "=== CHAPTER 2 CONTENT ==="].join("\n"),
+    );
+  });
+
+  it("does not corrupt an unwrapped fragment that merely opens and closes with two separate fences", () => {
+    // Not a wrapper at all: a complete fenced block, then prose, then another
+    // complete fenced block. Greedily matching first-line-to-last-line would
+    // eat the first fence's opener and leave a stray closing fence mid-chapter.
+    const unwrapped = "```js\ncode\n```\n正文\n```py\nmore\n```";
+
+    expect(stripOuterCodeFence(unwrapped)).toBe(unwrapped);
+  });
 });
 
 describe("writeDraft batching", () => {
@@ -429,9 +456,25 @@ describe("reviseDraft batching", () => {
     const agent = reviserAgent();
     const chat = spyChat(agent);
     const seen: number[][] = [];
+    const seedRanges: number[][] = [];
     chat.mockImplementation((...args: unknown[]) => {
-      const group = requestedChapters(args, 12);
+      const messages = (args[0] as unknown[]) as ReadonlyArray<{ role: string; content: string }>;
+      // The followup turn is the last user message — it alone carries the
+      // per-batch chapterRange. The seed writer turn (second message) must be
+      // unranged so it matches the whole-story v1Markdown assistant turn it is
+      // paired with; if it were ranged too, `requestedChapters` on the joined
+      // text could no longer distinguish that from the followup being ranged.
+      const userMessages = messages.filter((m) => m.role === "user");
+      const followupText = userMessages[userMessages.length - 1]!.content;
+      const group: number[] = [];
+      for (let n = 1; n <= 12; n += 1) if (followupText.includes(`=== CHAPTER ${n} CONTENT ===`)) group.push(n);
       seen.push(group);
+
+      const seedText = userMessages[0]!.content;
+      const seedRange: number[] = [];
+      for (let n = 1; n <= 12; n += 1) if (seedText.includes(`=== CHAPTER ${n} CONTENT ===`)) seedRange.push(n);
+      seedRanges.push(seedRange);
+
       return Promise.resolve({ content: batchReply(group, group[0] === 1), usage: undefined });
     });
 
@@ -441,6 +484,14 @@ describe("reviseDraft batching", () => {
     });
 
     expect(seen).toEqual([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]);
+    // The seed writer prompt is never ranged — every batch asks for all 12
+    // chapters in that turn, matching the unranged v1Markdown assistant turn.
+    expect(seedRanges).toEqual([
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    ]);
     expect(revised.chapters).toHaveLength(12);
     expect(revised.chapters.every((c) => c.content.trim().length > 0)).toBe(true);
   });
@@ -546,6 +597,11 @@ describe("runner batch progress", () => {
       await writeFile(join(root, "shorts", "elevator", "outline", "v002.md"), "## 既有大纲\n12章完整方案", "utf-8");
 
       const draft = parseShortFictionBatchDraft(fullDraftMarkdown(12), { expectedChapters: 12 });
+      // One empty chapter so continueDraft (and its "Completing" progress) runs.
+      const partialDraft = {
+        ...draft,
+        chapters: draft.chapters.map((c) => (c.number === 5 ? { ...c, content: "" } : c)),
+      };
 
       // The outline stages must be skipped by the resume path; make it loud if not.
       const outlineGuard = new Error("outline stage must be skipped when v002.md exists");
@@ -555,10 +611,17 @@ describe("runner batch progress", () => {
 
       vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft").mockImplementation(async (input) => {
         input.onBatchProgress?.({ batch: 2, totalBatches: 4, chapters: [4, 5, 6] });
+        return partialDraft;
+      });
+      vi.spyOn(ShortFictionWriterAgent.prototype, "continueDraft").mockImplementation(async (input) => {
+        input.onBatchProgress?.({ batch: 1, totalBatches: 1, chapters: [5] });
         return draft;
       });
       vi.spyOn(ShortFictionDraftReviewerAgent.prototype, "reviewDraft").mockResolvedValue("looks fine");
-      vi.spyOn(ShortFictionDraftReviserAgent.prototype, "reviseDraft").mockResolvedValue(draft);
+      vi.spyOn(ShortFictionDraftReviserAgent.prototype, "reviseDraft").mockImplementation(async (input) => {
+        input.onBatchProgress?.({ batch: 1, totalBatches: 4, chapters: [1, 2, 3] });
+        return draft;
+      });
       vi.spyOn(ShortFictionPackagingAgent.prototype, "generatePackage").mockResolvedValue({
         title: "电梯多一层", intro: "钩子", sellingPoints: ["反转"], coverPrompt: "", rawContent: "",
       });
@@ -576,6 +639,8 @@ describe("runner batch progress", () => {
       });
 
       expect(messages).toContain("Writing chapters 4-6 (batch 2/4)...");
+      expect(messages).toContain("Completing chapters 5 (batch 1/1)...");
+      expect(messages).toContain("Revising chapters 1-3 (batch 1/4)...");
     } finally {
       vi.restoreAllMocks();
       await rm(root, { recursive: true, force: true });

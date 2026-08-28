@@ -60,8 +60,31 @@ export function chunkChapters(chapters: readonly number[], size: number): number
 // sanitizeChapterContent only strips a fence at the very end of the whole string.
 export function stripOuterCodeFence(text: string): string {
   const trimmed = text.trim();
-  const match = /^```[a-zA-Z0-9_-]*\n([\s\S]*)\n```$/.exec(trimmed);
-  return match ? match[1]!.trim() : trimmed;
+  const lines = trimmed.split("\n");
+  if (lines.length < 2) return trimmed;
+
+  // The opening line must be a fence of 3+ backticks (an optional language tag
+  // allowed); the closing line must be a BARE fence of the exact same length.
+  const openMatch = /^(`{3,})[a-zA-Z0-9_-]*$/.exec(lines[0]!);
+  if (!openMatch) return trimmed;
+  const fenceLength = openMatch[1]!.length;
+  if (lines[lines.length - 1] !== "`".repeat(fenceLength)) return trimmed;
+
+  const middle = lines.slice(1, -1);
+  // Only accept this as a genuine single wrapper if no interior line opens or
+  // closes a fence of the SAME OR LONGER run length — that's the standard,
+  // unambiguous way to nest a fenced block inside another (the outer fence
+  // must use more backticks than anything nested inside it). Without that,
+  // "first line is a fence, last line is a fence" is not enough to tell a real
+  // wrapper apart from an unwrapped fragment that merely opens with one fenced
+  // block and closes with an unrelated later one (see the regression test).
+  const hasAmbiguousInnerFence = middle.some((line) => {
+    const innerRun = /^`{3,}/.exec(line)?.[0].length;
+    return innerRun !== undefined && innerRun >= fenceLength;
+  });
+  if (hasAmbiguousInnerFence) return trimmed;
+
+  return middle.join("\n").trim();
 }
 
 export type { ShortFictionLanguage } from "../prompts/short-fiction.js";
@@ -344,7 +367,10 @@ export class ShortFictionDraftReviserAgent extends BaseAgent {
 
         return [
           { role: "system", content: buildShortFictionWriterSystemPrompt(input.language) },
-          { role: "user", content: buildShortFictionWriterUserPrompt({ ...input, chapterRange }, input.language) },
+          // Unranged, matching the whole-story v1Markdown assistant turn below —
+          // a ranged seed here would show the model, in its own context, that
+          // the range constraint issued in the followup is one it may ignore.
+          { role: "user", content: buildShortFictionWriterUserPrompt(input, input.language) },
           { role: "assistant", content: v1Markdown },
           { role: "user", content: buildShortFictionDraftRevisionFollowup({
             ...input,
@@ -619,7 +645,7 @@ function fallbackChapterTitle(number: number, language: ShortFictionLanguage): s
 // multiplier is calibrated for zh chars (~1-1.5 tokens each); for en words
 // (~1.3-1.5 tokens each) it simply leaves extra headroom, which is safe for a cap.
 function estimateShortFictionMaxTokens(chapterCount: number, charsPerChapter: number): number {
-  return Math.max(12_288, Math.ceil(chapterCount * charsPerChapter * 2.2) + 4096);
+  return Math.max(4096, Math.ceil(chapterCount * charsPerChapter * 2.2) + 4096);
 }
 
 function isOutputLimitError(error: unknown): boolean {
@@ -658,7 +684,7 @@ async function runChapterBatches(params: {
       if (!isOutputLimitError(error) || chapters.length <= 1) throw error;
       const mid = Math.ceil(chapters.length / 2);
       params.log?.warn(
-        `[${params.agentName}] output limit on chapters ${chapters.join(", ")}; splitting the batch.`,
+        `[${params.agentName}] output limit on chapters ${chapters.join(", ")}; splitting the batch: ${String(error)}`,
       );
       await runOneGroup(chapters.slice(0, mid));
       await runOneGroup(chapters.slice(mid));
