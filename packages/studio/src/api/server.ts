@@ -1237,12 +1237,20 @@ async function executeConfirmedProductionAction(args: {
   readonly disabledSkills?: ReadonlyArray<string>;
   readonly playMode?: PlayMode;
   readonly language?: StudioLanguage;
+  /**
+   * The Studio UI language. `language` above is a WRITING language and can only
+   * be "zh" | "en" (see the note at the /agent call site), so display-only
+   * labels resolved from it can never come out Vietnamese. Those labels take
+   * this instead; everything that feeds production still takes `language`.
+   */
+  readonly uiLanguage?: StudioLanguage;
   readonly taskId: string;
   readonly sourceRequestId?: string;
   readonly signal: AbortSignal;
   readonly onTaskChange: (exec: CollectedToolExec) => Promise<void>;
 }): Promise<CollectedToolExec> {
   const lang = args.language ?? "vi";
+  const uiLang = args.uiLanguage ?? lang;
   const id = args.taskId;
   const actionPayload = args.actionPayload;
   const configuredSkills = await loadAvailableAgentSkills({ projectRoot: args.root });
@@ -1569,10 +1577,10 @@ async function executeConfirmedProductionAction(args: {
     id,
     tool: tool.name,
     agent,
-    label: resolveToolLabel(tool.name, agent, lang),
+    label: resolveToolLabel(tool.name, agent, uiLang),
     status: "running",
     args: params,
-    stages: agent ? pipelineStages(agent, lang)?.map(label => ({ label, status: "pending" as const })) : undefined,
+    stages: agent ? pipelineStages(agent, uiLang)?.map(label => ({ label, status: "pending" as const })) : undefined,
     startedAt: Date.now(),
   };
 
@@ -2790,6 +2798,9 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
         }
       : sseSink;
     const logger = createLogger({ tag: "studio", sinks: [scopedSseSink, consoleSink] });
+    // Progress lines are read by the person watching Studio, so they follow the
+    // UI language rather than the book's writing language.
+    const logLanguage = await currentProjectLanguage();
     return {
       client: overrides?.client ?? createLLMClient(currentConfig.llm),
       model: overrides?.model ?? currentConfig.llm.model,
@@ -2802,6 +2813,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
       modelOverrides: currentConfig.modelOverrides,
       notifyChannels: currentConfig.notify,
       logger,
+      logLanguage,
       onContextCompression: (event) => {
         broadcast("context:compression", {
           ...(overrides?.sessionIdForSSE ? { sessionId: overrides.sessionIdForSSE } : {}),
@@ -4972,6 +4984,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
             requestedSkills,
             disabledSkills,
             language: surfaceLanguage,
+            uiLanguage: language,
             taskId,
             sourceRequestId,
             signal: taskController.signal,

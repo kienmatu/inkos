@@ -169,7 +169,7 @@ async function exportBookToPath(state: StateLike, bookId: string, options: {
   return writeExportArtifact(state, bookId, options);
 }
 
-function mapStageMessageToStatus(message: string): InteractionEvent["status"] | undefined {
+export function mapStageMessageToStatus(message: string): InteractionEvent["status"] | undefined {
   const lower = message.trim().toLowerCase();
   if (
     lower.includes("planning next chapter")
@@ -180,24 +180,31 @@ function mapStageMessageToStatus(message: string): InteractionEvent["status"] | 
     || message.includes("生成基础设定")
     || message.includes("审核基础设定")
     || message.includes("准备章节输入")
+    || lower.includes("lập kế hoạch cho chương kế tiếp")
+    || lower.includes("tạo thiết lập nền tảng")
+    || lower.includes("rà soát thiết lập nền tảng")
+    || lower.includes("chuẩn bị dữ liệu chương")
   ) {
     return "planning";
   }
   if (
     lower.includes("composing chapter runtime context")
     || message.includes("组装章节运行时上下文")
+    || lower.includes("dựng ngữ cảnh chạy của chương")
   ) {
     return "composing";
   }
   if (
     lower.includes("writing chapter draft")
     || message.includes("撰写章节草稿")
+    || lower.includes("viết bản nháp chương")
   ) {
     return "writing";
   }
   if (
     lower.includes("auditing draft")
     || message.includes("审计草稿")
+    || lower.includes("kiểm duyệt bản nháp")
   ) {
     return "assessing";
   }
@@ -209,6 +216,8 @@ function mapStageMessageToStatus(message: string): InteractionEvent["status"] | 
     || message.includes("自动修复")
     || message.includes("整章改写")
     || message.includes("修订第")
+    || lower.includes("vòng sửa")
+    || lower.includes("chỉnh sửa chương")
   ) {
     return "repairing";
   }
@@ -225,18 +234,28 @@ function mapStageMessageToStatus(message: string): InteractionEvent["status"] | 
     || message.includes("校验真相文件变更")
     || message.includes("生成最终真相文件")
     || message.includes("同步记忆索引")
+    || lower.includes("lưu ")
+    || lower.includes("snapshot")
+    || lower.includes("ghi tệp")
+    || lower.includes("cập nhật chỉ mục")
+    || lower.includes("kiểm tra thay đổi tệp truth")
+    || lower.includes("tạo tệp truth cuối cùng")
+    || lower.includes("đồng bộ chỉ mục bộ nhớ")
   ) {
     return "persisting";
   }
   return undefined;
 }
 
-function extractStageDetail(message: string): string | undefined {
+export function extractStageDetail(message: string): string | undefined {
   if (message.startsWith("Stage: ")) {
     return message.slice("Stage: ".length).trim();
   }
   if (message.startsWith("阶段：")) {
     return message.slice("阶段：".length).trim();
+  }
+  if (message.startsWith("Bước: ")) {
+    return message.slice("Bước: ".length).trim();
   }
   return undefined;
 }

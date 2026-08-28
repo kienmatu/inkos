@@ -1,4 +1,5 @@
 import type { AuditIssue, AuditResult } from "../agents/continuity.js";
+import type { LogMessage } from "../utils/log-message.js";
 import type { ReviseMode, ReviseOutput } from "../agents/reviser.js";
 import type { WriteChapterOutput } from "../agents/writer.js";
 import type { ChapterIntent, ChapterMemo, ContextPackage, RuleStack } from "../models/input-governance.js";
@@ -97,8 +98,8 @@ export async function runChapterReviewCycle(params: {
   /** Re-run deterministic post-write checks (chapter-ref, paragraph shape, etc.) on any content. */
   readonly runPostWriteChecks?: (content: string) => ReadonlyArray<AuditIssue>;
   readonly maxReviewIterations?: number;
-  readonly logWarn: (message: { zh: string; en: string }) => void;
-  readonly logStage: (message: { zh: string; en: string }) => void;
+  readonly logWarn: (message: LogMessage) => void;
+  readonly logStage: (message: LogMessage) => void;
 }): Promise<ChapterReviewCycleResult> {
   let totalUsage = params.initialUsage;
   let finalContent = params.normalizePostWriteSurface?.(params.initialOutput.content)
@@ -181,7 +182,7 @@ export async function runChapterReviewCycle(params: {
   // projects can raise it when they accept slower but more persistent repair.
   // ---------------------------------------------------------------------------
   const maxReviewIterations = Math.max(0, Math.floor(params.maxReviewIterations ?? DEFAULT_MAX_REVIEW_ITERATIONS));
-  params.logStage({ zh: "审计草稿", en: "auditing draft" });
+  params.logStage({ zh: "审计草稿", en: "auditing draft", vi: "Kiểm duyệt bản nháp" });
   const initial = await assess(finalContent);
 
   const snapshots: ReviewSnapshot[] = [{
@@ -217,6 +218,7 @@ export async function runChapterReviewCycle(params: {
       params.logStage({
         zh: `修复轮次 ${iteration + 1}/${maxReviewIterations}（当前 ${currentAudit.score} 分）`,
         en: `repair iteration ${iteration + 1}/${maxReviewIterations} (current score: ${currentAudit.score})`,
+        vi: `Vòng sửa ${iteration + 1}/${maxReviewIterations} (điểm hiện tại: ${currentAudit.score})`,
       });
 
       const reviser = params.createReviser();
@@ -261,6 +263,7 @@ export async function runChapterReviewCycle(params: {
         params.logStage({
           zh: `修复后达到通过线（${nextAssessment.score} 分），退出循环`,
           en: `repair reached pass threshold (${nextAssessment.score}), exiting loop`,
+          vi: `Đã đạt ngưỡng đạt sau khi sửa (${nextAssessment.score}), kết thúc vòng lặp`,
         });
         finalContent = revisedContent;
         finalWordCount = revisedWordCount;

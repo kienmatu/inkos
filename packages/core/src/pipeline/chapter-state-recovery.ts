@@ -1,4 +1,5 @@
 import type { AuditIssue } from "../agents/continuity.js";
+import type { LogMessage } from "../utils/log-message.js";
 import type {
   ValidationResult,
   ValidationWarning,
@@ -31,7 +32,7 @@ export interface SettlementRetryParams {
   readonly oldHooks: string;
   readonly originalValidation: ValidationResult;
   readonly language: LengthLanguage;
-  readonly logWarn?: (message: { zh: string; en: string }) => void;
+  readonly logWarn?: (message: LogMessage) => void;
   readonly logger?: Pick<Logger, "warn">;
 }
 

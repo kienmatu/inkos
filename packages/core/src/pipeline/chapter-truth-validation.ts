@@ -1,4 +1,5 @@
 import type { AuditIssue, AuditResult } from "../agents/continuity.js";
+import type { LogMessage } from "../utils/log-message.js";
 import type { StateValidationAuthorityContext, ValidationResult, StateValidatorAgent } from "../agents/state-validator.js";
 import type { WriteChapterOutput, WriterAgent } from "../agents/writer.js";
 import type { BookConfig } from "../models/book.js";
@@ -32,7 +33,7 @@ export async function validateChapterTruthPersistence(params: {
     ruleStack: RuleStack;
   };
   readonly language: LengthLanguage;
-  readonly logWarn: (message: { zh: string; en: string }) => void;
+  readonly logWarn: (message: LogMessage) => void;
   readonly logger?: Pick<Logger, "warn">;
 }): Promise<{
   readonly validation: ValidationResult;
