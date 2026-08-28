@@ -20,6 +20,59 @@ and existing Chinese users are not broken, but it is **no longer maintained**:
 - When touching a file that mixes both, keep the Chinese as-is and add new content in
   English rather than expanding the Chinese side.
 
+### Language defaults in code
+
+The policy above governs prose. This governs signatures, and it is the rule most easily
+broken while following the other one.
+
+**A function that takes a language and can be called without one must default to `"en"`.**
+A `"zh"` default means a forgotten argument silently emits Chinese into an English path —
+the failure mode that produced the parity work in `packages/core/src/agents/*-prompts.ts`,
+where nine prompt builders were Chinese-only while being called from the English branch.
+
+`packages/core/src/utils/language.ts` already states the invariant:
+
+```ts
+// Anything that is not exactly "zh" resolves to "en", so an unrecognised value
+// can never silently fall through to Chinese.
+export function toWritingLanguage(lang: string | undefined): WritingLanguage {
+  return lang === "zh" ? "zh" : "en";
+}
+```
+
+Vietnamese is a UI language only — `toWritingLanguage("vi") === "en"` — so a Vietnamese
+interface writes English prose, and the English path is not a niche one.
+
+The one deliberate exception is `inferLanguage()` in the same file, which **guesses** a
+language from free text and defaults to `"zh"` to preserve behaviour for existing Chinese
+briefs. The distinction is guessing versus narrowing: a function handed a language it must
+merely narrow has no license to fall back to Chinese, while a function inferring one from
+ambiguous input does.
+
+**Known deviation:** several prompt builders in `agents/writer-prompts.ts` and
+`agents/fanfic-prompt-sections.ts` currently declare `language: "zh" | "en" = "zh"`. They
+are safe today because every call site passes the argument explicitly, and
+`__tests__/en-prompt-parity.test.ts` renders the English path. They should be flipped to
+`"en"`; until they are, do not copy that shape into new code.
+
+### Prompt parity
+
+Prompts in `packages/core/src/agents/` branch on language. When adding or fixing an
+English branch:
+
+- The Chinese branch must remain **byte-identical in what it renders**. Add an English
+  branch; never edit Chinese text to make room for one.
+- Do not convert Chinese character counts into English word counts by copying the number.
+  The conversion, documented at `utils/length-metrics.ts`, is 3000 Chinese characters ≈
+  2000 English words. A threshold pegged to something physical — a phone screen, a scene —
+  should be re-derived for English rather than scaled.
+- English craft may diverge from the Chinese doctrine where the Chinese convention would
+  produce prose English readers reject. Say so in the commit message when it does.
+- `__tests__/en-prompt-parity.test.ts` renders the English prompt builders and fails on
+  CJK or on lengths expressed in characters. It does not cover every builder; the ones it
+  misses are named in a comment above `ENGLISH_PROMPTS`. Extend it rather than working
+  around it.
+
 ## Answer structure
 
 Answer technical questions with a visible line of reasoning, not a pile of near-synonymous
