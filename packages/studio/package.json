@@ -1,6 +1,6 @@
 {
   "name": "@kienmatu/inkos-studio",
-  "version": "0.1.3",
+  "version": "1.0.0",
   "description": "InkOS Studio web workbench for novels, short fiction, scripts, interactive film and worlds, and translation",
   "type": "module",
   "main": "dist/api/index.js",
