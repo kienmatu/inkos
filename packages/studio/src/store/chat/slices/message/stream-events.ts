@@ -643,23 +643,23 @@ export function attachSessionStreamListeners({
 
 function compressionLabel(category: ContextCompressionCategory): string {
   return category === "session_context"
-    ? tr("整理会话记忆", "Organize session memory")
-    : tr("压缩故事上下文", "Compress story context");
+    ? tr("整理会话记忆", "Organize session memory", "Sắp xếp bộ nhớ phiên")
+    : tr("压缩故事上下文", "Compress story context", "Nén ngữ cảnh câu chuyện");
 }
 
 function compressionSourceSummary(sources: readonly string[] | undefined): string {
   if (!sources || sources.length === 0) return "";
   const preview = sources.slice(0, 3).join(", ");
   const suffix = sources.length > 3 ? ` +${sources.length - 3}` : "";
-  return `${tr("来源", "sources")} ${sources.length}: ${preview}${suffix}`;
+  return `${tr("来源", "sources", "nguồn")} ${sources.length}: ${preview}${suffix}`;
 }
 
 function compressionProgress(data: ContextCompressionEventPayload): PipelineStage["progress"] | undefined {
   if (data.phase !== "start") return undefined;
   const parts = [
-    data.protectedTokens !== undefined ? `${tr("保护", "protected")} ${data.protectedTokens}` : "",
-    data.compressibleTokens !== undefined ? `${tr("可压缩", "compressible")} ${data.compressibleTokens}` : "",
-    data.budgetTokens !== undefined ? `${tr("预算", "budget")} ${data.budgetTokens}` : "",
+    data.protectedTokens !== undefined ? `${tr("保护", "protected", "bảo vệ")} ${data.protectedTokens}` : "",
+    data.compressibleTokens !== undefined ? `${tr("可压缩", "compressible", "có thể nén")} ${data.compressibleTokens}` : "",
+    data.budgetTokens !== undefined ? `${tr("预算", "budget", "ngân sách")} ${data.budgetTokens}` : "",
     compressionSourceSummary(data.sources),
   ].filter(Boolean);
   return {
@@ -705,7 +705,7 @@ function applyContextCompressionToExecution(
       ...execution,
       stages,
       status: "error",
-      error: data.message ?? `${compressionLabel(category)}${tr("失败", " failed")}`,
+      error: data.message ?? `${compressionLabel(category)}${tr("失败", " failed", " thất bại")}`,
     };
   }
   return { ...execution, stages };
@@ -722,7 +722,7 @@ function applyContextCompressionToParts(
     running.stages = upsertCompressionStage(running.stages, category, phase, data);
     if (phase === "error") {
       running.status = "error";
-      running.error = data.message ?? `${compressionLabel(category)}${tr("失败", " failed")}`;
+      running.error = data.message ?? `${compressionLabel(category)}${tr("失败", " failed", " thất bại")}`;
     }
     return;
   }
@@ -744,6 +744,6 @@ function applyContextCompressionToParts(
   execution.label = compressionLabel(category);
   execution.stages = upsertCompressionStage(execution.stages, category, phase, data);
   if (phase !== "start") execution.completedAt = Date.now();
-  if (phase === "error") execution.error = data.message ?? `${compressionLabel(category)}${tr("失败", " failed")}`;
+  if (phase === "error") execution.error = data.message ?? `${compressionLabel(category)}${tr("失败", " failed", " thất bại")}`;
   if (!existing) parts.push({ type: "tool", execution });
 }

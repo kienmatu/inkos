@@ -1,13 +1,17 @@
+import { tr } from "../../lib/app-language";
+
 export function PlayChoicePanel(props: {
   readonly choices: ReadonlyArray<string>;
   readonly disabled: boolean;
+  // Retained for the caller's signature; display language now comes from the
+  // app-language singleton.
   readonly isZh: boolean;
   readonly onChoose: (action: string) => void;
 }) {
   if (props.choices.length === 0) {
     return (
       <div className="px-4 py-3 text-center text-xs text-muted-foreground/60">
-        {props.disabled ? (props.isZh ? "推进中…" : "Advancing…") : (props.isZh ? "等待场景给出选项…" : "Waiting for choices…")}
+        {props.disabled ? tr("推进中…", "Advancing…", "Đang xử lý…") : tr("等待场景给出选项…", "Waiting for choices…", "Đang chờ lựa chọn…")}
       </div>
     );
   }

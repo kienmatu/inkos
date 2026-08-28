@@ -1,15 +1,22 @@
 import { ChevronRight } from "lucide-react";
 import type { HoldingRow } from "./types";
-import { KIND_LABEL_ZH, KIND_LABEL_EN } from "./types";
+import { KIND_LABEL_ZH, KIND_LABEL_EN, KIND_LABEL_VI } from "./types";
+import { tr } from "../../../lib/app-language";
 
 export function HoldingSlot(props: {
   readonly row: HoldingRow;
+  // Retained for the caller's signature (ChatPage passes it to every play-hud
+  // component); display language now comes from the app-language singleton.
   readonly isZh: boolean;
   readonly generating?: boolean;
   readonly onOpen: () => void;
 }) {
-  const { row, isZh, generating, onOpen } = props;
-  const kind = (isZh ? KIND_LABEL_ZH : KIND_LABEL_EN)[row.kind] ?? row.kind;
+  const { row, generating, onOpen } = props;
+  const kind = tr(
+    KIND_LABEL_ZH[row.kind] ?? row.kind,
+    KIND_LABEL_EN[row.kind] ?? row.kind,
+    KIND_LABEL_VI[row.kind] ?? row.kind,
+  );
   return (
     <button
       type="button"
@@ -28,7 +35,7 @@ export function HoldingSlot(props: {
           <span className="truncate text-[15px] leading-6 font-semibold text-foreground">{row.label}</span>
           {row.isFresh ? (
             <span className="shrink-0 rounded-full bg-emerald-500/20 px-1.5 text-[12px] leading-5 font-medium text-emerald-300">
-              {isZh ? "新" : "NEW"}
+              {tr("新", "NEW", "MỚI")}
             </span>
           ) : null}
         </span>

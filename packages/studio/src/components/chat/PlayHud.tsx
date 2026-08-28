@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Gamepad2, X, ChevronDown, ChevronLeft } from "lucide-react";
 import { fetchJson } from "../../hooks/use-api";
+import { tr } from "../../lib/app-language";
 import {
   HOLDING_TYPES, HOLDING_GLYPH, SLOT_GLYPH, EVIDENCE_LADDER,
   type HudDetail, type HudRow, type HoldingRow, type HoldingRelation, type HoldingLifecycle,
@@ -194,7 +195,7 @@ export function buildView(run: PlayRunResponse | null): HudView | null {
       .map((e) => {
         const other = e.fromId === id ? labelOf.get(e.toId) : labelOf.get(e.fromId);
         const strength = typeof e.strength === "number" ? ` ${e.strength}` : "";
-        return { label: "关系", text: `${e.type}${strength}${other ? ` · ${other}` : ""}` };
+        return { label: tr("关系", "Relation", "Quan hệ"), text: `${e.type}${strength}${other ? ` · ${other}` : ""}` };
       });
 
   const locations: HudRow[] = entities
@@ -283,7 +284,7 @@ export function buildView(run: PlayRunResponse | null): HudView | null {
       return {
         id: slot.id, glyph: SLOT_GLYPH[slot.kind] ?? "•", label: slot.label, kind: slot.kind,
         value: text, ratio, note: null,
-        details: cause ? [{ label: "因为", text: cause }] : [],
+        details: cause ? [{ label: tr("因为", "Because", "Vì"), text: cause }] : [],
       };
     });
   const latestTime = run.currentState?.timeAdvance
@@ -293,12 +294,12 @@ export function buildView(run: PlayRunResponse | null): HudView | null {
     ? {
         id: "world-time",
         glyph: "⏳",
-        label: "世界时间",
+        label: tr("世界时间", "World time", "Thời gian thế giới"),
         value: latestTime.anchor || latestTime.elapsed || "",
         note: latestTime.rationale || null,
         details: [
-          ...(latestTime.elapsed && latestTime.anchor ? [{ label: "经过", text: latestTime.elapsed }] : []),
-          ...(latestTime.synchronized ?? []).map((text) => ({ label: "同步", text })),
+          ...(latestTime.elapsed && latestTime.anchor ? [{ label: tr("经过", "Elapsed", "Đã trôi qua"), text: latestTime.elapsed }] : []),
+          ...(latestTime.synchronized ?? []).map((text) => ({ label: tr("同步", "Synced", "Đồng bộ"), text })),
         ],
       }
     : null;
@@ -407,7 +408,7 @@ export function PlayHud(props: {
       .forEach((request) => void generate(request.key, request.body));
   }, [coverReady, effectiveImageSettings, view, run?.sceneImageUrl, generate]);
 
-  const title = props.sessionTitle?.trim() || run?.title?.trim() || (isZh ? "互动世界" : "Play World");
+  const title = props.sessionTitle?.trim() || run?.title?.trim() || tr("互动世界", "Play World", "Thế giới tương tác");
 
   // Collapsed: render nothing (the chat input row owns the prominent toggle).
   // Hooks above still run, so the run keeps polling and reporting the scene image.
@@ -420,7 +421,7 @@ export function PlayHud(props: {
         {view?.turn != null ? (
           <div className="flex shrink-0 flex-col items-center leading-none">
             <span className="text-[24px] leading-6 font-extrabold text-primary">{view.turn}</span>
-            <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/60">{isZh ? "幕" : "Turn"}</span>
+            <span className="text-[12px] font-semibold uppercase tracking-wider text-muted-foreground/60">{tr("幕", "Turn", "Màn")}</span>
           </div>
         ) : (
           <Gamepad2 size={16} className="shrink-0 text-primary" />
@@ -429,10 +430,10 @@ export function PlayHud(props: {
           <div className="truncate text-[16px] leading-6 font-bold text-foreground">{title}</div>
           <div className="mt-0.5 text-[14px] leading-5 text-muted-foreground">
             {view?.turn == null
-              ? (isZh ? "尚未开始" : "Not started")
+              ? tr("尚未开始", "Not started", "Chưa bắt đầu")
               : view?.mode
-                ? (view.mode === "guided" ? (isZh ? "互动模式" : "Guided") : (isZh ? "开放模式" : "Open"))
-                : (isZh ? "互动世界" : "Play World")}
+                ? (view.mode === "guided" ? tr("互动模式", "Guided", "Chế độ dẫn dắt") : tr("开放模式", "Open", "Chế độ mở"))
+                : tr("互动世界", "Play World", "Thế giới tương tác")}
           </div>
         </div>
         {view?.time?.value ? (
@@ -440,7 +441,7 @@ export function PlayHud(props: {
             {view.time.value}
           </span>
         ) : null}
-        <button type="button" onClick={() => { onClose(); setSelectedHoldingId(null); setSelectedFacingId(null); }} className="shrink-0 text-muted-foreground hover:text-foreground" title={isZh ? "收起" : "Collapse"}>
+        <button type="button" onClick={() => { onClose(); setSelectedHoldingId(null); setSelectedFacingId(null); }} className="shrink-0 text-muted-foreground hover:text-foreground" title={tr("收起", "Collapse", "Thu gọn")}>
           <X size={15} />
         </button>
       </header>
@@ -449,11 +450,13 @@ export function PlayHud(props: {
         {!view ? (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border/50 bg-secondary/10 px-4 py-8 text-center">
             <span className="text-3xl opacity-80">🎲</span>
-            <p className="text-[16px] leading-6 font-semibold text-foreground">{isZh ? "这个世界还在沉睡" : "This world is still asleep"}</p>
+            <p className="text-[16px] leading-6 font-semibold text-foreground">{tr("这个世界还在沉睡", "This world is still asleep", "Thế giới này vẫn còn đang ngủ")}</p>
             <p className="text-[14px] leading-6 text-muted-foreground">
-              {isZh
-                ? "在左边写下你的第一个动作，人物、线索、状态会在这里逐渐点亮。"
-                : "Take your first action on the left — characters, clues, and state will light up here."}
+              {tr(
+                "在左边写下你的第一个动作，人物、线索、状态会在这里逐渐点亮。",
+                "Take your first action on the left — characters, clues, and state will light up here.",
+                "Viết hành động đầu tiên của bạn ở bên trái — nhân vật, manh mối và trạng thái sẽ dần hiện ra ở đây.",
+              )}
             </p>
           </div>
         ) : selectedHolding ? (
@@ -473,7 +476,7 @@ export function PlayHud(props: {
           <>
             {view.time && (view.time.note || view.time.details.length > 0) ? (
               <Zone
-                title={isZh ? "世界时间" : "World time"}
+                title={tr("世界时间", "World time", "Thời gian thế giới")}
                 icon="⏳"
                 empty={false}
                 emptyText=""
@@ -482,10 +485,10 @@ export function PlayHud(props: {
               </Zone>
             ) : null}
             <Zone
-              title={isZh ? "我面对的" : "Around me"}
+              title={tr("我面对的", "Around me", "Xung quanh tôi")}
               icon="🧭"
               empty={view.facing.length === 0}
-              emptyText={isZh ? "周围还没有出现地点或人物" : "No places or people around yet"}
+              emptyText={tr("周围还没有出现地点或人物", "No places or people around yet", "Chưa có địa điểm hay nhân vật nào xuất hiện")}
             >
               {view.facing.map((row) => (
                 <Row
@@ -499,10 +502,10 @@ export function PlayHud(props: {
             </Zone>
 
             <Zone
-              title={isZh ? "我握有的" : "What I hold"}
+              title={tr("我握有的", "What I hold", "Những gì tôi có")}
               icon="🎒"
               empty={view.holdings.length === 0}
-              emptyText={isZh ? "还没有获得物品、证据或线索" : "No items, evidence, or clues yet"}
+              emptyText={tr("还没有获得物品、证据或线索", "No items, evidence, or clues yet", "Chưa có vật phẩm, chứng cứ hay manh mối nào")}
             >
               {view.holdings.map((row) => (
                 <HoldingSlot
@@ -516,10 +519,14 @@ export function PlayHud(props: {
             </Zone>
 
             <Zone
-              title={isZh ? "状态" : "State"}
+              title={tr("状态", "State", "Trạng thái")}
               icon="📊"
               empty={view.meters.length === 0}
-              emptyText={isZh ? "还没有出现数值（压力、资源、关系、倒计时等）" : "No meters yet (pressure, resources, relations, timers…)"}
+              emptyText={tr(
+                "还没有出现数值（压力、资源、关系、倒计时等）",
+                "No meters yet (pressure, resources, relations, timers…)",
+                "Chưa có chỉ số nào (áp lực, tài nguyên, quan hệ, đếm ngược…)",
+              )}
             >
               {view.meters.map((row) => (
                 <StateGauge key={row.id} row={row} />
@@ -567,14 +574,16 @@ function Zone(props: {
 
 function HudRowInspect(props: {
   readonly row: HudRow;
+  // Retained for the caller's signature; display language now comes from the
+  // app-language singleton.
   readonly isZh: boolean;
   readonly onBack: () => void;
 }) {
-  const { row, isZh, onBack } = props;
+  const { row, onBack } = props;
   return (
     <div className="min-w-0 space-y-3">
       <button type="button" onClick={onBack} className="flex items-center gap-1 text-[14px] leading-6 text-muted-foreground hover:text-foreground">
-        <ChevronLeft size={14} /> {isZh ? "返回" : "Back"}
+        <ChevronLeft size={14} /> {tr("返回", "Back", "Quay lại")}
       </button>
 
       <div className="min-w-0 overflow-hidden rounded-xl border border-border/40 bg-secondary/30">
@@ -613,11 +622,12 @@ function HudRowInspect(props: {
 
 function Row({
   row,
-  isZh,
   generating,
   onOpenVisual,
 }: {
   readonly row: HudRow;
+  // Retained for the caller's signature; display language now comes from the
+  // app-language singleton.
   readonly isZh: boolean;
   readonly generating?: boolean;
   readonly onOpenVisual?: () => void;
@@ -631,7 +641,7 @@ function Row({
     <div className="min-w-0 rounded-lg border border-border/30 bg-secondary/30">
       <div
         role={interactive ? "button" : undefined}
-        aria-label={interactive ? `${row.label} ${opensVisual ? (isZh ? "查看大图" : "view image") : open ? (isZh ? "收起详情" : "collapse details") : (isZh ? "展开详情" : "show details")}` : undefined}
+        aria-label={interactive ? `${row.label} ${opensVisual ? tr("查看大图", "view image", "xem ảnh lớn") : open ? tr("收起详情", "collapse details", "thu gọn chi tiết") : tr("展开详情", "show details", "xem chi tiết")}` : undefined}
         onClick={opensVisual ? onOpenVisual : expandable ? () => setOpen((o) => !o) : undefined}
         className={`px-2.5 py-2 ${interactive ? "cursor-pointer" : ""}`}
       >

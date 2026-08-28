@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildAutoImageRequests, buildView } from "../PlayHud";
+import { setAppLanguage } from "../../../lib/app-language";
 
 describe("PlayHud buildView", () => {
+  // buildView() localizes its row labels; pin the language so these
+  // assertions do not depend on the module default (which is now "vi").
+  beforeEach(() => setAppLanguage("zh"));
+  afterEach(() => setAppLanguage("zh"));
   it("classifies held inventory from canonical graph edge roles, not status words", () => {
     const view = buildView({
       currentState: { turn: 1, mode: "guided", premise: "查一个配送柜。" },
