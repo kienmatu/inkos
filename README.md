@@ -6,10 +6,10 @@
 <h1 align="center">Story Creation AI Agent<br><sub>Creation system for long-form and short fiction, scripts, interactive film/games, IP content, and multilingual translation</sub></h1>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@actalk/inkos"><img src="https://img.shields.io/npm/v/@actalk/inkos.svg?color=cb3837&logo=npm" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@kienmatu/inkos"><img src="https://img.shields.io/npm/v/@kienmatu/inkos.svg?color=cb3837&logo=npm" alt="npm version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg" alt="License: AGPL-3.0"></a>
   <a href="https://github.com/Narcooo/inkos/stargazers"><img src="https://img.shields.io/github/stars/Narcooo/inkos?style=flat&logo=github&color=yellow" alt="GitHub stars"></a>
-  <a href="https://www.npmjs.com/package/@actalk/inkos"><img src="https://img.shields.io/npm/dm/@actalk/inkos?color=cb3837&logo=npm&label=downloads" alt="npm downloads"></a>
+  <a href="https://www.npmjs.com/package/@kienmatu/inkos"><img src="https://img.shields.io/npm/dm/@kienmatu/inkos?color=cb3837&logo=npm&label=downloads" alt="npm downloads"></a>
   <a href="https://clawhub.ai/narcooo/inkos"><img src="https://img.shields.io/badge/🦞%20ClawHub-Skill-FF6B35?labelColor=1a1a1a" alt="ClawHub Skill"></a>
 </p>
 
@@ -99,7 +99,7 @@ InkOS 1.8.0 converges the Chat Agent and every production workflow on one pi-age
 Requires **Node.js 22 or later**.
 
 ```bash
-npm i -g @actalk/inkos
+npm i -g @kienmatu/inkos
 ```
 
 ### Use via OpenClaw 🦞
@@ -147,9 +147,11 @@ Use evidence chains; do not turn clues into generic atmosphere.
 
 ### Configure
 
-InkOS now separates two configuration paths: **Studio uses visual service settings**, while **CLI / daemon / deployment can still use env overrides**. They do not silently overwrite each other.
+**You do not need a `.env` file to use InkOS.** `inkos init` creates a project with `configSource: "studio"`, and Studio always reads its model settings from the project's own service config — the env path is treated as a legacy fallback internally. Configure everything in the app.
 
-**Option 1: Studio service settings (recommended for local writing)**
+Env variables matter only when you run the CLI, the daemon, or a deployment headlessly, where there is no UI to configure.
+
+**Option 1: Studio service settings (recommended — no `.env` needed)**
 
 ```bash
 inkos init my-novel
@@ -186,10 +188,10 @@ inkos config set-global \
 
 `--lang en` sets English as the default writing language for CLI / daemon runs. Saved to `~/.inkos/.env`.
 
-You can also edit global `~/.inkos/.env` or project `.env` manually:
+You can also edit global `~/.inkos/.env` or project `.env` manually. These are **not required for Studio** — they apply to headless CLI / daemon runs:
 
 ```bash
-# Required
+# Required for headless CLI / daemon runs only (Studio does not need these)
 INKOS_LLM_PROVIDER=                               # openai / anthropic / custom (use custom for any OpenAI-compatible API)
 INKOS_LLM_BASE_URL=                               # API endpoint
 INKOS_LLM_API_KEY=                                 # API Key

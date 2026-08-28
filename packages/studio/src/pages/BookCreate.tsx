@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { toWritingLanguage, type BookCreationDraft } from "@actalk/inkos-core";
+import { toWritingLanguage, type BookCreationDraft } from "@kienmatu/inkos-core";
 import { BookPlus, CheckCircle2, RotateCcw, Sparkles } from "lucide-react";
 import { fetchJson, useApi } from "../hooks/use-api";
 import type { Theme } from "../hooks/use-theme";

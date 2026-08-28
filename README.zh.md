@@ -6,10 +6,10 @@
 <h1 align="center">Story Creation AI Agent<br><sub>面向长短篇小说、剧本剧作、互动影游、IP 内容与多语言翻译的创作智能体系统</sub></h1>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@actalk/inkos"><img src="https://img.shields.io/npm/v/@actalk/inkos.svg?color=cb3837&logo=npm" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@kienmatu/inkos"><img src="https://img.shields.io/npm/v/@kienmatu/inkos.svg?color=cb3837&logo=npm" alt="npm version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg" alt="License: AGPL-3.0"></a>
   <a href="https://github.com/Narcooo/inkos/stargazers"><img src="https://img.shields.io/github/stars/Narcooo/inkos?style=flat&logo=github&color=yellow" alt="GitHub stars"></a>
-  <a href="https://www.npmjs.com/package/@actalk/inkos"><img src="https://img.shields.io/npm/dm/@actalk/inkos?color=cb3837&logo=npm&label=downloads" alt="npm downloads"></a>
+  <a href="https://www.npmjs.com/package/@kienmatu/inkos"><img src="https://img.shields.io/npm/dm/@kienmatu/inkos?color=cb3837&logo=npm&label=downloads" alt="npm downloads"></a>
   <a href="https://clawhub.ai/narcooo/inkos"><img src="https://img.shields.io/badge/🦞%20ClawHub-Skill-FF6B35?labelColor=1a1a1a" alt="ClawHub Skill"></a>
 </p>
 
@@ -101,7 +101,7 @@ InkOS 1.8.0 把“Chat Agent 调工具”和“各类作品管线”收敛成一
 需要 **Node.js 22 或更高版本**。
 
 ```bash
-npm i -g @actalk/inkos
+npm i -g @kienmatu/inkos
 ```
 
 ### 通过 OpenClaw 使用 🦞
@@ -150,9 +150,11 @@ Use evidence chains; do not turn clues into generic atmosphere.
 
 ### 配置
 
-当前 InkOS 将 LLM 配置分成两条清晰路径：**Studio 用可视化服务配置**，**CLI / daemon / 部署环境支持 env 覆盖**。两者不会互相污染。
+**使用 InkOS 不需要 `.env` 文件。** `inkos init` 生成的项目默认 `configSource: "studio"`，Studio 始终从项目自身的服务配置读取模型设置；env 那条路径在代码里本就是 legacy 回退。直接在应用内配置即可。
 
-#### 方式一：Studio 服务配置（推荐）
+只有在无界面地跑 CLI、daemon 或部署环境时，env 变量才有意义。
+
+#### 方式一：Studio 服务配置（推荐，无需 `.env`）
 
 适合本地写作、Web 工作台和可视化管理。
 
@@ -193,7 +195,7 @@ inkos config set-global \
   --model <模型名>
 ```
 
-也可以手动写 `~/.inkos/.env` 或项目 `.env`：
+也可以手动写 `~/.inkos/.env` 或项目 `.env`。**Studio 不需要这些**，它们只作用于无界面的 CLI / daemon 运行：
 
 ```bash
 INKOS_LLM_PROVIDER=custom
