@@ -23,23 +23,60 @@ export class PlannerParseError extends Error {
 // - 1 char for "## 不要做" / "## Do not" because "无" / "N/A" / "none" /
 //   "—" are all legitimate for a chapter with no extra prohibitions; we
 //   only need to ensure the section is not whitespace-only.
+/**
+ * The canonical memo section names. The parser matches on these, the planner
+ * emits them, and the writer's memo contract must cite them — sourcing all three
+ * from one place is what stops the contract from naming sections that no memo
+ * contains.
+ */
+export const MEMO_SECTION_NAMES: ReadonlyArray<{ readonly zh: string; readonly en: string }> = [
+  { zh: "## 当前任务", en: "## Current task" },
+  { zh: "## 读者此刻在等什么", en: "## What the reader is waiting for right now" },
+  { zh: "## 该兑现的 / 暂不掀的", en: "## To pay off / to keep buried" },
+  { zh: "## 日常/过渡承担什么任务", en: "## What the slow / transitional beats carry" },
+  { zh: "## 关键抉择过三连问", en: "## Three-question check on the key choice" },
+  { zh: "## 章尾必须发生的改变", en: "## Required end-of-chapter change" },
+  { zh: "## 本章 hook 账", en: "## Hook ledger for this chapter" },
+  { zh: "## 不要做", en: "## Do not" },
+];
+
 interface RequiredSection {
   readonly zh: string;
   readonly en: string;
   readonly minContentChars: number;
 }
 
+/**
+ * The scene/length budget section. It is required by the parser but is not one
+ * of the memo body sections the planner/writer prompts cite, so it lives here
+ * rather than in MEMO_SECTION_NAMES.
+ */
+const SCENE_BUDGET_SECTION = {
+  zh: "## 场景与篇幅预算",
+  en: "## Scene and length budget",
+} as const;
+
+const DEFAULT_MIN_CONTENT_CHARS = 20;
+const RELAXED_MIN_CONTENT_CHARS = 1;
+
+/** Sections (keyed by their zh heading) that take RELAXED_MIN_CONTENT_CHARS. */
+const RELAXED_MIN_CONTENT_SECTIONS: ReadonlySet<string> = new Set(["## 不要做"]);
+
+/**
+ * Derived from MEMO_SECTION_NAMES so the headings cannot drift between what the
+ * prompts cite and what the parser accepts: the scene-budget row is prepended
+ * and a minContentChars threshold is overlaid per row.
+ */
 const REQUIRED_SECTIONS: ReadonlyArray<RequiredSection> = [
-  { zh: "## 场景与篇幅预算", en: "## Scene and length budget", minContentChars: 20 },
-  { zh: "## 当前任务", en: "## Current task", minContentChars: 20 },
-  { zh: "## 读者此刻在等什么", en: "## What the reader is waiting for right now", minContentChars: 20 },
-  { zh: "## 该兑现的 / 暂不掀的", en: "## To pay off / to keep buried", minContentChars: 20 },
-  { zh: "## 日常/过渡承担什么任务", en: "## What the slow / transitional beats carry", minContentChars: 20 },
-  { zh: "## 关键抉择过三连问", en: "## Three-question check on the key choice", minContentChars: 20 },
-  { zh: "## 章尾必须发生的改变", en: "## Required end-of-chapter change", minContentChars: 20 },
-  { zh: "## 本章 hook 账", en: "## Hook ledger for this chapter", minContentChars: 20 },
-  { zh: "## 不要做", en: "## Do not", minContentChars: 1 },
-];
+  SCENE_BUDGET_SECTION,
+  ...MEMO_SECTION_NAMES,
+].map((section) => ({
+  zh: section.zh,
+  en: section.en,
+  minContentChars: RELAXED_MIN_CONTENT_SECTIONS.has(section.zh)
+    ? RELAXED_MIN_CONTENT_CHARS
+    : DEFAULT_MIN_CONTENT_CHARS,
+}));
 
 const GOAL_HEADINGS = ["## 本章目标", "## Chapter goal"] as const;
 const THREAD_HEADINGS = ["## 关联线索", "## Thread refs", "## Related threads"] as const;

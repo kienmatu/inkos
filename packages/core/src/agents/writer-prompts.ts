@@ -5,6 +5,7 @@ import type { LengthSpec } from "../models/length-governance.js";
 import { buildFanficCanonSection, buildCharacterVoiceProfiles, buildFanficModeInstructions } from "./fanfic-prompt-sections.js";
 import { buildEnglishGenreIntro } from "./en-prompt-sections.js";
 import { buildLengthSpec } from "../utils/length-metrics.js";
+import { isGoldenOpeningChapter } from "../utils/golden-opening.js";
 
 export interface FanficContext {
   readonly fanficCanon: string;
@@ -50,15 +51,16 @@ export function buildWriterSystemPrompt(
         buildChapterMemoContract("en", governed),
         buildLengthGuidance(resolvedLengthSpec, "en"),
         buildGoldenOpeningDiscipline(chapterNumber, "en"),
-        buildGenreRules(genreProfile, genreBody),
-        buildProtagonistRules(bookRules),
+        bookRules?.enableFullCastTracking ? buildFullCastTracking("en") : "",
+        buildGenreRules(genreProfile, genreBody, "en"),
+        buildProtagonistRules(bookRules, "en"),
         buildNarrativePersonRule(bookRules, isEnglish ? "en" : "zh"),
-        buildBookRulesBody(bookRulesBody),
-        buildStyleGuide(styleGuide),
-        buildStyleFingerprint(styleFingerprint),
-        fanficContext ? buildFanficCanonSection(fanficContext.fanficCanon, fanficContext.fanficMode) : "",
-        fanficContext ? buildCharacterVoiceProfiles(fanficContext.fanficCanon) : "",
-        fanficContext ? buildFanficModeInstructions(fanficContext.fanficMode, fanficContext.allowedDeviations) : "",
+        buildBookRulesBody(bookRulesBody, "en"),
+        buildStyleGuide(styleGuide, "en"),
+        buildStyleFingerprint(styleFingerprint, "en"),
+        fanficContext ? buildFanficCanonSection(fanficContext.fanficCanon, fanficContext.fanficMode, "en") : "",
+        fanficContext ? buildCharacterVoiceProfiles(fanficContext.fanficCanon, "en") : "",
+        fanficContext ? buildFanficModeInstructions(fanficContext.fanficMode, fanficContext.allowedDeviations, "en") : "",
         // Pre-write checklist moved to style_guide.md (v10)
         outputSection,
       ]
@@ -68,16 +70,16 @@ export function buildWriterSystemPrompt(
         buildChapterMemoContract("zh", governed),
         buildLengthGuidance(resolvedLengthSpec, "zh"),
         buildGoldenOpeningDiscipline(chapterNumber, "zh"),
-        bookRules?.enableFullCastTracking ? buildFullCastTracking() : "",
-        buildGenreRules(genreProfile, genreBody),
-        buildProtagonistRules(bookRules),
+        bookRules?.enableFullCastTracking ? buildFullCastTracking("zh") : "",
+        buildGenreRules(genreProfile, genreBody, "zh"),
+        buildProtagonistRules(bookRules, "zh"),
         buildNarrativePersonRule(bookRules, isEnglish ? "en" : "zh"),
-        buildBookRulesBody(bookRulesBody),
-        buildStyleGuide(styleGuide),
-        buildStyleFingerprint(styleFingerprint),
-        fanficContext ? buildFanficCanonSection(fanficContext.fanficCanon, fanficContext.fanficMode) : "",
-        fanficContext ? buildCharacterVoiceProfiles(fanficContext.fanficCanon) : "",
-        fanficContext ? buildFanficModeInstructions(fanficContext.fanficMode, fanficContext.allowedDeviations) : "",
+        buildBookRulesBody(bookRulesBody, "zh"),
+        buildStyleGuide(styleGuide, "zh"),
+        buildStyleFingerprint(styleFingerprint, "zh"),
+        fanficContext ? buildFanficCanonSection(fanficContext.fanficCanon, fanficContext.fanficMode, "zh") : "",
+        fanficContext ? buildCharacterVoiceProfiles(fanficContext.fanficCanon, "zh") : "",
+        fanficContext ? buildFanficModeInstructions(fanficContext.fanficMode, fanficContext.allowedDeviations, "zh") : "",
         // Pre-write checklist moved to style_guide.md (v10)
         outputSection,
       ];
@@ -107,7 +109,7 @@ function buildGovernedInputContract(language: "zh" | "en", governed: boolean): s
 - If Hook Debt Briefs are provided, they contain the ORIGINAL SEED TEXT from the chapter where each hook was planted. Use this text to write a continuation or payoff that feels connected to what the reader already saw — not a vague mention, but a scene that builds on the specific promise.
 - When the explicit hook agenda names an eligible resolve target, land a concrete payoff beat that answers the reader's original question from the seed chapter.
 - When stale debt is present, do not open sibling hooks casually; clear pressure from old promises before minting fresh debt.
-- In multi-character scenes, include at least one resistance-bearing exchange instead of reducing the beat to summary or explanation.`;
+- In multi-character scenes, include at least one exchange where someone pushes back — real friction on the page, not summary or explanation.`;
   }
 
   return `## 输入治理契约
@@ -135,14 +137,14 @@ function buildChapterMemoContract(language: "zh" | "en", governed: boolean): str
 
 You will receive a chapter_memo composed of 7 markdown sections:
 
-- ## 当前任务 → the concrete action this chapter must complete; stay aligned with it throughout
-- ## 读者此刻在等什么 → controls how emotional gaps are created / delayed / paid off
-- ## 该兑现的 / 暂不掀的 → payoffs that must land this chapter + cards you must NOT reveal
-- ## 日常/过渡承担什么任务 → function map for non-conflict passages ([passage location] → [function])
-- ## 关键抉择过三连问 → three-question check every key character choice must pass
-- ## 章尾必须发生的改变 → 1-3 concrete changes the ending must deliver (info / relation / physical / power)
-- ## 本章 hook 账 → **hard correspondence rule**: each hook_id listed under advance/resolve MUST have a **concretely locatable payoff scene** in the prose — explicit characters acting on or talking about a specific object/event/piece of information, with observable actions. No "sideways hints" or "deferred to next chapter". Example: if the memo says 'advance: H007 Huzi's IOU → planted → pressured', the prose must contain a scene where Lin Qiu actually touches / sees / picks up that specific IOU and does something. An inner mention like "he remembered the IOU was still in the drawer" does NOT count. Each advance/resolve payoff scene must be at least 60 chars. Entries under defer need no prose. Entries under open only need a natural new-hook seed near the chapter end
-- ## 不要做 → hard prohibitions for this chapter
+- ## Current task → the concrete action this chapter must complete; stay aligned with it throughout
+- ## What the reader is waiting for right now → controls how emotional gaps are created / delayed / paid off
+- ## To pay off / to keep buried → payoffs that must land this chapter + cards you must NOT reveal
+- ## What the slow / transitional beats carry → function map for non-conflict passages ([passage location] → [function])
+- ## Three-question check on the key choice → three-question check every key character choice must pass
+- ## Required end-of-chapter change → 1-3 concrete changes the ending must deliver (info / relation / physical / power)
+- ## Hook ledger for this chapter → **hard correspondence rule**: each hook_id listed under advance/resolve MUST have a **concretely locatable payoff scene** in the prose — explicit characters acting on or talking about a specific object/event/piece of information, with observable actions. No oblique hints, no "saved for next chapter". Example: if the memo says 'advance: H007 Marcus's IOU → planted → pressured', the prose must contain a scene where Elena actually touches / sees / picks up that specific IOU and does something. An inner mention like "she remembered the note was still in the drawer" does NOT count. Each advance/resolve payoff must be dramatized on the page — at least one full beat of action or dialogue with a visible reaction (as a floor, ~100 words). A payoff delivered in a single narrated sentence is a mention, not a payoff. Entries under defer need no prose. Entries under open only need a natural new-hook seed near the chapter end
+- ## Do not → hard prohibitions for this chapter
 
 Address each section in order when drafting the chapter. Every section must leave a visible trace in the prose — if a section is not reflected, the chapter is incomplete. **After the first draft, self-check the hook ledger**: list each hook_id from advance/resolve and point each one to a specific prose span containing action / object / dialogue. If you cannot point to one, go back and add it; do not submit a draft where the ledger lives in the memo but nowhere in the prose — review will flag the missing payoff and ask for a concrete scene.`;
   }
@@ -189,14 +191,14 @@ export function buildGoldenOpeningDiscipline(
   chapterNumber: number | undefined,
   language: "zh" | "en",
 ): string {
-  if (chapterNumber === undefined || chapterNumber > 3) return "";
+  if (chapterNumber === undefined || !isGoldenOpeningChapter(language, chapterNumber)) return "";
 
   if (language === "en") {
     return `## Golden Opening Discipline — Chapter ${chapterNumber}
 
-This is chapter ${chapterNumber} of the opening three — your prose directly decides whether the reader stays. The Golden Three Chapters rule is a hard constraint on your sentences, not advice. Chapter 1: within the first 800 words the protagonist must trip the main-line conflict (chase, dead-end, dispossession, transmigration-as-crisis); long background paragraphs are forbidden, and worldbuilding rides on the protagonist's actions instead of being explained in a block. **The last sentence of the first 300 words (the reader's first phone screen) must land a dramatic / reversal / striking beat — "Officer, I transmigrated"-level, "I'll probably die tomorrow"-level, "I'm attending my own funeral"-level — not background or scene-setting. When the reader scrolls to the bottom of the first screen they must feel pulled into the next line.** Chapter 2: the edge — power, system, rebirth-memory, information advantage — must be **performed** (one concrete event of using it, with a visible consequence), not **announced** (a narrator paragraph saying it exists). Chapter 3: somewhere in this chapter the protagonist's next quantifiable short-term goal must surface, so the reader can name what comes next when they close the page.
+This is chapter ${chapterNumber} of the opening three. The three-chapter opening window is a hard constraint on your sentences, not advice: these chapters decide whether the reader stays. Chapter 1: within the first 500 words the protagonist must trip the main-line conflict (chase, dead end, dispossession, waking up somewhere or somewhen you shouldn't be); long background paragraphs are forbidden, and worldbuilding rides on the protagonist's actions instead of being explained in a block. **The last sentence of the first 150 words (the reader's first phone screen) must land a dramatic / reversal / striking beat, not background or scene-setting. Calibration — match this intensity; do not copy these:** "the heir is told he was never the heir"-level, or "a status window opens over the face of the woman he is bargaining with"-level, or "the family recipe turns out to be a summoning"-level. **When the reader scrolls to the bottom of the first screen they must feel pulled into the next line.** Chapter 2: the edge — power, system, rebirth-memory, information advantage — must be **performed** (one concrete event of using it, with a visible consequence), not **announced** (a narrator paragraph saying it exists). Chapter 3: somewhere in this chapter the protagonist's next quantifiable short-term goal must surface, so the reader can name what comes next when they close the page.
 
-The discipline that runs across all three opening chapters: paragraphs of three to five lines (mobile reading), verbs over adjectives, and every chapter ends on a small hook — a cliff, an unresolved question, or an emotional gap. **At most two scenes and at most two named characters who actually clash in the chapter (protagonist + one trigger/opponent; walk-on roles get a role label only, no name, no expansion). Editor Cong Yue's rule tightens the cap from 3 to 2 — readers already mix up 3.** Information is layered into action: basic facts (looks, status, situation) emerge from what the protagonist does; key world rules (system mechanics, the deeper logic) attach to plot triggers; a paragraph of pure exposition is forbidden.`;
+The discipline that runs across all three opening chapters: paragraphs of three to five lines (mobile reading), verbs over adjectives, and every chapter ends on a small hook — a cliff, an unresolved question, or an emotional gap. **At most two scenes in the chapter. Hard cap: two named characters in the chapter, and they must actually clash (protagonist + one trigger/opponent). Walk-ons get a role label — "the guard," "the auctioneer" — never a name. Three named characters is already enough for a new reader to mix up; two is safe.** Information is layered into action: basic facts (looks, status, situation) emerge from what the protagonist does; key world rules (system mechanics, the deeper logic) attach to plot triggers; a paragraph of pure exposition is forbidden.`;
   }
 
   return `## 黄金三章写作纪律 — 第 ${chapterNumber} 章
@@ -211,7 +213,16 @@ The discipline that runs across all three opening chapters: paragraphs of three 
 // Full cast tracking (conditional)
 // ---------------------------------------------------------------------------
 
-function buildFullCastTracking(): string {
+export function buildFullCastTracking(language: "zh" | "en" = "en"): string {
+  if (language === "en") {
+    return `## Full-cast tracking
+
+This book has full-cast tracking mode enabled. At the end of each chapter, POST_SETTLEMENT must additionally contain:
+- The roster of characters who appear in this chapter (name + one-line state change)
+- Changes in relationships between characters (if any)
+- Characters who do not appear but are referred to (name + reason mentioned)`;
+  }
+
   return `## 全员追踪
 
 本书启用全员追踪模式。每章结束时，POST_SETTLEMENT 必须额外包含：
@@ -224,7 +235,29 @@ function buildFullCastTracking(): string {
 // Genre-specific rules
 // ---------------------------------------------------------------------------
 
-function buildGenreRules(gp: GenreProfile, genreBody: string): string {
+export function buildGenreRules(gp: GenreProfile, genreBody: string, language: "zh" | "en" = "en"): string {
+  if (language === "en") {
+    const fatigueLineEn = gp.fatigueWords.length > 0
+      ? `- Overuse-prone words (${gp.fatigueWords.join(", ")}): at most once per chapter`
+      : "";
+
+    const chapterTypesLineEn = gp.chapterTypes.length > 0
+      ? `Decide this chapter's type before you start writing:\n${gp.chapterTypes.map(t => `- ${t}`).join("\n")}`
+      : "";
+
+    const pacingLineEn = gp.pacingRule
+      ? `- Pacing rule: ${gp.pacingRule}`
+      : "";
+
+    return [
+      `## Genre conventions (${gp.name})`,
+      fatigueLineEn,
+      pacingLineEn,
+      chapterTypesLineEn,
+      genreBody,
+    ].filter(Boolean).join("\n\n");
+  }
+
   const fatigueLine = gp.fatigueWords.length > 0
     ? `- 高疲劳词（${gp.fatigueWords.join("、")}）单章最多出现1次`
     : "";
@@ -267,10 +300,38 @@ function buildNarrativePersonRule(bookRules: BookRules | null, language: "zh" | 
 }
 
 
-function buildProtagonistRules(bookRules: BookRules | null): string {
+export function buildProtagonistRules(bookRules: BookRules | null, language: "zh" | "en" = "en"): string {
   if (!bookRules?.protagonist) return "";
 
   const p = bookRules.protagonist;
+
+  if (language === "en") {
+    const lines = [`## Protagonist hard rules (${p.name})`];
+
+    if (p.personalityLock.length > 0) {
+      lines.push(`\nPersonality lock: ${p.personalityLock.join(", ")}`);
+    }
+    if (p.behavioralConstraints.length > 0) {
+      lines.push("\nBehavioral constraints:");
+      for (const c of p.behavioralConstraints) {
+        lines.push(`- ${c}`);
+      }
+    }
+
+    if (bookRules.prohibitions.length > 0) {
+      lines.push("\nProhibitions for this book:");
+      for (const p of bookRules.prohibitions) {
+        lines.push(`- ${p}`);
+      }
+    }
+
+    if (bookRules.genreLock?.forbidden && bookRules.genreLock.forbidden.length > 0) {
+      lines.push(`\nHard style bans: the following must never appear: ${bookRules.genreLock.forbidden.join(", ")}`);
+    }
+
+    return lines.join("\n");
+  }
+
   const lines = [`## 主角铁律（${p.name}）`];
 
   if (p.personalityLock.length > 0) {
@@ -301,8 +362,9 @@ function buildProtagonistRules(bookRules: BookRules | null): string {
 // Book rules body (user-written markdown)
 // ---------------------------------------------------------------------------
 
-function buildBookRulesBody(body: string): string {
+export function buildBookRulesBody(body: string, language: "zh" | "en" = "en"): string {
   if (!body) return "";
+  if (language === "en") return `## Book-specific rules\n\n${body}`;
   return `## 本书专属规则\n\n${body}`;
 }
 
@@ -310,8 +372,9 @@ function buildBookRulesBody(body: string): string {
 // Style guide
 // ---------------------------------------------------------------------------
 
-function buildStyleGuide(styleGuide: string): string {
+export function buildStyleGuide(styleGuide: string, language: "zh" | "en" = "en"): string {
   if (!styleGuide || styleGuide === "(文件尚未创建)") return "";
+  if (language === "en") return `## Style guide\n\n${styleGuide}`;
   return `## 文风指南\n\n${styleGuide}`;
 }
 
@@ -319,8 +382,17 @@ function buildStyleGuide(styleGuide: string): string {
 // Style fingerprint (Phase 9: C3)
 // ---------------------------------------------------------------------------
 
-function buildStyleFingerprint(fingerprint?: string): string {
+export function buildStyleFingerprint(fingerprint?: string, language: "zh" | "en" = "en"): string {
   if (!fingerprint) return "";
+
+  if (language === "en") {
+    return `## Style fingerprint (target to emulate)
+
+Below are writing-style traits extracted from the reference text. Your output must match these traits as closely as possible:
+
+${fingerprint}`;
+  }
+
   return `## 文风指纹（模仿目标）
 
 以下是从参考文本中提取的写作风格特征。你的输出必须尽量贴合这些特征：
@@ -488,7 +560,7 @@ function buildEnglishPreWriteTable(gp: GenreProfile): string {
 ${resourceRow}| Hooks to resolve | Real hook_id (write none if absent) | Match the hook pool |
 | This chapter's conflict | One line | |
 | Chapter type | ${gp.chapterTypes.join(" / ")} | |
-| Risk scan | OOC / info leak / canon conflict${gp.powerScaling ? " / power-scaling break" : ""} / pacing / word fatigue | |`;
+| Risk scan | OOC / information-boundary breach / canon conflict${gp.powerScaling ? " / power-scaling break" : ""} / pacing / word overuse | |`;
 }
 
 function buildEnglishContentBlocks(lengthSpec: LengthSpec): string {

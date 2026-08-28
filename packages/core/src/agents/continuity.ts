@@ -5,6 +5,7 @@ import type { FanficMode } from "../models/book.js";
 import type { ChapterMemo, ContextPackage, RuleStack } from "../models/input-governance.js";
 import { readGenreProfile, readBookLanguage, readBookRules } from "./rules-reader.js";
 import { getFanficDimensionConfig, FANFIC_DIMENSIONS } from "./fanfic-dimensions.js";
+import { EN_AI_TELL_WORDS } from "./post-write-validator.js";
 import { readFile, readdir } from "node:fs/promises";
 import { filterHooks, filterSummaries, filterSubplots, filterEmotionalArcs, filterCharacterMatrix } from "../utils/context-filter.js";
 import { buildGovernedMemoryEvidenceBlocks } from "../utils/governed-context.js";
@@ -158,7 +159,7 @@ function buildDimensionNote(
 
   if (id === 10 && words.length > 0) {
     return language === "en"
-      ? `Fatigue words: ${words.join(", ")}. Also check AI tell markers (仿佛/不禁/宛如/竟然/忽然/猛地); warn when any appears more than once per 3,000 words.`
+      ? `Fatigue words: ${words.join(", ")}. Also check AI tell markers (${EN_AI_TELL_WORDS.join(", ")}); warn when any appears more than once per 2,000 words.`
       : `高疲劳词：${words.join("、")}。同时检查AI标记词（仿佛/不禁/宛如/竟然/忽然/猛地）密度，每3000字超过1次即warning`;
   }
 

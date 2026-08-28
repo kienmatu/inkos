@@ -454,6 +454,12 @@ export function detectParagraphLengthDrift(
   ];
 }
 
+/** English AI-tell words. Shared with the continuity reviewer's dimension 10. */
+export const EN_AI_TELL_WORDS: ReadonlyArray<string> = [
+  "delve", "tapestry", "testament", "intricate", "pivotal",
+  "vibrant", "embark", "comprehensive", "nuanced",
+];
+
 /** English-specific post-write validation rules. */
 function validatePostWriteEnglish(
   content: string,
@@ -463,8 +469,7 @@ function validatePostWriteEnglish(
   const violations: PostWriteViolation[] = [];
 
   // 1. AI-tell word density (from en-prompt-sections IRON LAW 3)
-  const aiTellWords = ["delve", "tapestry", "testament", "intricate", "pivotal", "vibrant", "embark", "comprehensive", "nuanced"];
-  for (const word of aiTellWords) {
+  for (const word of EN_AI_TELL_WORDS) {
     const regex = new RegExp(`\\b${word}\\b`, "gi");
     const matches = content.match(regex);
     if (matches && matches.length > Math.ceil(content.length / 3000)) {

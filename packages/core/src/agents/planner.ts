@@ -4,6 +4,7 @@ import { BaseAgent } from "./base.js";
 import type { BookConfig } from "../models/book.js";
 import type { LengthSpec } from "../models/length-governance.js";
 import { buildLengthSpec } from "../utils/length-metrics.js";
+import { isGoldenOpeningChapter } from "../utils/golden-opening.js";
 import { readBookRules as readAuthoritativeBookRules } from "./rules-reader.js";
 import {
   ChapterIntentSchema,
@@ -385,8 +386,7 @@ export class PlannerAgent extends BaseAgent {
   }
 
   private isGoldenOpeningChapter(language: string | undefined, chapterNumber: number): boolean {
-    const isZh = (language ?? "zh").toLowerCase().startsWith("zh");
-    return isZh ? chapterNumber <= 3 : chapterNumber <= 5;
+    return isGoldenOpeningChapter(language, chapterNumber);
   }
 
   private buildArcContext(

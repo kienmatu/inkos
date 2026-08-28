@@ -270,7 +270,7 @@ describe("Phase 5 consolidation — 7→5 sections, prompt contract", () => {
       "book_rules",
       "pending_hooks",
     ]);
-    expect(system).toContain("story_frame ≤ 3000 chars");
+    expect(system).toContain("story_frame ≤ 2000 words");
     expect(system).not.toContain("current_state 500-800 chars");
     expect(system).toContain("ordinary Markdown");
     // Rhythm universal allowance

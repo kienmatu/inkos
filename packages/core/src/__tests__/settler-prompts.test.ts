@@ -41,6 +41,7 @@ describe("settler hook identity contract", () => {
 
   it("labels supplied hooks as active or semantically relevant dormant canon", () => {
     const prompt = buildSettlerUserPrompt({
+      language: "zh",
       chapterNumber: 1,
       title: "慢了十一分钟",
       content: "孙玉珍抱钟进店。",

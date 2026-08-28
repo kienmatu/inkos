@@ -229,6 +229,6 @@ describe("buildWriterSystemPrompt", () => {
     );
 
     expect(prompt).toContain("English Variance Brief");
-    expect(prompt).toContain("resistance-bearing exchange");
+    expect(prompt).toContain("at least one exchange where someone pushes back");
   });
 });

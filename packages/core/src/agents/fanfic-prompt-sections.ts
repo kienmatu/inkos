@@ -23,10 +23,45 @@ const MODE_PREAMBLES: Record<FanficMode, string> = {
 - 关系发展应有节奏感：推进、试探、阻碍、突破`,
 };
 
+const MODE_PREAMBLES_EN: Record<FanficMode, string> = {
+  canon: `You are writing **canon-compliant fanfic**. Strictly follow canon:
+- Characters' verbal tics, speech style, and behavior patterns must match the source
+- World rules must not be violated
+- The timeline of key events must not contradict the source
+- You may fill in blanks the source left open, or explore angles it left unaddressed`,
+
+  au: `You are writing **AU (alternate-universe) fanfic**:
+- World rules may change (only the deviations already declared in allowedDeviations)
+- Characters' core personality and way of speaking should stay recognizable — readers must be able to tell who is who
+- AU deviations must be internally consistent (change one rule, and everything connected to it must follow)`,
+
+  ooc: `You are writing **OOC fanfic**:
+- Characters may deviate from their baseline personality under extreme circumstances
+- But the deviation must be driven by the situation, not change personality for no reason
+- Preserve characters' verbal tics and speech traits — even if personality shifts, their way of speaking should stay recognizable`,
+
+  cp: `You are writing **ship-centric fanfic**, centered on the pairing's interaction and relationship development:
+- The pair must have a meaningful interaction every chapter
+- The interaction style must have chemistry — not two people each doing their own thing in the same scene
+- Relationship development should have rhythm: advance, probe, obstacle, breakthrough`,
+};
+
 export function buildFanficCanonSection(
   fanficCanon: string,
   mode: FanficMode,
+  language: "zh" | "en" = "en",
 ): string {
+  if (language === "en") {
+    return `
+## Fanfic Canon Reference
+
+${MODE_PREAMBLES_EN[mode]}
+
+Below is the source canon information; you must reference it while writing:
+
+${fanficCanon}`;
+  }
+
   return `
 ## 同人正典参照
 
@@ -37,7 +72,20 @@ ${MODE_PREAMBLES[mode]}
 ${fanficCanon}`;
 }
 
-export function buildCharacterVoiceProfiles(fanficCanon: string): string {
+// NOTE on the marker below: this regex intentionally always searches for the
+// Chinese heading "## 角色档案", in both the "zh" and "en" branches. The
+// upstream fanfic_canon.md document is produced by FanficCanonImporter
+// (fanfic-canon-importer.ts), which has no language parameter at all and
+// always emits this heading in Chinese regardless of the book's language.
+// Searching for an English heading here would look for a marker the pipeline
+// never actually writes, silently breaking extraction instead of fixing
+// anything — narrower to keep matching the real data format. See the task-7
+// report for this as a flagged, out-of-scope follow-up (the importer itself
+// needs a language branch before this marker can be translated safely).
+export function buildCharacterVoiceProfiles(
+  fanficCanon: string,
+  language: "zh" | "en" = "en",
+): string {
   // Extract character table from fanfic_canon.md
   const tableMatch = fanficCanon.match(
     /## 角色档案[\s\S]*?\n(\|[^\n]+\|\n\|[-|\s]+\|\n(?:\|[^\n]+\|\n)*)/,
@@ -56,6 +104,30 @@ export function buildCharacterVoiceProfiles(fanficCanon: string): string {
     .filter((cells) => cells.length >= 5);
 
   if (rows.length === 0) return "";
+
+  if (language === "en") {
+    const profilesEn = rows.map((cells) => {
+      const [name, , , catchphrases, speakingStyle, behavior] = cells;
+      const parts: string[] = [`### ${name}`];
+      if (catchphrases && catchphrases !== "（素材未提及）") {
+        parts.push(`- Catchphrases/verbal tics: ${catchphrases}`);
+      }
+      if (speakingStyle && speakingStyle !== "（素材未提及）") {
+        parts.push(`- Speaking style: ${speakingStyle}`);
+      }
+      if (behavior && behavior !== "（素材未提及）") {
+        parts.push(`- Typical behavior: ${behavior}`);
+      }
+      return parts.join("\n");
+    });
+
+    return `
+## Character Voice Reference (fanfic-only)
+
+The dialogue and behavior of these characters must reference the source material's traits. When writing dialogue, first ask "how would this character speak in the source material?"
+
+${profilesEn.join("\n\n")}`;
+  }
 
   const profiles = rows.map((cells) => {
     const [name, , , catchphrases, speakingStyle, behavior] = cells;
@@ -94,10 +166,36 @@ const MODE_CHECKS: Record<FanficMode, string> = {
 - 互动质量检查：互动是否有化学反应（不是各干各的）？`,
 };
 
+const MODE_CHECKS_EN: Record<FanficMode, string> = {
+  canon: `- Canon compliance check: does this chapter violate the source setting? Does character dialogue match the source's verbal tics?
+- Information-boundary check: did any character reference information they should not know?`,
+
+  au: `- AU deviation list: which world rules did this chapter change? Is the change internally consistent?
+- Character recognizability check: can readers recognize the character from their dialogue?`,
+
+  ooc: `- OOC deviation log: in what ways did the character deviate from their baseline personality? What drove the deviation?
+- Verbal-tic retention check: even OOC, does their way of speaking still carry source-material traits?`,
+
+  cp: `- Ship interaction check: did the pair share a meaningful interaction this chapter? Did the relationship move?
+- Interaction quality check: does the interaction have chemistry (not each character doing their own thing)?`,
+};
+
 export function buildFanficModeInstructions(
   mode: FanficMode,
   allowedDeviations: ReadonlyArray<string>,
+  language: "zh" | "en" = "en",
 ): string {
+  if (language === "en") {
+    const deviationsBlockEn = allowedDeviations.length > 0
+      ? `\nAllowed deviations (not treated as violations):\n${allowedDeviations.map((d) => `- ${d}`).join("\n")}\n`
+      : "";
+
+    return `
+## Fanfic Self-Check (additional check inside PRE_WRITE_CHECK)
+
+${MODE_CHECKS_EN[mode]}${deviationsBlockEn}`;
+  }
+
   const deviationsBlock = allowedDeviations.length > 0
     ? `\n允许的偏离（不视为违规）：\n${allowedDeviations.map((d) => `- ${d}`).join("\n")}\n`
     : "";
