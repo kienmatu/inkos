@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildWriterSystemPrompt, buildGoldenOpeningDiscipline } from "../agents/writer-prompts.js";
 import { getPlannerMemoSystemPrompt } from "../agents/planner-prompts.js";
@@ -70,5 +71,29 @@ describe("English length thresholds are expressed in English units", () => {
     const zh = buildGoldenOpeningDiscipline(1, "zh");
     expect(zh).toContain("800 字以内");
     expect(zh).toContain("前 300 字");
+  });
+});
+
+describe("architect English output budgets", () => {
+  // The English foundation prompt is a private method, so assert on the source
+  // of the English branch rather than constructing an Architect instance.
+  const source = readFileSync(
+    new URL("../agents/architect.ts", import.meta.url),
+    "utf-8",
+  );
+  // Use lastIndexOf: the first occurrence is the `this.buildEnglishFoundationPrompt(...)`
+  // call site, which precedes (and would otherwise pull in) the Chinese method body;
+  // the second occurrence is the `private buildEnglishFoundationPrompt(` definition itself.
+  const englishBranch = source.slice(source.lastIndexOf("buildEnglishFoundationPrompt"));
+
+  it("sizes the English budgets in words", () => {
+    expect(englishBranch).toContain("story_frame ≤ 2000 words");
+    expect(englishBranch).toContain("pending_hooks ≤ 1300 words");
+    expect(englishBranch).not.toContain("story_frame ≤ 3000 chars");
+  });
+
+  it("sizes the prose sections and payoff placement in words", () => {
+    expect(englishBranch).toContain("~400-600 words each");
+    expect(englishBranch).toContain("last 200 words of the chapter");
   });
 });
