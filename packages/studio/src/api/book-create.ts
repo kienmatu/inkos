@@ -42,10 +42,13 @@ export function buildStudioBookConfig(body: StudioCreateBookBody, now: string): 
     status: "outlining",
     targetChapters: body.targetChapters ?? 200,
     // body.language is a UI language ("zh"/"en"/"vi") reaching this WRITING-language
-    // field; normalize instead of dropping unrecognized values, so "vi" (and any
-    // other unexpected value) yields English, never a silent fall-through to the
-    // Chinese-defaulting genre profile.
-    chapterWordCount: body.chapterWordCount ?? defaultChapterLength(toWritingLanguage(body.language)),
+    // field. When it is genuinely OMITTED, defer to the same "zh" default the
+    // (also omitted) `language` field defers to via the genre profile below --
+    // do NOT run it through toWritingLanguage(undefined), which would resolve
+    // to "en" and desync the two. When it IS present but unrecognized (e.g.
+    // "vi"), normalize instead of dropping it, so it yields English, never a
+    // silent fall-through to the Chinese-defaulting genre profile.
+    chapterWordCount: body.chapterWordCount ?? defaultChapterLength(body.language === undefined ? "zh" : toWritingLanguage(body.language)),
     ...(body.language !== undefined ? { language: toWritingLanguage(body.language) } : {}),
     createdAt: now,
     updatedAt: now,
