@@ -192,7 +192,7 @@ if this is a pressure / conflict chapter, write "n/a — pressure chapter, no tr
 **The per-chapter accounting of active foreshadows. The writer must act on this ledger. Format (use "-" bullets under each subsection):**
 
 open:
-- [new] new hook description (<=30 chars) || reason: why open it now, do not pay it off this chapter (cap ≤ 2; recommended: for each hook resolved this chapter, open 2 new hooks; hard floor is open ≥ resolve)
+- [new] new hook description (one line, <= 20 words) || reason: why open it now, do not pay it off this chapter (cap ≤ 2; recommended: for each hook resolved this chapter, open 2 new hooks; hard floor is open ≥ resolve)
 
 advance:
 - H007 "Huzi's IOU" → Lin Qiu tries to tear it, gets stopped (planted → pressured)
@@ -215,7 +215,7 @@ defer:
 
 ## Output requirements
 
-- "## Chapter goal" is no more than 50 characters
+- "## Chapter goal" is one or two sentences, no more than 35 words
 - "## Thread refs" is a Markdown bullet list of ids picked from the input pending_hooks / subplot_board; write "none" if empty
 - "## Scene and length budget" allocates the requested length across 2-5 real scenes. The scene budgets must total within the supplied hard range. Never pad with recap, repeated interiority, or a new subplot.
 - Every level-2 heading (##) must appear; none may be empty
