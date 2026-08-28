@@ -171,7 +171,7 @@ describe("batch-mode chapter shaping", () => {
     const en = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION, mode: "batch" }, "en");
     const zh = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION, mode: "batch" }, "zh");
 
-    expect(en).toMatch(/find (these|this) chapters? entr/i);
+    expect(en).toMatch(/find (these|this) chapters? entr\w* in the story plan below/i);
     expect(zh).toContain("在下面的故事方案里找到这几章的条目");
   });
 
