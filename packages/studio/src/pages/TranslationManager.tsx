@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Theme } from "../hooks/use-theme";
-import type { TFunction } from "../hooks/use-i18n";
+import { useI18n, type TFunction } from "../hooks/use-i18n";
 import { useColors } from "../hooks/use-colors";
 import { tr } from "../lib/app-language";
 import { fetchJson, useApi } from "../hooks/use-api";
@@ -122,13 +122,39 @@ const LANGUAGE_PRESETS_EN = [
   "Turkish",
 ] as const;
 
+// These names are not codes: they're passed straight through as free-text,
+// human-readable language names to the translation LLM prompt (see
+// packages/core/src/agent/agent-tools.ts sourceLanguage/targetLanguage
+// descriptions — "human-readable name", "do not require ISO abbreviations").
+// So unlike a book's writing language, there is no separate value/label split
+// to preserve here: showing and submitting the Vietnamese name is safe, and
+// it's what a Vietnamese-UI user actually typed or picked.
+const LANGUAGE_PRESETS_VI = [
+  "Tự động nhận diện",
+  "Tiếng Trung (giản thể)",
+  "Tiếng Trung (phồn thể)",
+  "Tiếng Anh",
+  "Tiếng Nhật",
+  "Tiếng Hàn",
+  "Tiếng Pháp",
+  "Tiếng Đức",
+  "Tiếng Tây Ban Nha",
+  "Tiếng Bồ Đào Nha",
+  "Tiếng Nga",
+  "Tiếng Ả Rập",
+  "Tiếng Indonesia",
+  "Tiếng Việt",
+  "Tiếng Thái",
+  "Tiếng Ý",
+  "Tiếng Thổ Nhĩ Kỳ",
+] as const;
+
 export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunction }) {
   const c = useColors(theme);
-  // Content-language data (source/target for translation, and the presets used to
-  // pick them): zh/en only, per the project invariant. Not UI chrome, so this
-  // stays keyed off isZh rather than routed through tr().
-  const isZh = t("nav.connected") === "已连接";
-  const languagePresets = isZh ? LANGUAGE_PRESETS_ZH : LANGUAGE_PRESETS_EN;
+  const { lang } = useI18n();
+  const languagePresets = lang === "zh" ? LANGUAGE_PRESETS_ZH : lang === "vi" ? LANGUAGE_PRESETS_VI : LANGUAGE_PRESETS_EN;
+  const autoDetectLabel = lang === "zh" ? "自动识别" : lang === "vi" ? "Tự động nhận diện" : "Auto detect";
+  const defaultTargetLanguage = lang === "zh" ? "中文（简体）" : lang === "vi" ? "Tiếng Việt" : "English";
   const { data, loading, error, refetch } = useApi<TranslationListResponse>("/translations");
   const [selectedId, setSelectedId] = useState("");
   const [detail, setDetail] = useState<TranslationDetailResponse | null>(null);
@@ -138,8 +164,8 @@ export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; 
   const [file, setFile] = useState<File | null>(null);
   const [uploaded, setUploaded] = useState<TranslationUploadResponse | null>(null);
   const [title, setTitle] = useState("");
-  const [sourceLanguage, setSourceLanguage] = useState(isZh ? "自动识别" : "Auto detect");
-  const [targetLanguage, setTargetLanguage] = useState(isZh ? "中文（简体）" : "English");
+  const [sourceLanguage, setSourceLanguage] = useState(autoDetectLabel);
+  const [targetLanguage, setTargetLanguage] = useState(defaultTargetLanguage);
   const [segmentMaxChars, setSegmentMaxChars] = useState(1200);
   const [previewChapterNumber, setPreviewChapterNumber] = useState<number | null>(null);
 
@@ -339,7 +365,7 @@ export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; 
               {languagePresets.map((language) => <option key={`source-${language}`} value={language} />)}
             </datalist>
             <datalist id="translation-target-language-options">
-              {languagePresets.filter((language) => language !== (isZh ? "自动识别" : "Auto detect")).map((language) => (
+              {languagePresets.filter((language) => language !== autoDetectLabel).map((language) => (
                 <option key={`target-${language}`} value={language} />
               ))}
             </datalist>

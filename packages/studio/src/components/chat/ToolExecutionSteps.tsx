@@ -71,8 +71,16 @@ function StageIcon({ status }: { status: PipelineStage["status"] }) {
 function formatProgress(progress: NonNullable<PipelineStage["progress"]>): string {
   const secs = Math.round(progress.elapsedMs / 1000);
   const statusLabel = progress.status === "thinking" ? tr("思考中", "Thinking", "Đang suy nghĩ") : progress.status ?? "";
+  // The "字" unit describes the text being measured, not the interface: a
+  // Chinese chapter is naturally counted in 字 regardless of UI language, the
+  // same way book.words switches unit by the book's own writing language
+  // elsewhere in this app. So chineseChars > 0 (content) picks the unit, not
+  // the UI language. The non-Chinese branch, though, is UI chrome describing
+  // a generic character count, so that one follows the interface language.
   const chars = progress.totalChars > 0
-    ? progress.chineseChars > 0 ? `${progress.totalChars}字` : `${progress.totalChars} chars`
+    ? progress.chineseChars > 0
+      ? `${progress.totalChars}字`
+      : tr(`${progress.totalChars} 字符`, `${progress.totalChars} chars`, `${progress.totalChars} ký tự`)
     : "";
   const parts = [statusLabel, `${secs}s`, chars].filter(Boolean);
   return parts.join(" · ");

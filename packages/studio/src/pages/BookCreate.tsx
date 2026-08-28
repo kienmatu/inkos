@@ -3,8 +3,9 @@ import { toWritingLanguage, type BookCreationDraft } from "@kienmatu/inkos-core"
 import { BookPlus, CheckCircle2, RotateCcw, Sparkles } from "lucide-react";
 import { fetchJson, useApi } from "../hooks/use-api";
 import type { Theme } from "../hooks/use-theme";
-import type { TFunction } from "../hooks/use-i18n";
+import { useI18n, type TFunction } from "../hooks/use-i18n";
 import { useColors } from "../hooks/use-colors";
+import { tr, type AppLanguage } from "../lib/app-language";
 import {
   clearBookCreateSessionId,
   getBookCreateSessionId,
@@ -130,7 +131,7 @@ const PLATFORMS_EN: ReadonlyArray<PlatformOption> = [
   { value: "other", label: "Other" },
 ];
 
-const PAGE_COPY: Record<"zh" | "en", PlatformCopy> = {
+export const PAGE_COPY: Record<AppLanguage, PlatformCopy> = {
   zh: {
     idleTitle: "从一句模糊想法开始",
     idleBody: "先填清楚书名、题材和故事核心，系统会生成基础设定并进入新书工作台。",
@@ -202,6 +203,42 @@ const PAGE_COPY: Record<"zh" | "en", PlatformCopy> = {
     syncedHint: "This draft is shared with TUI and Studio Chat.",
     helperTitle: "Recommended flow",
     helperBody: "Lock the world and protagonist first, then settle the conflict, blurb, and volume-one direction. In TUI, use /draft to inspect the same draft.",
+  },
+  vi: {
+    idleTitle: "Bắt đầu từ một ý tưởng mơ hồ",
+    idleBody: "Điền tên sách, thể loại và cốt lõi câu chuyện trước. Hệ thống sẽ tạo bộ khung cơ bản và mở bàn làm việc cho sách mới.",
+    formHeading: "Thông tin cơ bản của sách",
+    formHint: "Các trường này sẽ đi thẳng vào quy trình tạo sách. Tóm tắt càng cụ thể, bộ khung cơ bản sinh ra sau đó càng ổn định.",
+    titleLabel: "Tên sách",
+    titlePlaceholder: "Ví dụ: Sổ Cái Bến Đêm",
+    genreLabel: "Thể loại",
+    genrePlaceholder: "Ví dụ: trinh thám đô thị, huyền huyễn, khoa học viễn tưởng, ngôn tình",
+    platformLabel: "Nền tảng mục tiêu",
+    targetChaptersLabel: "Số chương mục tiêu",
+    chapterWordCountLabel: "Số từ mỗi chương",
+    briefLabel: "Tóm tắt câu chuyện / thiết lập cốt lõi",
+    briefPlaceholder: "Nêu rõ thế giới quan, nhân vật chính, mục tiêu, xung đột cốt lõi và hướng đi giai đoạn đầu. Ví dụ: một thành phố cảng tương lai gần, nhân vật chính là kế toán hàng lậu muốn rửa tay gác kiếm nhưng bị vụ án cũ ở cảng kéo trở lại.",
+    createBook: "Tạo sách",
+    creatingBook: "Đang tạo…",
+    creationStatus: "Đang tạo sách. Bàn làm việc sẽ tự động mở khi hoàn tất.",
+    creationSteps: ["Lưu cấu hình sách", "Tạo bộ khung cơ bản", "Chuẩn bị bàn làm việc"],
+    assistantHeading: "Muốn để AI giúp hoàn thiện thiết lập trước?",
+    assistantHint: "Phần này là bản nháp hỗ trợ, không bắt buộc. Nếu đã có bản nháp phù hợp, bạn có thể áp dụng ngay vào biểu mẫu bên trái.",
+    applyDraft: "Áp dụng bản nháp",
+    promptLabel: "Tiếp tục hoàn thiện cuốn sách này",
+    promptPlaceholder: "Ví dụ: Tôi muốn viết truyện trinh thám thương chiến phong cách cảng thị, nhân vật chính làm ăn phi pháp rồi tìm cách rửa tay gác kiếm.",
+    promptPlaceholderFollowup: "Ví dụ: đổi thế giới quan thành thành phố cảng tương lai gần; đừng để nữ chính xuất hiện quá sớm; quyển một tập trung kiểm tra sổ sách trước khi hành động.",
+    submit: "Cập nhật bản nháp",
+    submitting: "Đang xử lý…",
+    create: "Tạo sách theo bản nháp hiện tại",
+    creating: "Đang tạo…",
+    discard: "Bỏ bản nháp",
+    draftHeading: "Bản nháp thiết lập cơ bản hiện tại",
+    missingHeading: "Vẫn còn thiếu những thông tin quan trọng sau",
+    missingHint: "Không cần điền đầy đủ mọi trường ngay lập tức, nhưng đừng vội tạo sách khi vẫn còn thiếu quá nhiều.",
+    syncedHint: "Bản nháp này dùng chung với TUI / Studio Chat.",
+    helperTitle: "Gợi ý cách triển khai",
+    helperBody: "Chốt thế giới quan và nhân vật chính trước, rồi mới đến xung đột cốt lõi, tóm tắt và hướng đi quyển một. Muốn xem lại bản nháp hiện tại, dùng lệnh /draft trong TUI.",
   },
 };
 
@@ -301,7 +338,7 @@ export function canCreateFromDraft(draft?: BookCreationDraft): boolean {
   );
 }
 
-const DRAFT_STAGE_LABELS: Record<"zh" | "en", Record<string, string>> = {
+export const DRAFT_STAGE_LABELS: Record<AppLanguage, Record<string, string>> = {
   zh: {
     basic: "基础信息",
     world: "世界观与规则",
@@ -348,6 +385,29 @@ const DRAFT_STAGE_LABELS: Record<"zh" | "en", Record<string, string>> = {
     currentFocus: "Current Focus",
     constraints: "Constraints",
   },
+  vi: {
+    basic: "Thông tin cơ bản",
+    world: "Thế giới quan & quy tắc",
+    characters: "Nhân vật chính & dàn nhân vật",
+    conflict: "Xung đột & đền đáp",
+    structure: "Cấu trúc & ràng buộc viết",
+    title: "Tên sách",
+    genre: "Thể loại",
+    platform: "Nền tảng",
+    language: "Ngôn ngữ",
+    targetChapters: "Số chương mục tiêu",
+    chapterWordCount: "Số từ mỗi chương",
+    worldPremise: "Thế giới quan",
+    settingNotes: "Ghi chú thiết lập",
+    protagonist: "Nhân vật chính",
+    supportingCast: "Nhân vật phụ",
+    conflictCore: "Xung đột cốt lõi",
+    blurb: "Tóm tắt",
+    authorIntent: "Ý đồ tác giả",
+    volumeOutline: "Hướng đi quyển",
+    currentFocus: "Focus hiện tại",
+    constraints: "Ràng buộc viết",
+  },
 };
 
 const DRAFT_STAGE_FIELDS: ReadonlyArray<{
@@ -374,7 +434,7 @@ function draftValueAsText(value: unknown): string | null {
 
 export function buildCreationDraftStages(
   draft: BookCreationDraft,
-  language: "zh" | "en",
+  language: AppLanguage,
 ): ReadonlyArray<DraftSummaryStage> {
   const labels = DRAFT_STAGE_LABELS[language];
   const missingSet = new Set(draft.missingFields ?? []);
@@ -588,8 +648,13 @@ export async function waitForBookReady(
 export function BookCreate({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunction }) {
   const c = useColors(theme);
   const { data: project } = useApi<{ language: string }>("/project");
+  const { lang: uiLang } = useI18n();
+  // projectLang drives everything that feeds the book itself (defaults,
+  // platform options, payload language) — Vietnamese is never a writing
+  // language, so this stays "zh" | "en". uiLang drives this page's own
+  // display copy, which does follow the interface language.
   const projectLang = resolveProjectWritingLanguage(project?.language);
-  const copy = PAGE_COPY[projectLang];
+  const copy = PAGE_COPY[uiLang];
   const platformChoices = platformOptionsForLanguage(projectLang);
 
   const [draft, setDraft] = useState<BookCreationDraft | undefined>();
@@ -603,8 +668,8 @@ export function BookCreate({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunc
   const [bookCreateSessionId, setBookCreateSessionIdState] = useState<string | null>(null);
 
   const summaryStages = useMemo(
-    () => (draft ? buildCreationDraftStages(draft, projectLang) : []),
-    [draft, projectLang],
+    () => (draft ? buildCreationDraftStages(draft, uiLang) : []),
+    [draft, uiLang],
   );
   const canSubmitForm = isBookCreateFormReady(form);
 
@@ -750,7 +815,7 @@ export function BookCreate({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunc
         body: JSON.stringify(payload),
       });
       if (!data.bookId) {
-        throw new Error(projectLang === "zh" ? "创建请求没有返回书籍 ID。" : "Create request did not return a book id.");
+        throw new Error(tr("创建请求没有返回书籍 ID。", "Create request did not return a book id.", "Yêu cầu tạo sách không trả về ID sách."));
       }
       await waitForBookReady(data.bookId);
       nav.toBook(data.bookId);
@@ -773,7 +838,7 @@ export function BookCreate({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunc
       const data = await runAgentInstruction("/create");
       const bookId = data.session?.activeBookId;
       if (!bookId) {
-        throw new Error(projectLang === "zh" ? "创建完成后没有返回书籍 ID。" : "Create succeeded but no book id was returned.");
+        throw new Error(tr("创建完成后没有返回书籍 ID。", "Create succeeded but no book id was returned.", "Tạo sách thành công nhưng không nhận được ID sách."));
       }
       setStatus(data.response ?? null);
       setDraft(undefined);
@@ -970,7 +1035,7 @@ export function BookCreate({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunc
             </div>
 
             {loadingDraft ? (
-              <div className="text-sm text-muted-foreground">{projectLang === "zh" ? "读取草案中…" : "Loading draft…"}</div>
+              <div className="text-sm text-muted-foreground">{tr("读取草案中…", "Loading draft…", "Đang tải bản nháp…")}</div>
             ) : draft ? (
               <div className="space-y-4">
                 {summaryStages.some((stage) => stage.rows.length > 0) ? (
@@ -981,10 +1046,10 @@ export function BookCreate({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunc
                           <div className="text-[10px] uppercase text-muted-foreground font-semibold">{stage.label}</div>
                           <span className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] text-muted-foreground">
                             {stage.status === "complete"
-                              ? (projectLang === "zh" ? "已补齐" : "Ready")
+                              ? tr("已补齐", "Ready", "Đã đủ")
                               : stage.status === "partial"
-                                ? (projectLang === "zh" ? "待补充" : "Partial")
-                                : (projectLang === "zh" ? "未开始" : "Missing")}
+                                ? tr("待补充", "Partial", "Cần bổ sung")
+                                : tr("未开始", "Missing", "Chưa bắt đầu")}
                           </span>
                         </div>
                         {stage.rows.length > 0 ? (

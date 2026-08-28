@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { tr } from "../lib/app-language";
 import {
   deleteServiceConfig,
   matchServiceConfigEntryForDetail,
@@ -82,7 +83,7 @@ describe("saveServiceConfig", () => {
     })).resolves.toMatchObject({
       status: {
         state: "error",
-        message: "请先输入 API Key",
+        message: tr("请先输入 API Key", "Enter an API Key first", "Vui lòng nhập API Key trước"),
       },
     });
   });

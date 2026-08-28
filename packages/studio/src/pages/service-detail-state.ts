@@ -1,4 +1,5 @@
 import { fetchJson } from "../hooks/use-api";
+import { tr } from "../lib/app-language";
 
 export interface ServiceDetailModelInfo {
   readonly id: string;
@@ -147,14 +148,14 @@ export async function saveServiceConfig(args: {
 
   if (!trimmedKey && !args.isCustom && !args.apiKeyOptional) {
     return {
-      status: { state: "error", message: "请先输入 API Key" },
+      status: { state: "error", message: tr("请先输入 API Key", "Enter an API Key first", "Vui lòng nhập API Key trước") },
       detectedModel: "",
       detectedConfig: null,
     };
   }
   if (args.isCustom && !trimmedBaseUrl) {
     return {
-      status: { state: "error", message: "请先填写 Base URL" },
+      status: { state: "error", message: tr("请先填写 Base URL", "Enter a Base URL first", "Vui lòng nhập Base URL trước") },
       detectedModel: "",
       detectedConfig: null,
     };
@@ -188,7 +189,7 @@ export async function saveServiceConfig(args: {
       }, { fetchJsonImpl });
     } catch (error) {
       return {
-        status: { state: "error", message: error instanceof Error ? error.message : "连接失败" },
+        status: { state: "error", message: error instanceof Error ? error.message : tr("连接失败", "Connection failed", "Kết nối thất bại") },
         detectedModel: "",
         detectedConfig: null,
       };
@@ -197,7 +198,7 @@ export async function saveServiceConfig(args: {
 
   if (!probe.ok) {
     return {
-      status: { state: "error", message: probe.error ?? "连接失败" },
+      status: { state: "error", message: probe.error ?? tr("连接失败", "Connection failed", "Kết nối thất bại") },
       detectedModel: "",
       detectedConfig: null,
     };

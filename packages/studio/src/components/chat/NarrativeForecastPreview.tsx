@@ -92,14 +92,17 @@ export function buildNarrativeForecastRecheckInstruction(
     : `Call get_narrative_forecast for forecast ${forecastId} and report whether it is stale.`;
 }
 
-const RISK_LABELS: Record<ForecastRisk["kind"], readonly [string, string]> = {
-  continuity: ["连续性", "Continuity"],
-  causality: ["因果", "Causality"],
-  character: ["人物", "Character"],
+const RISK_LABELS: Record<ForecastRisk["kind"], readonly [string, string, string]> = {
+  continuity: ["连续性", "Continuity", "Tính liên tục"],
+  causality: ["因果", "Causality", "Nhân quả"],
+  character: ["人物", "Character", "Nhân vật"],
 };
 
-function label(zh: boolean, values: readonly [string, string]): string {
-  return zh ? values[0] : values[1];
+// This is UI chrome (a risk-category pill label), not content language, so it
+// follows the interface language via tr() rather than the forecast's zh/en
+// writing language.
+function label(values: readonly [string, string, string]): string {
+  return tr(values[0], values[1], values[2]);
 }
 
 function RiskPills({ risks, zh }: { risks: readonly ForecastRisk[]; zh: boolean }) {
@@ -119,7 +122,7 @@ function RiskPills({ risks, zh }: { risks: readonly ForecastRisk[]; zh: boolean 
           title={risk.description}
           className="inline-flex items-center rounded-full border border-amber-500/25 bg-amber-500/8 px-2 py-0.5 text-[11px] text-amber-800 dark:text-amber-200"
         >
-          {label(zh, RISK_LABELS[risk.kind])}
+          {label(RISK_LABELS[risk.kind])}
         </span>
       ))}
     </div>
@@ -232,17 +235,18 @@ export function NarrativeForecastPreview({ exec, onSelectBranch, onRecheck }: Na
       <div className="mx-3 mb-3 mt-1 rounded-xl border border-primary/25 bg-primary/5 px-3.5 py-3">
         <div className="flex items-center gap-2 text-sm font-semibold text-primary">
           <Check size={15} />
-          {tr("候选分支已保存", "Candidate branch saved")}
+          {tr("候选分支已保存", "Candidate branch saved", "Đã lưu nhánh ứng viên")}
         </div>
         <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
           {tr(
             `${details.branchId} 已写入候选计划；正文、大纲和正史状态没有修改。`,
             `${details.branchId} was written to the candidate plan; prose, outline, and canon were not modified.`,
+            `Đã ghi ${details.branchId} vào kế hoạch ứng viên; bản thảo, dàn ý và chính sử không bị thay đổi.`,
           )}
         </p>
         {details.stale && (
           <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-            {tr("该推演基于旧正史，请核验后再继续写作。", "This forecast is stale; verify it before writing.")}
+            {tr("该推演基于旧正史，请核验后再继续写作。", "This forecast is stale; verify it before writing.", "Dự đoán này dựa trên chính sử cũ; hãy kiểm chứng trước khi viết tiếp.")}
           </p>
         )}
       </div>
