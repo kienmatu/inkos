@@ -1,6 +1,5 @@
 import { useApi } from "./use-api";
-
-type Lang = "zh" | "en";
+import type { AppLanguage } from "../lib/app-language";
 
 const strings = {
   // Header
@@ -392,12 +391,32 @@ const strings = {
 export type StringKey = keyof typeof strings;
 export type TFunction = (key: StringKey) => string;
 
+/**
+ * 三语归一：zh / en / vi 原样通过，其余（包括未设置）一律视为越南语——
+ * 越南语是新项目的默认界面语言。
+ */
+export function resolveUiLanguage(value: unknown): AppLanguage {
+  if (value === "zh") return "zh";
+  if (value === "en") return "en";
+  return "vi";
+}
+
+/**
+ * 纯函数取值，脱离 React 也可测试。
+ * 越南语缺失时回退到英文，绝不回退到中文。
+ */
+export function translate(key: StringKey, lang: AppLanguage): string {
+  const entry = strings[key] as { zh: string; en: string; vi?: string };
+  if (lang === "vi") return entry.vi ?? entry.en;
+  return lang === "en" ? entry.en : entry.zh;
+}
+
 export function useI18n() {
   const { data } = useApi<{ language: string }>("/project");
-  const lang: Lang = data?.language === "en" ? "en" : "zh";
+  const lang = resolveUiLanguage(data?.language);
 
   function t(key: StringKey): string {
-    return strings[key][lang];
+    return translate(key, lang);
   }
 
   return { t, lang };
