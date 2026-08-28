@@ -24,6 +24,7 @@ import {
   renderShortFictionDraftMarkdown,
   validateShortFictionDraftForFinal,
   type ShortFictionBatchDraft,
+  type ShortFictionBatchProgress,
   type ShortFictionLanguage,
   type ShortFictionReference,
   type ShortFictionSalesPackage,
@@ -47,6 +48,13 @@ import { toPosixPath as projectPath } from "../utils/posix-path.js";
 import { commitAtomicFileSet, type AtomicFileWrite } from "../utils/atomic-file-set.js";
 
 const SHORT_FICTION_DRAFT_COMPLETION_ATTEMPTS = 3;
+
+function batchProgressMessage(stage: string, info: ShortFictionBatchProgress): string {
+  const first = info.chapters[0];
+  const last = info.chapters[info.chapters.length - 1];
+  const range = first === last ? `${first}` : `${first}-${last}`;
+  return `${stage} chapters ${range} (batch ${info.batch}/${info.totalBatches})...`;
+}
 
 export interface ShortFictionRunRuntimes {
   readonly planner: AgentContext;
@@ -281,6 +289,7 @@ async function produceShort(
       chapterCount,
       charsPerChapter,
       language,
+      onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Writing", info)),
     });
     let missingFromDraft = findEmptyShortFictionChapters(draftV1);
     if (missingFromDraft.length > 0) {
@@ -294,6 +303,7 @@ async function produceShort(
           charsPerChapter,
           language,
           draft: draftV1,
+          onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Completing", info)),
         });
         missingFromDraft = findEmptyShortFictionChapters(draftV1);
         if (missingFromDraft.length > 0) {
@@ -328,6 +338,7 @@ async function produceShort(
         chapterCount,
         charsPerChapter,
         language,
+        onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Revising", info)),
       });
       validateShortFictionDraftForFinal(draftV2, { expectedChapters: chapterCount });
       await writeDraftArtifacts(root, baseDir, "v002", draftV2, language);

@@ -525,3 +525,60 @@ describe("continueDraft chunking", () => {
     expect(result).toBe(complete);
   });
 });
+
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  ShortFictionOutlineAgent,
+  ShortFictionOutlineReviewerAgent,
+  ShortFictionOutlineReviserAgent,
+  ShortFictionDraftReviewerAgent,
+  ShortFictionPackagingAgent,
+} from "../agents/short-fiction.js";
+import { runShortFictionProduction } from "../pipeline/short-fiction-runner.js";
+
+describe("runner batch progress", () => {
+  it("reports each draft batch through onProgress", async () => {
+    const root = await mkdtemp(join(tmpdir(), "inkos-shortbatch-"));
+    try {
+      await mkdir(join(root, "shorts", "elevator", "outline"), { recursive: true });
+      await writeFile(join(root, "shorts", "elevator", "outline", "v002.md"), "## 既有大纲\n12章完整方案", "utf-8");
+
+      const draft = parseShortFictionBatchDraft(fullDraftMarkdown(12), { expectedChapters: 12 });
+
+      // The outline stages must be skipped by the resume path; make it loud if not.
+      const outlineGuard = new Error("outline stage must be skipped when v002.md exists");
+      vi.spyOn(ShortFictionOutlineAgent.prototype, "createOutline").mockRejectedValue(outlineGuard);
+      vi.spyOn(ShortFictionOutlineReviewerAgent.prototype, "reviewOutline").mockRejectedValue(outlineGuard);
+      vi.spyOn(ShortFictionOutlineReviserAgent.prototype, "reviseOutline").mockRejectedValue(outlineGuard);
+
+      vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft").mockImplementation(async (input) => {
+        input.onBatchProgress?.({ batch: 2, totalBatches: 4, chapters: [4, 5, 6] });
+        return draft;
+      });
+      vi.spyOn(ShortFictionDraftReviewerAgent.prototype, "reviewDraft").mockResolvedValue("looks fine");
+      vi.spyOn(ShortFictionDraftReviserAgent.prototype, "reviseDraft").mockResolvedValue(draft);
+      vi.spyOn(ShortFictionPackagingAgent.prototype, "generatePackage").mockResolvedValue({
+        title: "电梯多一层", intro: "钩子", sellingPoints: ["反转"], coverPrompt: "", rawContent: "",
+      });
+
+      const runtime = { client: { provider: "openai" } as never, model: "fake", projectRoot: root };
+      const messages: string[] = [];
+      await runShortFictionProduction({
+        projectRoot: root, direction: "恐怖短篇", storyId: "elevator",
+        chapterCount: 12, charsPerChapter: 1000, cover: false,
+        runtimes: {
+          planner: runtime, outlineReview: runtime, writer: runtime,
+          draftReview: runtime, revise: runtime, package: runtime,
+        },
+        onProgress: (message) => messages.push(message),
+      });
+
+      expect(messages).toContain("Writing chapters 4-6 (batch 2/4)...");
+    } finally {
+      vi.restoreAllMocks();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
