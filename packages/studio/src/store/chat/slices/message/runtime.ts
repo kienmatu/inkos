@@ -143,6 +143,10 @@ export function deriveFlat(
     }
 
     if (part.type === "text") {
+      // Text parts are split whenever a tool runs mid-stream. Glueing them
+      // directly would push the next part's first line onto the previous
+      // one, so a leading "## heading" stops being a heading.
+      if (content && !content.endsWith("\n")) content += "\n\n";
       content += part.content;
       continue;
     }
