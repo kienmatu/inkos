@@ -14,6 +14,7 @@ import type {
   ToolResultMessage,
   UserMessage,
 } from "@mariozechner/pi-ai";
+import { resolveEndpointApiKey } from "../utils/llm-endpoint-auth.js";
 import type { PipelineRunner } from "../pipeline/runner.js";
 import { buildAgentSystemPrompt } from "./agent-system-prompt.js";
 import {
@@ -1210,10 +1211,12 @@ async function runAgentSessionUnlocked(
         if (isLlmStubEnabled()) return stubAgentStream(streamModel, context);
         return guardedPiStream(streamModel, context, options);
       },
-      getApiKey: (provider: string) => {
-        if (config.apiKey) return config.apiKey;
-        return getEnvApiKey(provider);
-      },
+      getApiKey: (provider: string) => resolveEndpointApiKey({
+        configuredApiKey: config.apiKey,
+        envApiKey: getEnvApiKey(provider),
+        provider,
+        baseUrl: model.baseUrl,
+      }),
     });
 
     cached = {

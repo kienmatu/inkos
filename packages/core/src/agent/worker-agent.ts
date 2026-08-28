@@ -2,6 +2,7 @@ import { Agent } from "@mariozechner/pi-agent-core";
 import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import {
   createAssistantMessageEventStream,
+  getEnvApiKey,
   type Api,
   type AssistantMessage,
   type Context,
@@ -19,6 +20,7 @@ import {
   type LLMResponse,
   type OnStreamProgress,
 } from "../llm/provider.js";
+import { resolveEndpointApiKey } from "../utils/llm-endpoint-auth.js";
 import { guardedPiStream } from "./pi-stream.js";
 import { isLlmStubEnabled, stubChatCompletion } from "./llm-stub.js";
 
@@ -348,7 +350,12 @@ export async function runWorkerAgentTool<TParameters extends TSchema>(
           ...(options.maxTokens !== undefined ? { maxTokens: options.maxTokens } : {}),
           signal: combineSignals(streamOptions?.signal, options.signal),
         }),
-    getApiKey: () => client._apiKey,
+    getApiKey: (provider: string) => resolveEndpointApiKey({
+      configuredApiKey: client._apiKey,
+      envApiKey: getEnvApiKey(provider),
+      provider,
+      baseUrl: model.baseUrl,
+    }),
   });
   const abortAgent = () => agent.abort();
   options.signal?.addEventListener("abort", abortAgent, { once: true });
