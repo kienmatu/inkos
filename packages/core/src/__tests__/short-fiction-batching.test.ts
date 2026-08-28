@@ -337,3 +337,66 @@ describe("writeDraft batching", () => {
     expect(seen).toEqual(["1/4:1,2,3", "2/4:4,5,6", "3/4:7,8,9", "4/4:10,11,12"]);
   });
 });
+
+import { PartialResponseError } from "../llm/provider.js";
+
+describe("adaptive batch halving", () => {
+  it("splits a batch that hits the output limit and completes the story", async () => {
+    const agent = writerAgent();
+    const chat = spyChat(agent);
+    const seen: number[][] = [];
+    chat.mockImplementation((...args: unknown[]) => {
+      const group = requestedChapters(args, 12);
+      seen.push(group);
+      // Chapters 7-9 as a group of three is too big; halves succeed.
+      if (group.length === 3 && group[0] === 7) {
+        return Promise.reject(new PartialResponseError(
+          "half", new Error("model reached the output limit (length)"), "output-limit",
+        ));
+      }
+      return Promise.resolve({ content: batchReply(group, group[0] === 1), usage: undefined });
+    });
+
+    const draft = await agent.writeDraft({
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+    });
+
+    expect(seen).toEqual([[1, 2, 3], [4, 5, 6], [7, 8, 9], [7, 8], [9], [10, 11, 12]]);
+    expect(draft.chapters).toHaveLength(12);
+    expect(draft.chapters.every((c) => c.content.trim().length > 0)).toBe(true);
+  });
+
+  it("gives up when a single-chapter batch still hits the limit", async () => {
+    const agent = writerAgent();
+    const chat = spyChat(agent);
+    chat.mockImplementation((...args: unknown[]) => {
+      const group = requestedChapters(args, 12);
+      if (group[0]! >= 4) {
+        return Promise.reject(new PartialResponseError(
+          "half", new Error("model reached the output limit (length)"), "output-limit",
+        ));
+      }
+      return Promise.resolve({ content: batchReply(group, group[0] === 1), usage: undefined });
+    });
+
+    await expect(agent.writeDraft({
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+    })).rejects.toThrow(/output limit/);
+  });
+
+  it("does not split a non-output-limit failure", async () => {
+    const agent = writerAgent();
+    const chat = spyChat(agent);
+    chat.mockImplementation((...args: unknown[]) => {
+      const group = requestedChapters(args, 12);
+      if (group[0] === 4) return Promise.reject(new Error("401 unauthorized"));
+      return Promise.resolve({ content: batchReply(group, group[0] === 1), usage: undefined });
+    });
+
+    await expect(agent.writeDraft({
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+    })).rejects.toThrow(/401/);
+    // batch 1 succeeded, batch 2 failed once — no halving attempts
+    expect(chat).toHaveBeenCalledTimes(2);
+  });
+});

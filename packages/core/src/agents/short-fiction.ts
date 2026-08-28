@@ -1,5 +1,6 @@
 import { BaseAgent } from "./base.js";
 import type { LLMMessage, LLMResponse } from "../llm/provider.js";
+import { PartialResponseError } from "../llm/provider.js";
 import { countChapterLength, resolveLengthCountingMode } from "../utils/length-metrics.js";
 import {
   type ShortFictionLanguage,
@@ -577,6 +578,10 @@ function estimateShortFictionMaxTokens(chapterCount: number, charsPerChapter: nu
   return Math.max(12_288, Math.ceil(chapterCount * charsPerChapter * 2.2) + 4096);
 }
 
+function isOutputLimitError(error: unknown): boolean {
+  return error instanceof PartialResponseError && error.reason === "output-limit";
+}
+
 /**
  * Run one batch per group and return the raw fragments in chapter order.
  * `buildMessages` receives the group and the fragments completed so far, so a
@@ -594,6 +599,28 @@ async function runChapterBatches(params: {
 }): Promise<string[]> {
   const fragments: string[] = [];
 
+  // A group that still hits the output cap is split in half and retried, down to
+  // a single chapter. Completed fragments are never regenerated.
+  const runOneGroup = async (chapters: readonly number[]): Promise<void> => {
+    try {
+      const response = await retryShortFictionCall(() =>
+        params.chat(params.buildMessages(chapters, fragments), {
+          temperature: params.temperature,
+          maxTokens: estimateShortFictionMaxTokens(chapters.length, params.charsPerChapter),
+        }), params.agentName, params.log);
+
+      fragments.push(stripOuterCodeFence(response.content));
+    } catch (error) {
+      if (!isOutputLimitError(error) || chapters.length <= 1) throw error;
+      const mid = Math.ceil(chapters.length / 2);
+      params.log?.warn(
+        `[${params.agentName}] output limit on chapters ${chapters.join(", ")}; splitting the batch.`,
+      );
+      await runOneGroup(chapters.slice(0, mid));
+      await runOneGroup(chapters.slice(mid));
+    }
+  };
+
   for (const [index, chapters] of params.groups.entries()) {
     params.onBatchProgress?.({
       batch: index + 1,
@@ -601,13 +628,7 @@ async function runChapterBatches(params: {
       chapters,
     });
 
-    const response = await retryShortFictionCall(() =>
-      params.chat(params.buildMessages(chapters, fragments), {
-        temperature: params.temperature,
-        maxTokens: estimateShortFictionMaxTokens(chapters.length, params.charsPerChapter),
-      }), params.agentName, params.log);
-
-    fragments.push(stripOuterCodeFence(response.content));
+    await runOneGroup(chapters);
   }
 
   return fragments;
