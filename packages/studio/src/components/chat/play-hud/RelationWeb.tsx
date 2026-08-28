@@ -1,4 +1,5 @@
 import type { HoldingRelation } from "./types";
+import { tr } from "../../../lib/app-language";
 
 export interface WebNode {
   readonly x: number;
@@ -34,6 +35,8 @@ function truncate(s: string, n = 6): string {
 export function RelationWeb(props: {
   readonly centerLabel: string;
   readonly relations: ReadonlyArray<HoldingRelation>;
+  // Retained for the caller's signature; display language now comes from the
+  // app-language singleton.
   readonly isZh: boolean;
 }) {
   const W = 300;
@@ -42,7 +45,7 @@ export function RelationWeb(props: {
   const cy = H / 2;
   const { nodes, overflow } = layoutRelations(props.relations, W, H);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="block w-full min-w-0" role="img" aria-label={props.isZh ? "关系网" : "Relations"}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="block w-full min-w-0" role="img" aria-label={tr("关系网", "Relations", "Mạng quan hệ")}>
       {nodes.map((n, i) => (
         <line key={`l${i}`} x1={cx} y1={cy} x2={n.x} y2={n.y} className="stroke-border" strokeWidth={1.5} />
       ))}

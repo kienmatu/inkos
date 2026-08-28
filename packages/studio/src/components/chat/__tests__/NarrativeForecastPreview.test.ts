@@ -3,6 +3,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { NarrativeForecast } from "@kienmatu/inkos-core/forecast/schema";
 import type { ToolExecution } from "../../../store/chat/types";
+import { tr } from "../../../lib/app-language";
 import {
   NarrativeForecastPreview,
   buildNarrativeForecastRecheckInstruction,
@@ -112,7 +113,9 @@ describe("NarrativeForecastPreview", () => {
     expect(html).toContain("沉默的铁锈");
     expect(html).toContain("试探深水");
     expect(html).toContain("第 4 章");
-    expect(html).toContain("连续性");
+    // The risk-category pill is UI chrome and follows the interface language
+    // (via tr()), not the forecast's own zh/en writing language.
+    expect(html).toContain(tr("连续性", "Continuity", "Tính liên tục"));
     expect(html).toContain("采用此分支");
     expect(html).toContain(`data-forecast-id="${forecast.forecastId}"`);
     expect(html).toContain("data-branch-id=\"branch-1\"");

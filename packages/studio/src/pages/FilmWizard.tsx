@@ -54,12 +54,12 @@ type Colors = ReturnType<typeof useColors>;
 
 // 标签在渲染时通过 tr() 解析语言，模块加载时不能固化成单一语言字符串，
 // 所以这里存 zh/en 对。
-const PHASE_LABELS: Record<Phase, { zh: string; en: string }> = {
-  world: { zh: "世界", en: "World" },
-  scale: { zh: "规模", en: "Scale" },
-  structure: { zh: "结构", en: "Structure" },
-  workshop: { zh: "逐节点", en: "Nodes" },
-  validate: { zh: "校验", en: "Validate" },
+const PHASE_LABELS: Record<Phase, { zh: string; en: string; vi: string }> = {
+  world: { zh: "世界", en: "World", vi: "Thế giới" },
+  scale: { zh: "规模", en: "Scale", vi: "Quy mô" },
+  structure: { zh: "结构", en: "Structure", vi: "Cấu trúc" },
+  workshop: { zh: "逐节点", en: "Nodes", vi: "Từng nút" },
+  validate: { zh: "校验", en: "Validate", vi: "Kiểm tra" },
 };
 
 
@@ -71,19 +71,19 @@ const DEFAULT_SUBVIEW: Record<Phase, string> = {
   validate: "validate",
 };
 
-const PHASE_SUBVIEWS: Record<Phase, ReadonlyArray<{ key: string; zh: string; en: string }>> = {
+const PHASE_SUBVIEWS: Record<Phase, ReadonlyArray<{ key: string; zh: string; en: string; vi: string }>> = {
   world: [
-    { key: "chat", zh: "对话", en: "Chat" },
-    { key: "anchor", zh: "世界锚点", en: "World anchor" },
+    { key: "chat", zh: "对话", en: "Chat", vi: "Trò chuyện" },
+    { key: "anchor", zh: "世界锚点", en: "World anchor", vi: "Neo thế giới" },
   ],
   scale: [],
   structure: [
-    { key: "flow", zh: "流程图", en: "Flow" },
-    { key: "tree", zh: "树", en: "Tree" },
+    { key: "flow", zh: "流程图", en: "Flow", vi: "Sơ đồ luồng" },
+    { key: "tree", zh: "树", en: "Tree", vi: "Cây" },
   ],
   workshop: [
-    { key: "tree", zh: "树", en: "Tree" },
-    { key: "chat", zh: "对话", en: "Chat" },
+    { key: "tree", zh: "树", en: "Tree", vi: "Cây" },
+    { key: "chat", zh: "对话", en: "Chat", vi: "Trò chuyện" },
   ],
   validate: [],
 };
@@ -121,6 +121,7 @@ function WorldAnchorView({
         {tr(
           "暂无世界锚点。请先切换到「对话」，请 AI 帮您设定世界观和角色。",
           "No world anchor yet. Switch to “Chat” and ask the AI to set up the world and characters.",
+          "Chưa có neo thế giới. Hãy chuyển sang “Trò chuyện” và nhờ AI thiết lập thế giới và nhân vật.",
         )}
       </div>
     );
@@ -130,34 +131,34 @@ function WorldAnchorView({
   return (
     <div className="p-4 space-y-3 text-sm" data-testid="film-world">
       <div>
-        <div className={`text-xs font-medium mb-1 ${c.muted}`}>{tr("故事核心", "Story core")}</div>
+        <div className={`text-xs font-medium mb-1 ${c.muted}`}>{tr("故事核心", "Story core", "Cốt lõi câu chuyện")}</div>
         <div className="text-foreground">{worldAnchor.storyCore || "—"}</div>
       </div>
       <div className="flex gap-6">
         <div>
-          <div className={`text-xs font-medium mb-1 ${c.muted}`}>{tr("主题", "Theme")}</div>
+          <div className={`text-xs font-medium mb-1 ${c.muted}`}>{tr("主题", "Theme", "Chủ đề")}</div>
           <div>{worldAnchor.theme || "—"}</div>
         </div>
         <div>
-          <div className={`text-xs font-medium mb-1 ${c.muted}`}>{tr("题材", "Genre")}</div>
+          <div className={`text-xs font-medium mb-1 ${c.muted}`}>{tr("题材", "Genre", "Thể loại")}</div>
           <div>{worldAnchor.genre || "—"}</div>
         </div>
         {worldAnchor.durationMinutes > 0 && (
           <div>
-            <div className={`text-xs font-medium mb-1 ${c.muted}`}>{tr("时长", "Duration")}</div>
-            <div>{worldAnchor.durationMinutes} {tr("分钟", "min")}</div>
+            <div className={`text-xs font-medium mb-1 ${c.muted}`}>{tr("时长", "Duration", "Thời lượng")}</div>
+            <div>{worldAnchor.durationMinutes} {tr("分钟", "min", "phút")}</div>
           </div>
         )}
       </div>
       {worldAnchor.worldRules && (
         <div>
-          <div className={`text-xs font-medium mb-1 ${c.muted}`}>{tr("世界规则", "World rules")}</div>
+          <div className={`text-xs font-medium mb-1 ${c.muted}`}>{tr("世界规则", "World rules", "Quy tắc thế giới")}</div>
           <div className="whitespace-pre-wrap">{worldAnchor.worldRules}</div>
         </div>
       )}
       {graph.characters.length > 0 && (
         <div>
-          <div className={`text-xs font-medium mb-2 ${c.muted}`}>{tr("主要角色", "Main characters")}</div>
+          <div className={`text-xs font-medium mb-2 ${c.muted}`}>{tr("主要角色", "Main characters", "Nhân vật chính")}</div>
           <ul className="space-y-2">
             {graph.characters.map((ch) => (
               <li key={ch.id} className="flex items-start gap-2">
@@ -185,6 +186,7 @@ function ScalePlaceholderView({ c }: { c: Colors }) {
       {tr(
         "规模配置（P2 功能）— 在此设定节点数量目标、分支深度、多结局数量等参数。",
         "Scale settings (P2) — set node count targets, branch depth, number of endings, and other parameters here.",
+        "Cấu hình quy mô (tính năng P2) — đặt số nút mục tiêu, độ sâu nhánh, số kết thúc và các tham số khác tại đây.",
       )}
     </div>
   );
@@ -259,7 +261,7 @@ export default function FilmWizard({
             onClick={nav.toDashboard}
             className={c.link}
           >
-            ← {tr("互动影游", "Interactive films")}
+            ← {tr("互动影游", "Interactive films", "Phim tương tác")}
           </button>
           <div className="flex items-center gap-1 flex-wrap">
           {WIZARD_PHASES.map((p, i) => {
@@ -291,7 +293,7 @@ export default function FilmWizard({
                 >
                   {i + 1}
                 </span>
-                <span>{tr(PHASE_LABELS[p].zh, PHASE_LABELS[p].en)}</span>
+                <span>{tr(PHASE_LABELS[p].zh, PHASE_LABELS[p].en, PHASE_LABELS[p].vi)}</span>
               </button>
             );
           })}
@@ -307,7 +309,7 @@ export default function FilmWizard({
             showPreview ? c.btnPrimary : c.btnSecondary,
           ].join(" ")}
         >
-          {tr("试玩", "Play")}
+          {tr("试玩", "Play", "Chơi thử")}
         </button>
       </div>
 
@@ -325,7 +327,7 @@ export default function FilmWizard({
                 currentSubView === sv.key ? c.btnPrimary : c.btnSecondary,
               ].join(" ")}
             >
-              {tr(sv.zh, sv.en)}
+              {tr(sv.zh, sv.en, sv.vi)}
             </button>
           ))}
         </div>

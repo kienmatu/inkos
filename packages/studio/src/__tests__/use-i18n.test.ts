@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { resolveUiLanguage, translate, strings } from "../hooks/use-i18n";
+import type { StringKey } from "../hooks/use-i18n";
 
 describe("resolveUiLanguage", () => {
   it("passes through the three known languages", () => {
@@ -25,10 +26,17 @@ describe("translate", () => {
     expect(translate("common.save", "en")).toBe("Save");
   });
 
-  it("falls back to English — never Chinese — for untranslated keys", () => {
-    // "logs.showingRecent" is deliberately outside this pass's translation scope,
-    // so it exercises the fallback both now and after Task 7.
-    expect(translate("logs.showingRecent", "vi")).toBe("Showing recent log entries.");
+  it("falls back to English — never Chinese — for any key without Vietnamese", () => {
+    // Every shipped key now carries `vi`, so this set is currently empty and the
+    // assertion is self-maintaining: it starts checking the moment someone adds a
+    // key without a Vietnamese value. The fallback mechanism itself is exercised
+    // directly against `tr` in app-language.test.ts and `pick` in
+    // api/__tests__/studio-language.test.ts, which share the same `vi ?? en` shape.
+    const withoutVi = Object.entries(strings).filter(([, v]) => !("vi" in v));
+    for (const [key, value] of withoutVi) {
+      const en = (value as { en: string }).en;
+      expect(translate(key as StringKey, "vi")).toBe(en);
+    }
   });
 
   it("returns Vietnamese in vi mode for a translated key", () => {

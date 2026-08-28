@@ -24,10 +24,10 @@ describe("service-groups i18n", () => {
     expect(getGroupDescription("aggregator")).toContain("one API key");
   });
 
-  it("vi 模式回退到英文（服务分组暂无越南语文案）", () => {
+  it("vi 模式返回越南语标签", () => {
     setAppLanguage("vi");
-    expect(getGroupLabel("overseas")).toBe("International providers");
-    expect(getGroupShortLabel("aggregator")).toBe("Aggregator");
+    expect(getGroupLabel("overseas")).toBe("Nhà cung cấp quốc tế");
+    expect(getGroupShortLabel("aggregator")).toBe("Tổng hợp");
   });
 });
 

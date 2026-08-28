@@ -21,11 +21,11 @@ export interface DisplayCard {
   readonly values: ReadonlyArray<string>;
 }
 
-const FANFIC_LABELS: Record<string, { readonly zh: string; readonly en: string }> = {
-  canon: { zh: "原著向", en: "Canon-compliant" },
-  au: { zh: "架空改编", en: "Alternate Universe" },
-  ooc: { zh: "OOC", en: "OOC" },
-  cp: { zh: "CP 向", en: "Pairing (CP)" },
+const FANFIC_LABELS: Record<string, { readonly zh: string; readonly en: string; readonly vi: string }> = {
+  canon: { zh: "原著向", en: "Canon-compliant", vi: "Theo nguyên tác" },
+  au: { zh: "架空改编", en: "Alternate Universe", vi: "Thế giới song song" },
+  ooc: { zh: "OOC", en: "OOC", vi: "OOC" },
+  cp: { zh: "CP 向", en: "Pairing (CP)", vi: "Cặp đôi (CP)" },
 };
 
 // Turn the structured frontmatter of story_frame.md into a few reader-friendly
@@ -36,23 +36,23 @@ export function frontmatterToCards(fm: TruthFrontmatter | null | undefined): Rea
   if (!fm) return [];
   const cards: DisplayCard[] = [];
   const name = fm.protagonist?.name?.trim();
-  if (name) cards.push({ label: tr("主角", "Protagonist"), values: [name] });
+  if (name) cards.push({ label: tr("主角", "Protagonist", "Nhân vật chính"), values: [name] });
   const genre = fm.genreLock?.primary?.trim();
-  if (genre) cards.push({ label: tr("题材", "Genre"), values: [genre] });
+  if (genre) cards.push({ label: tr("题材", "Genre", "Thể loại"), values: [genre] });
   const era = fm.eraConstraints;
   if (era?.enabled) {
     const eraValues = [era.period, era.region]
       .map((v) => v?.trim())
       .filter((v): v is string => Boolean(v));
-    if (eraValues.length > 0) cards.push({ label: tr("时代背景", "Era"), values: eraValues });
+    if (eraValues.length > 0) cards.push({ label: tr("时代背景", "Era", "Bối cảnh thời đại"), values: eraValues });
   }
   const prohibitions = (fm.prohibitions ?? []).map((p) => p.trim()).filter(Boolean);
-  if (prohibitions.length > 0) cards.push({ label: tr("红线", "Hard Lines"), values: prohibitions });
+  if (prohibitions.length > 0) cards.push({ label: tr("红线", "Hard Lines", "Giới hạn không được vượt"), values: prohibitions });
   if (fm.fanficMode) {
     const fanficLabel = FANFIC_LABELS[fm.fanficMode];
     cards.push({
-      label: tr("同人模式", "Fanfic Mode"),
-      values: [fanficLabel ? tr(fanficLabel.zh, fanficLabel.en) : fm.fanficMode],
+      label: tr("同人模式", "Fanfic Mode", "Chế độ đồng nhân"),
+      values: [fanficLabel ? tr(fanficLabel.zh, fanficLabel.en, fanficLabel.vi) : fm.fanficMode],
     });
   }
   return cards;
