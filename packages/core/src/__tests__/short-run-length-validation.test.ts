@@ -66,7 +66,7 @@ describe("short_run charsPerChapter validation (envelope layer)", () => {
     }).success).toBe(true);
   });
 
-  it("keeps the 600-1200 union when language is omitted (session default decides later)", () => {
+  it("keeps the 900-1500 union when language is omitted (session default decides later)", () => {
     expect(ShortRunActionPayloadSchema.safeParse({
       direction: "a short story",
       charsPerChapter: 900,

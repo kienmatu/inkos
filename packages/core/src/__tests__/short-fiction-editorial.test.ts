@@ -16,6 +16,7 @@ import {
   buildShortFictionDraftContinuationUserPrompt,
   buildShortFictionWriterSystemPrompt,
   buildShortFictionOutlineSystemPrompt,
+  buildShortFictionPackageSystemPrompt,
   buildShortFictionPackageUserPrompt,
 } from "../prompts/short-fiction.js";
 
@@ -44,10 +45,20 @@ describe("English format re-cut", () => {
     expect(SHORT_FICTION_DEFAULT_CHARS_PER_CHAPTER).toBe(1000);
     expect(SHORT_FICTION_MIN_CHARS_PER_CHAPTER).toBe(900);
     expect(SHORT_FICTION_MAX_CHARS_PER_CHAPTER).toBe(1200);
-    // Zhihu Yanxuan's paid short format wants 8,000+ characters total; the new
-    // minimum chapter count must still clear that floor.
-    expect(SHORT_FICTION_MIN_CHAPTERS * SHORT_FICTION_DEFAULT_CHARS_PER_CHAPTER)
-      .toBeGreaterThanOrEqual(8_000);
+    // Zhihu Yanxuan's paid short format wants 8,000+ characters total. The
+    // *configurable* worst case is MIN_CHAPTERS x MIN_CHARS_PER_CHAPTER — the
+    // value a user can actually dial down to — not MIN_CHAPTERS x
+    // DEFAULT_CHARS_PER_CHAPTER, which a user can undercut by lowering
+    // --chars. That worst case is 8 x 900 = 7,200 characters, below the
+    // 8,000 floor. This shortfall is deliberately accepted (a language-aware
+    // chapter minimum was ruled against as unnecessary complexity for a
+    // market this deployment does not serve) — see "Accepted trade-offs" in
+    // docs/superpowers/specs/2026-08-28-short-fiction-editorial-review.md and
+    // the comment on SHORT_FICTION_MIN_CHAPTERS in
+    // models/short-fiction-format.ts. This assertion exists to state that
+    // fact, not to hide it behind a guard that multiplies the wrong pair of
+    // constants.
+    expect(SHORT_FICTION_MIN_CHAPTERS * SHORT_FICTION_MIN_CHARS_PER_CHAPTER).toBe(7_200);
   });
 
   it("still batches one English chapter per call across the whole new range", () => {
@@ -214,6 +225,10 @@ describe("genre engine is named, not implied", () => {
 });
 
 describe("selling points are aimed at an English listing", () => {
+  it("frames the packaging editor's role around the store listing", () => {
+    expect(buildShortFictionPackageSystemPrompt("en")).toMatch(/store-listing|listing/i);
+  });
+
   it("asks for description bullets, not distribution-editor selling points", () => {
     const en = buildShortFictionPackageUserPrompt({
       direction: "A courier discovers the parcels are evidence",
@@ -224,5 +239,45 @@ describe("selling points are aimed at an English listing", () => {
 
     expect(en).toMatch(/product description|listing|store page/i);
     expect(en).toContain("=== SHORT_FICTION_SELLING_POINTS ===");
+  });
+});
+
+// Regression coverage for the bug this branch's whole-branch review found:
+// buildShortFictionOutlineUserPrompt interpolates the real chapter/length
+// constants, but buildShortFictionOutlineSystemPrompt restated them as stale
+// literals ("12-18 chapters at roughly 600-800 words") — a system-turn vs.
+// user-turn contradiction in the one stage every later stage follows. These
+// assertions check the system prompt AGAINST THE CONSTANTS, not against
+// separately hand-typed expected literals, so a future edit that changes the
+// constants without updating the prompt (or vice versa) fails here instead of
+// only showing up in a real run.
+describe("outline system prompt agrees with the format constants", () => {
+  it("states the real chapter bounds, in both languages", () => {
+    const en = buildShortFictionOutlineSystemPrompt("en");
+    const zh = buildShortFictionOutlineSystemPrompt("zh");
+
+    for (const prompt of [en, zh]) {
+      expect(prompt).toContain(String(SHORT_FICTION_MIN_CHAPTERS));
+      expect(prompt).toContain(String(SHORT_FICTION_MAX_CHAPTERS));
+    }
+  });
+
+  it("states the real English per-chapter word range", () => {
+    const en = buildShortFictionOutlineSystemPrompt("en");
+
+    expect(en).toContain(String(SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER));
+    expect(en).toContain(String(SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER));
+    expect(en).toContain(String(SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER));
+  });
+
+  it("never restates the old, stale numbers in either language", () => {
+    const en = buildShortFictionOutlineSystemPrompt("en");
+    const zh = buildShortFictionOutlineSystemPrompt("zh");
+
+    for (const prompt of [en, zh]) {
+      expect(prompt).not.toContain("12-18");
+      expect(prompt).not.toContain("600-800");
+      expect(prompt).not.toContain("650");
+    }
   });
 });
