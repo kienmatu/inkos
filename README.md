@@ -3,7 +3,7 @@
   <img src="assets/inkos-text.svg" width="240" height="65" alt="InkOS">
 </p>
 
-<h1 align="center">Story Creation AI Agent<br><sub>面向长短篇小说、剧本剧作、互动影游、IP 内容与多语言翻译的创作智能体系统</sub></h1>
+<h1 align="center">Story Creation AI Agent<br><sub>Creation system for long-form and short fiction, scripts, interactive film/games, IP content, and multilingual translation</sub></h1>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@actalk/inkos"><img src="https://img.shields.io/npm/v/@actalk/inkos.svg?color=cb3837&logo=npm" alt="npm version"></a>
@@ -14,131 +14,128 @@
 </p>
 
 <p align="center">
-  <a href="README.en.md">English</a> | 中文 | <a href="README.ja.md">日本語</a>
-</p>
-
-<p align="center">
-  <strong>InkOS 网页版上线！</strong>
-  <a href="https://huohuaapi.com/apps">立刻体验</a>
+  <a href="README.zh.md">中文</a> | English | <a href="README.ja.md">日本語</a>
 </p>
 
 ---
 
-InkOS 是一个面向故事创作与多语言翻译的 AI Agent 系统：长篇连载、独立短篇、剧本剧作、同人番外、仿写续写、互动影游、开放世界和长文翻译，都可以从同一个工作台开始。支持 Studio、TUI、CLI 交互形式，把创意、设定、角色、记忆、审稿、修订、封面、互动状态和跨语言交付交给智能体统一管理。
+InkOS is an AI Agent system for story creation and multilingual translation: long-form novels, standalone short fiction, scripts, storyboards, fan fiction, spinoffs, style imitation, continuation, interactive film projects, interactive worlds, and long-document translation all start from the same workbench. Studio Chat, CLI, and TUI share the same action surface for discussion, confirmed actions, generation, review, persistent editing, and cross-language delivery.
 
-<p align="left">
+<p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://kimi-file.moonshot.cn/prod-chat-kimi/kfs/4/1/2026-06-05/1d8h69mt3v89kkekg24gg">
-    <img alt="Kimi Open Source Friends" width="420" src="https://kimi-file.moonshot.cn/prod-chat-kimi/kfs/4/1/2026-06-05/1d8h69fudcmosb3pipls0">
+    <img alt="Kimi Open Source Friends" width="760" src="https://kimi-file.moonshot.cn/prod-chat-kimi/kfs/4/1/2026-06-05/1d8h69fudcmosb3pipls0">
   </picture>
-  <br>
-  🎉🎉 InkOS 入选首批 KIMI 开源合作伙伴 🎉🎉
 </p>
 
 <p align="center">
-  <a href="https://www.kimi.com/code/?aff=inkos"><img src="https://gcdn.moonshot.cn/growth-cdn/sponsor/kimi-zh.png" width="900" alt="Kimi 赞助 InkOS"></a>
+  <a href="https://www.kimi.com/code/?aff=inkos"><img src="https://gcdn.moonshot.cn/growth-cdn/sponsor/kimi-en.png" width="900" alt="Kimi sponsors InkOS"></a>
 </p>
 
-感谢 [Kimi](https://www.kimi.com/code/?aff=inkos) 赞助本项目！[Kimi K3](https://www.kimi.com/blog/kimi-k3) 是 Moonshot AI 迄今能力最强的模型，也是全球首个开源 3T 级模型，拥有原生视觉能力与 100 万 Token 上下文。搭配 InkOS，K3 可以参与长短篇小说、剧本、互动影游与多语言内容的规划、写作、审稿和修订；InkOS 则持续管理角色、设定、伏笔与故事状态，让长篇创作更连贯、更可控。
+Thanks to [Kimi](https://www.kimi.com/code/?aff=inkos) for sponsoring this project! [Kimi K3](https://www.kimi.com/blog/kimi-k3) is Moonshot AI's most capable model and the world's first open 3T-class model, featuring native vision and a 1-million-token context window. With InkOS, K3 can assist with planning, drafting, reviewing, and revising novels, scripts, interactive stories, and multilingual content, while InkOS manages characters, worldbuilding, plot threads, and persistent story state to keep long-form creation coherent and controllable.
 
-**InkOS Studio 已支持 Moonshot（Kimi）。前往 Kimi 开放平台（[中文站](https://platform.kimi.com/?aff=inkos)｜[Global](https://platform.kimi.ai/?aff=inkos)）获取 API Key，即可开始创作。**
+**InkOS Studio already supports Moonshot (Kimi). Get an API key from the Kimi Open Platform ([中文站](https://platform.kimi.com/?aff=inkos) | [Global](https://platform.kimi.ai/?aff=inkos)) and start creating.**
 
 <p align="center">
-  <a href="https://www.volcengine.com/activity/ai618?utm_source=OWO&utm_medium=devrel-1&utm_campaign=hw&utm_term=inkos&utm_content=hw"><img src="assets/volcengine-agent-coding-plan.png" width="840" alt="火山方舟 Agent Plan 与 Coding Plan 赞助 InkOS"></a>
+  <a href="https://www.volcengine.com/activity/ai618?utm_source=OWO&utm_medium=devrel-1&utm_campaign=hw&utm_term=inkos&utm_content=hw"><img src="assets/volcengine-agent-coding-plan.png" width="840" alt="Volcano Ark Agent Plan and Coding Plan sponsor InkOS"></a>
 </p>
 
-感谢 [字节火山引擎](https://www.volcengine.com/activity/ai618?utm_source=OWO&utm_medium=devrel-1&utm_campaign=hw&utm_term=inkos&utm_content=hw) 赞助本项目！火山方舟 Agent/Coding Plan 国模套餐首购 ¥9.9 起，支持 GLM-5.3、Kimi-K3、DeepSeek、MiniMax、Doubao 等模型；注册免费领取 2500 万 Token，统一 API，适配编码与智能体开发。[立即前往 →](https://www.volcengine.com/activity/ai618?utm_source=OWO&utm_medium=devrel-1&utm_campaign=hw&utm_term=inkos&utm_content=hw)
+Thanks to [ByteDance Volcano Engine](https://www.volcengine.com/activity/ai618?utm_source=OWO&utm_medium=devrel-1&utm_campaign=hw&utm_term=inkos&utm_content=hw) for sponsoring this project! Volcano Ark's Agent/Coding Plan starts at CNY 9.9 for a first purchase and supports GLM-5.3, Kimi-K3, DeepSeek, MiniMax, Doubao, and more. New registrations receive 25 million free tokens through one API for coding and agent development. [Get started →](https://www.volcengine.com/activity/ai618?utm_source=OWO&utm_medium=devrel-1&utm_campaign=hw&utm_term=inkos&utm_content=hw)
 
-> 💡 **写小说，先给 Agent 接一层专业数据** —— 写小说不只缺模型，更缺素材。推荐搭配 [**火花数据API（huohuaapi）**](https://huohuaapi.com/)：按调用计费的小说 / 网文创作数据，让 Agent 动笔前先查小说正文、章节结构、人物设定、文风和创作方法等带来源素材，而不是只靠 Prompt 硬凑一份“剧情提纲”。
+> 💡 **One key for global frontier models** — pair InkOS with [**kkaiapi**](https://en.kkaiapi.com/): an OpenAI-compatible gateway for Claude, GPT, Gemini, DeepSeek, Kimi, Qwen, GLM, and image models. Add it as a custom service with base URL `https://api.kkaiapi.com/v1`, then switch models in Studio without juggling multiple provider accounts.
 
-## v1.8.0 - 统一 Pi Agent Harness 与专业创作内核
+## v1.8.0 Unified Pi Agent Harness and Professional Creation Kernel
 
-InkOS 1.8.0 把“Chat Agent 调工具”和“各类作品管线”收敛成一套围绕 pi-agent 的生产 harness。模型负责理解、提议和调用能力；InkOS 负责确认、上下文、状态、原子落盘和产物真实性。长篇、短篇、剧本、分镜、互动影游、Play 与翻译继续保留各自的专业方法，但共享同一套执行、检索、观测和恢复基础设施。
+InkOS 1.8.0 converges the Chat Agent and every production workflow on one pi-agent-centered harness. Models understand, propose, and invoke capabilities; InkOS owns confirmation, context, state, atomic persistence, and artifact truth. Long fiction, short fiction, scripts, storyboards, interactive films, Play, and translation keep their own craft methods while sharing execution, retrieval, observation, and recovery infrastructure.
 
-- **模型配置**：Studio 内置多服务配置、模型路由和封面服务配置；支持 [kkaiapi](https://kkaiapi.com/) / OpenRouter 等全球主流模型聚合入口，以及自定义 OpenAI-compatible 服务。
-- **单一生产 Harness**：Studio Chat、TUI、`inkos interact` 与生产 worker 共用 pi-agent 工具循环和结构化 action/result；既有 pipeline 降为可直接调用、可中断、可观测的确定性能力，不再维护平行的自然语言决策内核。
-- **15 个内置专业 Skills**：长篇写作 / 审稿、商业短篇、Play、剧本、分镜、互动影游、翻译、拆稿、市场研究、导入、封面与去 AI 味都拥有独立 `SKILL.md`；各作品类型复用 Skill 架构，不复用不适合自己的长篇提示词。
-- **统一本地检索**：故事记忆、材料库和 Skill 参考资料共用 SQLite FTS5 / BM25 检索投影；原始文件仍是权威来源，索引可重建，检索结果保留来源与位置。
-- **书籍参考资料绑定**：导入材料可以显式绑定到某本书并声明用途，写作时按当前任务检索相关段落，而不是把所有文件全文塞进上下文。
-- **安全章节工作区**：正文、状态、伏笔和运行快照先在章节工作区内校验，再原子提交；失败不会出现“状态已推进、正文未落盘”。Studio 可查看改写工作区和真实审稿问题。
-- **跨作品生产一致性**：Short、剧本、分镜、互动影游、Play 与翻译接入统一 run snapshot、Skill 绑定、字数观测、取消信号和失败恢复，同时保留各自的状态模型与创作规则。
-- **长任务与模型调用更稳**：多章写作按一个可恢复任务顺序执行；首 Token / 流式空闲超时、过期状态修复和原子文件集降低被动卡住或半完成的概率。
-- **TUI 对齐 Studio**：新增 `/new`、`/short`、`/play`、`/cover`、`/write` 明确入口，结构化 `/confirm` / `/cancel`，会话级 `/model` 切换和明暗终端自适应配色；普通自由文本仍交给 Agent 理解。
-- **模型与工作台补齐**：新增 LM Studio 本地服务，动态模型目录和外部母本导入可持久化；Studio 支持自定义封面 Base URL、宽屏章节预览和安全章节重写。
+- **Model setup**: Studio includes provider settings, model routing, cover-service settings, [kkaiapi](https://en.kkaiapi.com/) / OpenRouter aggregator entries, and custom OpenAI-compatible endpoints.
+- **One production harness**: Studio Chat, TUI, `inkos interact`, and production workers share the pi-agent tool loop and typed action/result boundary. Existing pipelines are deterministic, interruptible capabilities rather than parallel natural-language decision engines.
+- **15 built-in professional Skills**: dedicated `SKILL.md` packages cover long-form writing/review, commercial shorts, Play, scripts, storyboards, interactive film, translation, analysis, market research, import, covers, and semantic de-slopping. Each medium shares the Skill architecture, not long-form-specific prompts.
+- **Unified local retrieval**: story memory, archived materials, and Skill references use one rebuildable SQLite FTS5 / BM25 projection. Source files remain authoritative and retrieved evidence keeps source locations.
+- **Book-bound references**: imported material can be explicitly bound to a book with intended uses, then retrieved by task instead of injecting every file in full.
+- **Safe chapter workspaces**: prose, state, hooks, and run snapshots are validated in a chapter workspace and committed atomically, preventing state from advancing when prose persistence fails.
+- **Cross-format production consistency**: Short, script, storyboard, interactive-film, Play, and translation runs share snapshots, Skill binding, length observations, cancellation, and recovery while retaining medium-specific state and craft.
+- **More reliable long tasks**: multi-chapter writing runs sequentially as one recoverable task; first-token and stream-idle deadlines, stale-state repair, and atomic file sets reduce passive hangs and partial completion.
+- **TUI parity with Studio**: explicit `/new`, `/short`, `/play`, `/cover`, and `/write` surfaces; structured `/confirm` / `/cancel`; session-level `/model`; and adaptive light/dark terminal colors. Ordinary free text still goes to the Agent.
+- **Models and workbench**: LM Studio support, persistent dynamic model catalogs and external canon imports, custom cover Base URLs, wider chapter previews, and a safe chapter rewrite workspace.
 
 <p align="center">
-  <img src="assets/interactive-film-e2e.png" width="440" alt="InkOS 互动影游剧情树实测截图">
-  <img src="assets/studio-play-1-5.png" width="440" alt="InkOS Play Studio 开放世界界面">
+  <img src="assets/interactive-film-e2e.png" width="900" alt="InkOS interactive-film story graph E2E screenshot">
 </p>
 
-### 主要创作形态
-
-**长篇小说** — 从创作简报建书，生成世界观、角色、卷纲、章节意图，按“写作 → 审稿 → 必要修订 → 状态结算”推进。上下文按 protected / compressible 分层组织，避免长书越写越乱。
-
-**剧情多线推演** — 在写下一章前，基于当前正史生成 2-5 条彼此隔离的未来分支，并在 Studio Chat 中横向比较章节节拍、人物决定、预计变化、风险和作者意图匹配度。采用分支只会保存 `selected-branch-plan.md` 候选计划，不会修改正文、大纲或正史状态；正史变化后旧推演会标记为过期。
-
-**InkOS Short** — Studio Chat 和 CLI 可以直接产出独立短篇：完整正文、大纲记录、审稿记录、简介卖点、封面提示词，并在配置封面服务后生成封面图。
-
-**InkOS Play** — 新增开放世界与分支互动。你可以用自然语言指定世界契约、时间推进方式、角色 agent、物品 / 证据 / 关系规则和视觉风格；系统维护世界状态、可点击选择、自由动作、HUD 和自动配图。
-
-**Studio Chat** — 普通聊天、建书、短篇、封面、互动世界都走同一套 action surface。重动作先确认，生成物可预览，可通过聊天修改章节、封面提示词、世界状态和持久化文本产物。
-
-**Native English novel writing now supported！** Set `--lang en` to write in English. See [English README](README.en.md) for details.
-
-## 欢迎交流
-
-> 当前更新相对频繁，后续会持续新增功能与优化写作效果。
-> 欢迎加群反馈问题、提出需求，也欢迎关注项目动态 — 我们的目标是做最强的基于小说的内容生态创作 AI Agent。
+### Core Creation Modes
 
 <p align="center">
-  <img src="assets/wechat-group-v23.jpg" width="300" alt="微信交流群">
+  <img src="assets/inkos-short-demo-cover.png" width="210" alt="InkOS Short cover example">
+  <img src="assets/play-openworld-warcraft.png" width="210" alt="InkOS Play fantasy open-world example">
+  <img src="assets/play-openworld-romance.png" width="210" alt="InkOS Play romance example">
+  <img src="assets/play-openworld-detective.png" width="210" alt="InkOS Play detective example">
 </p>
 
-## 快速开始
+**Long-form novels** — create from a brief, generate foundations, chapter intent, context packages, prose, review, revision, and state settlement. Context is governed with protected / compressible layers so long books remain steerable.
 
-### 安装
+**Narrative forecast** — before writing the next chapter, generate 2-5 isolated future branches from current canon and compare their chapter beats, character decisions, projected changes, risks, and author-intent alignment directly in Studio Chat. Selecting a branch writes only `selected-branch-plan.md`; it does not change prose, outlines, or canonical state. Forecasts are marked stale when canon changes.
 
-需要 **Node.js 22 或更高版本**。
+**InkOS Short** — Studio chat and CLI can create a complete standalone short-fiction package: full manuscript, outline records, review records, synopsis, selling points, cover prompt, and an optional cover image when a cover provider is configured.
+
+**InkOS Play** — build open worlds or branching interactive fiction from natural-language world contracts: time flow, character agents, inventory, evidence, relationships, scene state, visual rules, guided choices, free actions, and optional image generation.
+
+**Interactive film/games** — turn an idea, script, or prose reference into branching scenes, variables, endings, image prompts, node images, and an exportable project package.
+
+**Studio Chat** — a persistent chat surface for answering questions, proposing actions, creating books, launching Short / Play, generating covers, and editing text artifacts without pretending an action succeeded before the tool result exists.
+
+**Agent Skills and research** — add standard `SKILL.md` packages under `.agents/skills/` or another AgentSkills directory, force them with `@skill-id`, or ask for web research to generate a sourced Markdown report.
+
+<p align="center">
+  <img src="assets/play-item-warcraft.png" width="420" alt="InkOS Play item image example">
+</p>
+
+**Native English novel writing now supported！** — 10 built-in English genre profiles with dedicated pacing rules, fatigue word lists, and audit dimensions. Set `--lang en` and go.
+
+## Quick Start
+
+### Install
+
+Requires **Node.js 22 or later**.
 
 ```bash
 npm i -g @actalk/inkos
 ```
 
-### 通过 OpenClaw 使用 🦞
+### Use via OpenClaw 🦞
 
-InkOS 已发布为 [OpenClaw](https://clawhub.ai/narcooo/inkos) Skill，可被任何兼容 Agent（Claude Code、OpenClaw 等）直接调用：
-
-```bash
-clawhub install inkos          # 从 ClawHub 安装 InkOS Skill
-```
-
-通过 npm 安装或克隆本项目时，`skills/SKILL.md` 已包含在内，🦞 可直接读取——无需额外从 ClawHub 安装。
-
-安装后，Claw 应优先通过共享交互入口调用 InkOS：
+InkOS is published as an [OpenClaw](https://clawhub.ai/narcooo/inkos) Skill, callable by any compatible agent (Claude Code, OpenClaw, etc.):
 
 ```bash
-inkos interact --json --message "继续当前书，但把节奏再收紧一点"
+clawhub install inkos          # Install from ClawHub
 ```
 
-这条入口直接走和项目 TUI 相同的交互执行内核，因此 OpenClaw、TUI、Studio 共用同一套控制脑。当前 JSON 输出包含 assistant 文本回复和 interaction session 信息；真正的执行结果以工具结果和落盘文件为准，不从模型口头声明推断完成。
+If you installed via npm or cloned the repo, `skills/SKILL.md` is already included — 🦞 can read it directly without a separate ClawHub install.
 
-`plan chapter` / `compose chapter` / `draft` / `audit` / `revise` / `write next` 这些原子命令仍然保留，但更适合作为底层工具，而不是 OpenClaw 的首选入口。也可以在 [ClawHub](https://clawhub.ai) 搜索 `inkos` 在线查看。
+Once installed, Claw should prefer the shared interaction entry:
+
+```bash
+inkos interact --json --message "continue the current book, but keep the pacing tighter"
+```
+
+This routes through the same conversation executor used by the project TUI, so OpenClaw, TUI, and Studio stay on the same control brain. The current JSON output includes assistant response text and the interaction session; real completion should still be derived from tool results and files, not from prose claims.
+
+Atomic commands (`plan chapter` / `compose chapter` / `draft` / `audit` / `revise` / `write next`) are still available, but they are now lower-level tools rather than the preferred OpenClaw entry. You can also browse it on [ClawHub](https://clawhub.ai) by searching `inkos`.
 
 ### Agent Skills
 
-InkOS 直接使用标准 `SKILL.md` 作为专业能力扩展，不再维护一套 InkOS 私有 Skill 协议。Skill 只向 Chat Agent 提供专业说明和静态参考资料，不会增加执行权限；创建、写入、编辑和生成图片仍然由 InkOS 工具与确认闸门控制。
+InkOS uses the standard `SKILL.md` format directly and no longer maintains a separate InkOS-specific skill protocol. A skill gives the Chat Agent professional guidance and static references, but no extra execution authority. Creating, writing, editing, and image generation still go through InkOS tools and confirmation gates.
 
-可用方式：
+How to use them:
 
-- 放到标准目录：项目 `skills/`、`.agents/skills/`，或用户目录 `~/.agents/skills/`、`~/.openclaw/skills/`。Studio 也可以导入包含 `SKILL.md` 的完整文件夹和静态参考资料；项目导入统一保存到 `.agents/skills/`。
-- 或设置 `INKOS_SKILL_DIRS=/abs/path/to/skills`，可指向单个 skill 目录，也可指向包含多个 skill 子目录的目录。多个目录按系统分隔符分隔。
-- 在 Chat 里用 `@skill-id` 强制本轮使用，例如：`@detective-play 做一个证据链驱动的开放世界`。
-- 不写 `@skill-id` 时，Chat Agent 根据用户当前意图决定是否调用 `use_skill`；不再通过 session 类型、关键词或字符串包含匹配机械启用。
-- 外部 Skill 只提供指令和静态参考资料，InkOS 不会自动执行其中的脚本；它也不会绕过现有工具权限与确认闸门。
+- Use standard AgentSkills / OpenClaw locations: project `skills/` and `.agents/skills/`, plus `~/.agents/skills/` and `~/.openclaw/skills/`. Studio can import a complete folder containing `SKILL.md` and its static references; project imports are saved under `.agents/skills/`.
+- Or set `INKOS_SKILL_DIRS=/abs/path/to/skills`; the path may point to one skill directory or a directory containing multiple skill subdirectories. Use the platform path delimiter for multiple paths.
+- Force one for a turn with `@skill-id`, for example: `@detective-play create an evidence-chain open world`.
+- Without `@skill-id`, the Chat Agent decides from the user's current intent whether to call `use_skill`. Session kinds, trigger phrases, and substring matching no longer activate skills.
+- External skills provide instructions and static references only. InkOS never auto-executes their scripts, and a skill cannot bypass existing tool permissions or confirmation gates.
+- Prompt configuration is not a skill. Built-in prompt packs are edited separately in **Project Settings → Prompt packs**, with project overrides under `prompt/<pack>/<prompt>.md`.
 
-提示词配置不是 Skill。Studio 的 **项目设置 → 提示词** 单独管理 prompt packs，项目级覆盖文件写入 `prompt/<pack>/<prompt>.md`，例如 `prompt/play/renderer.md`、`prompt/longform/writer.md`。
-
-最小 `SKILL.md` 示例：
+Minimal `SKILL.md`:
 
 ```md
 ---
@@ -148,13 +145,11 @@ description: Detective evidence and suspect-board play.
 Use evidence chains; do not turn clues into generic atmosphere.
 ```
 
-### 配置
+### Configure
 
-当前 InkOS 将 LLM 配置分成两条清晰路径：**Studio 用可视化服务配置**，**CLI / daemon / 部署环境支持 env 覆盖**。两者不会互相污染。
+InkOS now separates two configuration paths: **Studio uses visual service settings**, while **CLI / daemon / deployment can still use env overrides**. They do not silently overwrite each other.
 
-#### 方式一：Studio 服务配置（推荐）
-
-适合本地写作、Web 工作台和可视化管理。
+**Option 1: Studio service settings (recommended for local writing)**
 
 ```bash
 inkos init my-novel
@@ -162,347 +157,348 @@ cd my-novel
 inkos
 ```
 
-打开 Studio 后进入「模型配置」：
+Open Studio, then go to **Model Settings**:
 
-1. 选择服务商，例如 Google Gemini、Moonshot、MiniMax、智谱、百炼或自定义端点。
-2. 粘贴 API Key，点击「测试连接」。
-3. 选择可用模型，保存配置。
-4. 回到书籍页面开始写作。
+1. Choose a service such as Google Gemini, Moonshot, MiniMax, DeepSeek, kkaiapi, OpenRouter, or a custom endpoint.
+2. Paste the API key and test the connection.
+3. Pick an available model and save.
+4. Return to Studio Chat or your book page.
 
-Studio 运行时只使用：
+Studio uses project service settings and `.inkos/secrets.json`. It may show env-detection hints, but env files do not override the Studio-selected service/model/base URL/API key.
 
-```text
-provider bank 默认值
-→ inkos.json 里的 services / 当前 service / defaultModel
-→ .inkos/secrets.json 里的 service API Key
-```
+MiniMax uses the official OpenAI-compatible `/v1/chat/completions` endpoint. InkOS disables returned thinking by default for `MiniMax-M3*`; M2.x thinking cannot be disabled by the upstream service.
 
-即使检测到 `~/.inkos/.env` 或项目 `.env`，Studio 也只会展示提示，不会用 env 覆盖 service、model、baseUrl 或 API Key。API Key 存在项目内的 `.inkos/secrets.json`，不会写进 `inkos.json`。
-
-#### 方式二：CLI / daemon / 部署环境的 env 配置
-
-适合终端批处理、服务器部署、CI、Docker、守护进程和一次性切模型。
-
-全局 env：
+**Option 2: CLI / daemon / deployment env config**
 
 ```bash
 inkos config set-global \
+  --lang en \
   --provider <openai|anthropic|custom> \
-  --base-url <API 地址> \
-  --api-key <你的 API Key> \
-  --model <模型名>
+  --base-url <API endpoint> \
+  --api-key <your API key> \
+  --model <model name>
+
+# provider: openai / anthropic / custom (use custom for OpenAI-compatible proxies)
+# base-url: your API provider URL
+# api-key: your API key
+# model: your model name
 ```
 
-也可以手动写 `~/.inkos/.env` 或项目 `.env`：
+`--lang en` sets English as the default writing language for CLI / daemon runs. Saved to `~/.inkos/.env`.
+
+You can also edit global `~/.inkos/.env` or project `.env` manually:
 
 ```bash
-INKOS_LLM_PROVIDER=custom
-INKOS_LLM_BASE_URL=https://api.moonshot.cn/v1
-INKOS_LLM_API_KEY=sk-...
-INKOS_LLM_MODEL=kimi-k2.5
+# Required
+INKOS_LLM_PROVIDER=                               # openai / anthropic / custom (use custom for any OpenAI-compatible API)
+INKOS_LLM_BASE_URL=                               # API endpoint
+INKOS_LLM_API_KEY=                                 # API Key
+INKOS_LLM_MODEL=                                   # Model name
 
-# 可选
-INKOS_LLM_SERVICE=moonshot                         # 推荐写；不写时会尽量从 baseUrl 自动识别
-INKOS_LLM_TEMPERATURE=0.7
-INKOS_LLM_THINKING_BUDGET=0
-INKOS_DEFAULT_LANGUAGE=zh
-INKOS_LLM_EXTRA_top_p=0.9
+# Language (defaults to global setting or genre default)
+# INKOS_DEFAULT_LANGUAGE=en                        # en or zh
+
+# Optional
+# INKOS_LLM_TEMPERATURE=0.7                       # Temperature
+# INKOS_LLM_THINKING_BUDGET=0                      # Anthropic extended thinking budget
 ```
 
-CLI 合成顺序：
+CLI resolution starts from Studio/project service settings, then layers service secrets, global env, project env, process env, and CLI flags. That means CLI can reuse the service you configured in Studio, while env and command-line flags remain explicit overrides.
 
-```text
-Studio/project service 配置
-→ .inkos/secrets.json service key
-→ global ~/.inkos/.env
-→ project .env
-→ 当前进程环境变量
-→ CLI 参数
-```
+**Option 3: Multi-model routing (optional)**
 
-也就是说，CLI 默认可以复用 Studio 配好的服务和密钥；如果 env 里声明了 `INKOS_LLM_SERVICE`、`INKOS_LLM_MODEL`、`INKOS_LLM_BASE_URL` 或 `INKOS_LLM_API_KEY`，则作为覆盖层生效。旧 env 只写 `baseUrl + model + apiKey` 也能继续用，InkOS 会尽量从 baseUrl 反推 service。
-
-一次性指定服务或模型：
+Assign different models to different agents — balance quality and cost:
 
 ```bash
-inkos write next --service google --model gemini-2.5-flash
-inkos write next --service moonshot --model kimi-k2.5 --no-stream
-inkos agent "继续写下一章" --api-key-env MOONSHOT_API_KEY
-inkos doctor --service minimaxCodingPlan --model MiniMax-M2.7
-```
-
-`--service` 会从 provider bank 自动推导 baseUrl、协议和兼容策略；`--model` 必须属于最终 service，否则会直接报错，避免把 Kimi 模型发到 Gemini 这类错配问题。
-
-#### 方式三：多模型路由（可选）
-
-给不同 Agent 分配不同模型，按需平衡质量与成本：
-
-```bash
-# 给不同 agent 配不同模型/提供商
+# Assign different models/providers to different agents
 inkos config set-model writer <model> --provider <provider> --base-url <url> --api-key-env <ENV_VAR>
 inkos config set-model auditor <model> --provider <provider>
-inkos config show-models        # 查看当前路由
+inkos config show-models        # View current routing
 ```
 
-未单独配置的 Agent 自动使用全局模型。
+Agents without explicit overrides fall back to the global model.
 
-#### 配置排查
+**Configuration troubleshooting**
 
 ```bash
 inkos doctor
 ```
 
-`doctor` 会显示当前 effective config mode、service/model/API Key 来源，并尝试 API 连通性。常见模式：
+`doctor` prints the current effective config mode, where the service / model / API key come from, and runs an API connectivity check. Common modes:
 
+| Mode | Meaning |
+|------|---------|
+| `studio-project` | Studio runtime: only Studio/project settings and secrets are used |
+| `cli-project` | CLI runtime: Studio settings as the base, with env and CLI flags layered on top |
+| `legacy-env` | Legacy env mode: compatibility with old `.env`-only projects |
 
-| 模式               | 含义                                        |
-| ---------------- | ----------------------------------------- |
-| `studio-project` | Studio 运行时：只使用 Studio/project 配置和 secrets |
-| `cli-project`    | CLI 运行时：以 Studio 配置为基础，再叠加 env 和 CLI 参数   |
-| `legacy-env`     | 旧 env 模式：兼容老项目的纯 `.env` 配置                |
+If a service test fails, first check that the service, model, and protocol match each other. Google Gemini AI Studio API keys work with the Gemini OpenAI-compatible endpoint; InkOS automatically disables the OpenAI `store` parameter that Google does not support. MiniMax defaults to the official OpenAI-compatible `/v1/chat/completions` endpoint and prefers a working non-streaming transport, avoiding streams that return usage but no text; `MiniMax-M3*` disables returned thinking by default, while M2.x thinking cannot be disabled upstream.
 
+### LLM Configuration Notes
 
-如果服务测试失败，优先检查服务商、模型和协议是否匹配。Google Gemini 的 AI Studio API Key 可用于 Gemini OpenAI-compatible endpoint；InkOS 会自动禁用 Google 不支持的 OpenAI `store` 参数。MiniMax 默认走官方 OpenAI-compatible `/v1/chat/completions`，并优先使用可工作的非流式 transport，避免流式返回 usage 但无正文的问题；`MiniMax-M3*` 会默认关闭 thinking 返回，M2.x thinking 由上游限制无法关闭。
+- **Studio / CLI config isolation**: Studio always uses the service page settings and `.inkos/secrets.json`; the CLI, daemon, and deployment environments support env overrides and one-off command flags.
+- **Provider bank capability table**: built-in baseUrl, protocol, models, and compatibility policies for 15 services — Google Gemini, Moonshot, MiniMax, Zhipu (GLM), Bailian (Alibaba Cloud Model Studio), DeepSeek, SiliconFlow, Volcengine, Tencent Hunyuan, Baidu ERNIE (Wenxin), iFlytek Spark, OpenRouter, kkaiapi, Ollama, and CodingPlan.
+- **Model ownership validation**: mismatches like `--service google --model kimi-k2.5` fail immediately, so requests are never sent to the wrong provider.
+- **Google Gemini compatibility fix**: AI Studio API keys work directly with the Gemini OpenAI-compatible endpoint; InkOS automatically disables the OpenAI `store` parameter Google does not support.
+- **MiniMax transport probing**: MiniMax / MiniMax CodingPlan use the official OpenAI-compatible `/v1` entry and automatically pick a working non-streaming transport, working around streams that report usage but return an empty body.
+- **Legacy env compatibility**: the old `INKOS_LLM_BASE_URL + INKOS_LLM_MODEL + INKOS_LLM_API_KEY` combination still works for the CLI; without `INKOS_LLM_SERVICE`, InkOS tries to infer the service from the baseUrl.
 
-### LLM 配置更新
+### Current Interaction Entry Points
 
-- **Studio / CLI 配置隔离**：Studio 固定使用服务页配置和 `.inkos/secrets.json`；CLI、daemon、部署环境支持 env 覆盖和一次性命令参数。
-- **Provider bank 能力表**：内置 Google Gemini、Moonshot、MiniMax、智谱、百炼、DeepSeek、硅基流动、火山、腾讯混元、文心、讯飞星火、OpenRouter、kkaiapi、Ollama、CodingPlan 等服务的 baseUrl、协议、模型和兼容策略。
-- **模型归属校验**：`--service google --model kimi-k2.5` 这类错配会直接报错，避免把请求发到错误服务商。
-- **Google Gemini 兼容修复**：AI Studio API Key 可直接用于 Gemini OpenAI-compatible endpoint，InkOS 会自动禁用 Google 不支持的 OpenAI `store` 参数。
-- **MiniMax transport 探测**：MiniMax / MiniMax CodingPlan 使用官方 OpenAI-compatible `/v1` 入口，并自动使用可工作的非流式 transport，规避流式 usage 正常但正文为空的问题。
-- **旧 env 兼容**：老的 `INKOS_LLM_BASE_URL + INKOS_LLM_MODEL + INKOS_LLM_API_KEY` 仍可用于 CLI；没有 `INKOS_LLM_SERVICE` 时会尝试从 baseUrl 反推服务商。
+**Studio Chat + CLI + TUI share the same execution surface**
 
-### 当前交互入口
+- **Studio Chat**: discuss, create books, run Short, generate covers, launch Play, and edit persistent files from one chat surface; heavy actions show confirmation cards.
+- **Creation entries**: Long-form Novel, Short Fiction, Fan Fiction, Spinoff, Style Imitation, Continuation, Branching Interactive, and Open World are available as first-class Studio entries.
+- **TUI dashboard**: `inkos tui` opens the full-screen terminal interface with `/new`, `/short`, `/play`, `/cover`, `/write`, `/confirm`, `/cancel`, and session-level `/model <name>` commands.
+- **External agent entry**: `inkos interact --json --message "..."` remains the structured entry for OpenClaw and other agents.
+- **Atomic commands remain**: `plan` / `compose` / `draft` / `audit` / `revise` / `write next` still work for scripting and advanced usage.
 
-**Studio Chat + CLI + TUI 共用同一套执行面**
+### Write Your First Book
 
-- **Studio Chat**：讨论、建书、短篇、封面、Play、编辑持久化文件都从同一个对话入口发起；重动作会先展示确认卡。
-- **开始创作入口**：长篇小说、短篇小说、同人创作、番外创作、仿写创作、续写创作、分支互动、开放世界都可以从 Studio 顶部入口进入。
-- **TUI 仪表盘**：`inkos tui` 进入终端全屏交互；支持 `/new`、`/short`、`/play`、`/cover`、`/write`、`/confirm`、`/cancel` 和会话级 `/model <模型名>`。
-- **外部 Agent 入口**：`inkos interact --json --message "..."` 仍是 OpenClaw / 其他 agent 的结构化入口。
-- **原子命令保留**：`plan` / `compose` / `draft` / `audit` / `revise` / `write next` 仍适合脚本和高级用户。
-
-### 写第一本书
+English is the default for English genre profiles. Pick a genre and go:
 
 ```bash
-inkos book create --title "吞天魔帝" --genre xuanhuan  # 创建新书
-inkos write next 吞天魔帝      # 写下一章（草稿 → 审计 → 按配置修订）
-inkos status                   # 查看状态
-inkos review list 吞天魔帝     # 审阅草稿
-inkos review approve-all 吞天魔帝  # 批量通过
-inkos export 吞天魔帝          # 导出全书
-inkos export 吞天魔帝 --format epub  # 导出 EPUB（手机/Kindle 阅读）
+inkos book create --title "The Last Delver" --genre litrpg     # LitRPG novel (English by default)
+inkos write next my-book          # Write next chapter (full pipeline: draft → audit → revise)
+inkos status                      # Check status
+inkos review list my-book         # Review drafts
+inkos review approve-all my-book  # Batch approve
+inkos export my-book --format epub  # Export EPUB (read on phone/Kindle)
 ```
 
-### 写完整短篇
+Language is set per-genre by default. Override explicitly with `--lang en` or `--lang zh`. Use `inkos genre list` to see all available genres and their default languages.
 
-想直接生成一篇完整短篇，可以在 Studio 对话里说：
+### Write Complete Short Fiction
+
+In Studio chat, ask for a complete short-fiction deliverable:
 
 ```text
-写一篇 12 章短篇，方向是：都市婚姻反转，女主拿到账本证据后反杀。
+Write a 12-chapter short fiction piece about a modern marriage reversal where the heroine wins with hard evidence.
 ```
 
-也可以走 CLI：
+Or run it from the CLI:
 
 ```bash
 inkos short run \
-  --direction "都市短篇 婚姻反转 女主证据反杀" \
+  --direction "modern short fiction marriage reversal evidence-driven heroine" \
   --chapters 12 \
   --chars 1000
 ```
 
-生成物会落在 `shorts/<故事名>/final/`，包含 `full.md`、`sales-package.md`、`cover-prompt.md`，配置封面服务后还会生成 `cover.png`。
+Outputs are saved under `shorts/<story-name>/final/`, including `full.md`, `sales-package.md`, `cover-prompt.md`, and `cover.png` when cover generation is configured.
 
-### 单独制作封面
+### Generate a Standalone Cover
 
-如果只想给已有标题或简介做封面，不需要重跑短篇正文，在 Studio 对话里直接说：
-
-```text
-给《她签下离婚协议那天，他悔疯了》生成一张短篇封面，偏现代都市、强反转。
-```
-
-封面工具会独立生成 `covers/<标题>/cover-prompt.md` 和 `covers/<标题>/cover.png`。如果还没有配置封面服务，先在 Studio 的模型配置里设置封面服务和 API Key。
-
-生成后也可以继续通过 chat 改封面提示词，例如“把人物拉近一点、标题字更大、表情更冷笑”。系统会用新的 `coverPrompt` 重写 `cover-prompt.md` 并重生成封面，不需要重新写短篇。
-
-
-
-### 启动开放世界 / 分支互动
-
-在 Studio Chat 里选择「开放世界」或「分支互动」，直接用自然语言描述你想玩的世界：
+To generate only a cover for an existing title or synopsis, do not rerun the short-fiction pipeline. Ask Studio chat directly:
 
 ```text
-做一个魔兽风格的边境哨塔开放世界。时间不是固定回合，巡逻是一小时，练功可以跨几天。装备有稀有度，但不要数值面板，用材质和光泽体现。
+Generate a short-fiction cover for "The Divorce Papers He Regretted", modern city, high-drama reversal.
 ```
 
-系统会生成世界、角色、物品、证据、关系、当前场景和可选动作。开放世界支持自由输入动作；分支互动会给出可点击选项。配置封面 / 图片服务后，角色、物品、证据、场景都可以生成图，并在对话流里滚动显示。
+The cover tool writes `covers/<title>/cover-prompt.md` and `covers/<title>/cover.png`. If no cover provider is configured yet, set the cover provider and API key in Studio model settings first.
+
+After generation, you can keep editing the cover prompt through chat, for example: "move the character closer, make the title text bigger, and give her a colder smile." InkOS will pass the revised direction as `coverPrompt`, rewrite `cover-prompt.md`, and regenerate the cover without rewriting the story.
+
+<p align="center">
+  <img src="assets/inkos-short-demo-cover.png" width="260" alt="InkOS Short cover example">
+  <img src="assets/play-openworld-warcraft.png" width="260" alt="InkOS Play open-world example">
+  <img src="assets/play-openworld-detective.png" width="260" alt="InkOS Play detective example">
+</p>
+
+### Launch an Open World or Branching Story
+
+In Studio Chat, choose **Open World** or **Branching Interactive**, then describe the world in natural language:
+
+```text
+Create a Warcraft-like border watchtower open world. Time is not fixed per turn: patrols take an hour, training can take several days. Equipment has rarity, but no stat sheet; show rarity through material, glow, and atmosphere.
+```
+
+InkOS creates the world, characters, items, evidence, relationships, current scene, and suggested actions. Open World supports free-form actions; Branching Interactive provides clickable choices. When image generation is configured, characters, items, evidence, and scenes can render images directly inside the chat stream.
 
 ---
 
-## 核心特性
+## English Genre Profiles
+
+InkOS ships with 10 English-native genre profiles. Each includes genre-specific rules, pacing, fatigue word detection, and audit dimensions:
+
+| Genre | Key Mechanics |
+|-------|--------------|
+| **LitRPG** | Numerical system, power scaling, stat progression |
+| **Progression Fantasy** | Power scaling, no numerical system required |
+| **Isekai** | Era research, world contrast, cultural fish-out-of-water |
+| **Cultivation** | Power scaling, realm progression |
+| **System Apocalypse** | Numerical system, survival mechanics |
+| **Dungeon Core** | Numerical system, power scaling, territory management |
+| **Romantasy** | Emotional arcs, dual POV pacing |
+| **Sci-Fi** | Era research, tech consistency |
+| **Tower Climber** | Numerical system, floor progression |
+| **Cozy Fantasy** | Low-stakes pacing, comfort-first tone |
+
+Also supports 5 Chinese web novel genres (xuanhuan, xianxia, urban, horror, other) for bilingual creators.
+
+Every genre includes a **fatigue word list** (e.g., "delve", "tapestry", "testament", "intricate", "pivotal" for LitRPG) — the auditor flags these automatically so your prose doesn't read like every other AI-generated novel.
+
+---
+
+## Key Features
 
 ### Studio Chat + Action Surface
 
-Studio Chat 不再只是问答框。它可以创建长篇、跑短篇、生成封面、启动 Play、编辑持久化文本文件，并在需要执行重动作前给出确认。普通讨论会直接回答；明确创作动作才进入工具执行。
+Studio Chat is not just a Q&A box. It can create long-form books, run Short, generate covers, launch Play, edit persistent text artifacts, and ask for confirmation before heavy actions. Plain discussion remains plain text; explicit creation requests become tool actions.
 
-### InkOS Play：开放世界与分支互动
+### InkOS Play: Open Worlds and Branching Interaction
 
-Play 维护一个可持续推进的世界状态：角色、地点、物品、证据、关系、时间、场景和 HUD。它不是固定 RPG 模板，你可以用自然语言定义世界契约：修仙装备可以有稀有感，恋爱本可以有心动层级，侦探本可以有证据生命周期。系统把这些规则写进世界状态，再用于后续叙事和配图。
+Play maintains a durable interactive world state: characters, locations, items, evidence, relationships, time, current scene, HUD, and images. It is not a hard-coded RPG system. A cultivation world may use rarity and realms; a romance story may use emotional stages; a detective story may use evidence lifecycle and credibility. The rules come from the user's world contract and stay in the world state.
 
-### 多维度审计 + 去 AI 味
+### 37-Dimension Audit + De-AI-ification
 
-连续性审计员从 37 个维度检查每一章草稿：角色记忆、物资连续性、伏笔回收、大纲偏离、叙事节奏、情感弧线等。内置 AI 痕迹检测维度，自动识别"LLM 味"表达（高频词、句式单调、过度总结）。默认长篇写作链路最多自动修订一次；如果你更看重自动闭环，可以通过 `writing.reviewRetries` 调整修订轮数。
+The Continuity Auditor agent checks every draft across 37 dimensions: character memory, resource continuity, hook payoff, outline adherence, narrative pacing, emotional arcs, and more. Built-in AI-tell detection automatically catches "LLM voice" — overused words, monotonous sentence patterns, excessive summarization. The default long-form write cycle now runs at most one automatic revision pass; unresolved critical findings are kept in the result for human review or later commands.
 
-去 AI 味规则内置于写手 agent 的 prompt 层——词汇疲劳词表、禁用句式、文风指纹注入，从源头减少 AI 生成痕迹。`revise --mode anti-detect` 可对已有章节做专门的反检测改写。
+De-AI-ification rules are baked into the Writer agent's prompts: fatigue word lists, banned patterns, style fingerprint injection — reducing AI traces at the source. `revise --mode anti-detect` runs dedicated anti-detection rewriting on existing chapters.
 
-### 文风仿写
+### Style Cloning
 
-`inkos style analyze` 分析参考文本，提取统计指纹（句长分布、词频特征、节奏模式）和 LLM 风格指南。`inkos style import` 将指纹注入指定书籍，后续所有章节自动采用该风格，修订者也会用风格标准做审计。
+`inkos style analyze` examines reference text and extracts a statistical fingerprint (sentence length distribution, word frequency patterns, rhythm profiles) plus an LLM-readable style guide. `inkos style import` injects this fingerprint into a book — all future chapters adopt the style, and the Reviser audits against it.
 
-### 创作简报
+### Creative Brief
 
-`inkos book create --brief my-ideas.md` 传入你的脑洞、世界观设定、人设文档。建筑师 agent 会基于简报生成故事设定（`story_bible.md`）和创作规则（`book_rules.md`），而非凭空创作；同时把简报落盘到 `story/author_intent.md`，让这本书的长期创作意图不会只在建书时生效一次。
+`inkos book create --brief my-ideas.md` — pass your brainstorming notes, worldbuilding doc, or character sheets. The Architect agent builds from your brief (generating `story_bible.md` and `book_rules.md`) instead of inventing from scratch, and persists the brief into `story/author_intent.md` so the book's long-horizon intent does not disappear after initialization.
 
-### 输入治理控制面
+### Input Governance Control Surface
 
-每本书现在都有两份长期可编辑的 Markdown 控制文档：
+Every book now has two long-lived Markdown control docs:
 
-- `story/author_intent.md`：这本书长期想成为什么
-- `story/current_focus.md`：最近 1-3 章要把注意力拉回哪里
+- `story/author_intent.md`: what this book should become over the long horizon
+- `story/current_focus.md`: what the next 1-3 chapters should pull attention back toward
 
-写作前可以先跑：
+Before writing, you can run:
 
 ```bash
-inkos plan chapter 吞天魔帝 --context "本章先把注意力拉回师徒矛盾"
-inkos compose chapter 吞天魔帝
+inkos plan chapter my-book --context "Pull attention back to the mentor conflict first"
+inkos compose chapter my-book
 ```
 
-这会生成 `story/runtime/chapter-XXXX.intent.md`、`context.json`、`rule-stack.yaml`、`trace.json`。其中 `intent.md` 给人看，其他文件给系统执行和调试。`plan` 会调用 LLM 生成章节意图；`compose` 只编译本地文档和状态，可在没配好 API Key 前先验证控制输入。
+This generates `story/runtime/chapter-XXXX.intent.md`, `context.json`, `rule-stack.yaml`, and `trace.json`. `intent.md` is the human-readable contract; the others are execution/debug artifacts. `plan` calls the LLM to produce the chapter intent; `compose` only compiles local documents and state, so it can run before you finish API key setup.
 
-### 字数治理
+### Length Governance
 
-`draft`、`write next`、`revise` 现在共享同一套保守型字数治理：
+`draft`, `write next`, and `revise` now share the same conservative length governor:
 
-- `--words` 指定的是目标字数，系统会自动推导一个允许区间，不承诺逐字精确命中
-- 中文默认按 `zh_chars` 计数，英文默认按 `en_words` 计数
-- 如果正文超出允许区间，InkOS 最多只会追加 1 次纠偏归一化（压缩或补足），不会直接硬截断正文
-- 如果 1 次纠偏后仍然超出 hard range，章节照常保存，但会在结果和 chapter index 里留下长度 warning / telemetry
+- `--words` sets a target band, not an exact hard promise
+- Chinese chapters default to `zh_chars`; English chapters default to `en_words`
+- If the chapter drifts outside the soft band, InkOS may run one corrective normalization pass (compress or expand) instead of hard-cutting prose
+- If the chapter still misses the hard range after that one pass, InkOS still saves it, but surfaces a visible length warning and telemetry in the result and chapter index
 
-### 续写已有作品
+### Continuation Writing
 
-`inkos import chapters` 从已有小说文本导入章节，自动重建结构化状态、章节摘要、伏笔、角色关系和可读 Markdown 投影，支持 `第X章` 和自定义分割模式、断点续导。导入后 `inkos write next` 可继续创作。
+`inkos import chapters` imports existing novel text and rebuilds structured state, chapter summaries, hooks, character relationships, and readable Markdown projections. It supports `Chapter N`, custom split patterns, and resumable import. After import, `inkos write next` can continue the story.
 
-### 同人创作
+### Fan Fiction
 
-`inkos fanfic init --from source.txt --mode canon` 从原作素材创建同人书。支持四种模式：canon（正典延续）、au（架空世界）、ooc（性格重塑）、cp（CP 向）。内置正典导入器、同人专属审计维度和信息边界管控——确保设定不矛盾。
+`inkos fanfic init --from source.txt --mode canon` creates a fanfic book from source material. Four modes: canon (faithful continuation), au (alternate universe), ooc (out of character), cp (ship-focused). Includes a canon importer, fanfic-specific audit dimensions, and information boundary controls to keep lore consistent.
 
-### 多模型路由
+### Multi-Model Routing
 
-不同 Agent 可以走不同模型和 Provider。写手用 Claude（创意强），审计用 GPT-4o（便宜快速），雷达用本地模型（零成本）。`inkos config set-model` 按 agent 粒度配置，未配置的自动回退全局模型。
+Different agents can use different models and providers. Writer on Claude (stronger creative), Auditor on GPT-4o (cheaper and fast), Radar on a local model (zero cost). `inkos config set-model` configures per-agent; unconfigured agents fall back to the global model.
 
-### 守护进程 + 通知推送
+### Daemon Mode + Notifications
 
-`inkos up` 启动后台循环自动写章。管线会自动推进可处理的非关键问题；需要人工判断的问题会暂停并留下可审结果。通知推送支持 Telegram、飞书、企业微信、Webhook（HMAC-SHA256 签名 + 事件过滤）。日志写入 `inkos.log`（JSON Lines），`-q` 静默模式。
+`inkos up` starts an autonomous background loop that writes chapters on a schedule. The pipeline continues through handleable non-critical issues, pausing with reviewable results when human judgment is needed. Notifications via Telegram, Feishu (Lark), WeCom (Enterprise WeChat), and Webhook (HMAC-SHA256 signing + event filtering). Logs to `inkos.log` (JSON Lines), `-q` for quiet mode.
 
-### 本地模型兼容
+### Local Model Compatibility
 
-支持任何 OpenAI 兼容接口（Studio 里新增自定义服务，或 CLI 使用 `--provider custom` / `INKOS_LLM_PROVIDER=custom`）。服务测试会尝试不同协议和流式开关组合，并保存或提示可用 transport。Fallback 解析器处理小模型不规范输出，流中断时自动恢复部分内容。
+Supports any OpenAI-compatible endpoint (`--provider custom`). Stream auto-fallback — when SSE isn't supported, InkOS retries with sync mode automatically. Fallback parser handles non-standard output from smaller models, and partial content recovery kicks in on stream interruption.
 
-### 可靠性保障
+### Reliability
 
-每章自动创建状态快照，`inkos write rewrite` 可回滚任意章节。写手动笔前输出自检表（上下文、资源、伏笔、风险），写完输出结算表，审计员交叉验证。文件锁防止并发写入。写后验证器含跨章重复检测和十余条硬规则自动 spot-fix。
+Every chapter creates an automatic state snapshot — `inkos write rewrite` rolls back any chapter to its pre-write state. The Writer outputs a pre-write checklist (context scope, resources, pending hooks, risks) and a post-write settlement table; the Auditor cross-validates both. File locking prevents concurrent writes. Post-write validator includes cross-chapter repetition detection and a dozen hard rules with auto spot-fix.
 
-伏笔系统使用 Zod schema 校验——`lastAdvancedChapter` 必须是整数，`status` 只能是 open/progressing/deferred/resolved。LLM 输出的 JSON delta 在写入前经过 `applyRuntimeStateDelta` 做 immutable 更新 + `validateRuntimeState` 结构校验。坏数据直接拒绝，不会滚雪球。
+The hook system uses Zod schema validation — `lastAdvancedChapter` must be an integer, `status` can only be open/progressing/deferred/resolved. JSON deltas from the LLM are processed through `applyRuntimeStateDelta` (immutable update) and `validateRuntimeState` (structural check) before persistence. Corrupted data is rejected, not propagated.
 
-模型输出上限由 provider bank 的模型卡管理；`llm.extra` / `INKOS_LLM_EXTRA_*` 中的保留键（max_tokens、temperature、model、messages、stream 等）会被自动过滤，防止意外覆盖核心请求参数。
+Model output limits are managed by provider model cards in the provider bank. Reserved keys in `llm.extra` (max_tokens, temperature, model, messages, stream, etc.) are stripped to prevent accidental overrides of core request parameters.
 
 ---
 
-## 工作原理
+## How It Works
 
-InkOS 以 pi-agent harness 作为统一认知与工具调用内核：Agent 理解用户意图并产生结构化 action，宿主执行确定性工具、确认权限、管理状态并以真实文件和 tool result 判定完成。长篇、短篇、剧本、分镜、互动影游、Play 和翻译复用这套架构，但保留各自的专业 Skill、状态模型与生产步骤。
-
-<p align="center">
-  <img src="assets/arch-system.svg" width="900" alt="InkOS 整体系统架构">
-</p>
-
-长篇每一章默认按“规划 → 编排 → 写作 → 审计 → 必要修订 → 状态同步”运行：
+InkOS uses a pi-agent harness as its shared reasoning and tool-call kernel. The Agent interprets user intent and emits typed actions; the host executes deterministic tools, enforces confirmation and permissions, manages state, and derives completion from real files and tool results. Long fiction, short fiction, scripts, storyboards, interactive film, Play, and translation share this architecture while retaining dedicated Skills, state models, and production steps.
 
 <p align="center">
-  <img src="assets/arch-pipeline.svg" width="900" alt="InkOS 章节生产管线">
+  <img src="assets/arch-system.svg" width="900" alt="System architecture">
 </p>
 
-
-| Agent               | 职责                                                                |
-| ------------------- | ----------------------------------------------------------------- |
-| **雷达 Radar**        | 扫描平台趋势和读者偏好，指导故事方向（可插拔，可跳过）                                       |
-| **规划师 Planner**     | 读取作者意图 + 当前焦点 + 记忆检索结果，产出本章意图（must-keep / must-avoid）             |
-| **编排师 Composer**    | 从结构化状态、控制文档和 Markdown 投影中按任务选择上下文，编译规则栈和运行时产物                     |
-| **建筑师 Architect**   | 建书、导入或番外初始化时生成基础设定：故事框架、规则、角色与长期控制文件                              |
-| **写手 Writer**       | 基于编排后的精简上下文生成正文（字数治理 + 对话引导）                                      |
-| **观察者 Observer**    | 从正文中过度提取 9 类事实（角色、位置、资源、关系、情感、信息、伏笔、时间、物理状态）                      |
-| **反射器 Reflector**   | 输出 JSON delta（而非全量 markdown），由代码层做 Zod schema 校验后 immutable 写入    |
-| **归一化器 Normalizer** | 仅在正文明显偏离 hard range 时单 pass 压缩/扩展                                 |
-| **连续性审计员 Auditor**  | 对照结构化状态、控制文档和章节上下文验证草稿，执行连续性与质量检查                                 |
-| **修订者 Reviser**     | 修复审计发现的关键问题；默认最多自动修订一次，可通过 `writing.reviewRetries` 调整，其他问题标记给人工审核 |
-
-
-如果审计不通过，默认管线只做一次"修订 → 再审计"；仍未解决的问题会保留在结果和状态里，交给人工或后续命令继续处理。需要更强自动闭环时，可以运行 `inkos config set writing.reviewRetries 3` 把修订轮数调高。
-
-### 长期记忆
-
-每本书的权威记忆由三层组成：
-
-
-| 层                    | 用途                                                                                          |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `story/state/*.json` | 权威结构化状态：当前状态、伏笔、章节摘要等，经过 Zod schema 校验                                                      |
-| `story/*.md`         | 人类可读投影：`current_state.md`、`pending_hooks.md`、`chapter_summaries.md`、`character_matrix.md` 等 |
-| `story/memory.db`    | Node 22+ 自动启用的 SQLite 时序记忆库，用于相关事实、伏笔和摘要检索                                                  |
-
-
-连续性审计员对照这些状态检查每一章草稿。如果角色"记起"了从未亲眼见过的事，或者拿出了两章前已经丢失的武器，审计员会捕捉到。
-
-Settler 不再要求模型输出完整 markdown 文件，而是输出 JSON delta，由代码层做 immutable apply + 结构校验后写入。Markdown 文件保留为人类可读投影。旧书首次运行时会从 legacy Markdown 自动迁移到结构化 JSON。
-
-Node 22+ 环境下自动启用 SQLite 时序记忆数据库（`story/memory.db`），支持按相关性检索历史事实、伏笔和章节摘要，避免全量注入导致的上下文膨胀。
+Long-form chapters are produced by multiple agents in sequence:
 
 <p align="center">
-  <img src="assets/arch-memory.svg" width="900" alt="InkOS 长期记忆与状态">
+  <img src="assets/arch-pipeline.svg" width="900" alt="Chapter pipeline">
 </p>
 
-### 控制面与运行时产物
+| Agent | Responsibility |
+|-------|---------------|
+| **Radar** | Scans platform trends and reader preferences to inform story direction (pluggable, skippable) |
+| **Planner** | Reads author intent + current focus + memory retrieval results, produces chapter intent (must-keep / must-avoid) |
+| **Composer** | Selects task-relevant context from structured state, control docs, and Markdown projections, then compiles rule stack and runtime artifacts |
+| **Architect** | Generates foundation files during book creation, import, or spinoff setup: story frame, rules, characters, and long-horizon control files |
+| **Writer** | Produces prose from the composed context (length-governed, dialogue-driven) |
+| **Observer** | Over-extracts 9 categories of facts from the chapter text (characters, locations, resources, relationships, emotions, information, hooks, time, physical state) |
+| **Reflector** | Outputs a JSON delta (not full markdown); code-layer applies Zod schema validation then immutable write |
+| **Normalizer** | Single-pass compress/expand only when the chapter clearly leaves the hard length range |
+| **Continuity Auditor** | Validates the draft against structured state, control docs, and chapter context |
+| **Reviser** | Fixes critical issues found by the auditor; the default write cycle runs at most one automatic revision pass and flags the rest for human review |
 
-除了运行时状态，InkOS 还把“护栏”和“自定义”拆成可审阅的控制层：
+If the audit fails, the default pipeline runs one revise → re-audit pass. Remaining issues are preserved in the result and state for human review or later commands.
 
-- `story/author_intent.md`：长期作者意图
-- `story/current_focus.md`：当前阶段的关注点
-- `story/runtime/chapter-XXXX.intent.md`：本章目标、保留项、避免项、冲突处理
-- `story/runtime/chapter-XXXX.context.json`：本章实际选入的上下文
-- `story/runtime/chapter-XXXX.rule-stack.yaml`：本章的优先级层和覆盖关系
-- `story/runtime/chapter-XXXX.trace.json`：本章输入编译轨迹
+### Long-Term Memory
 
-这样 `brief`、卷纲、书级规则、当前任务不再混成一坨 prompt，而是先编译，再写作。
+Each book's canonical memory is split into three layers:
 
-### 创作规则体系
+| Layer | Purpose |
+|-------|---------|
+| `story/state/*.json` | Authoritative structured state: current state, hooks, chapter summaries, and related runtime data, validated with Zod schemas |
+| `story/*.md` | Human-readable projections such as `current_state.md`, `pending_hooks.md`, `chapter_summaries.md`, and `character_matrix.md` |
+| `story/memory.db` | SQLite temporal memory on Node 22+, used for relevance-based retrieval of facts, hooks, and summaries |
 
-写手 agent 内置 ~25 条通用创作规则（人物塑造、叙事技法、逻辑自洽、语言约束、去 AI 味），适用于所有题材。
+The Continuity Auditor checks drafts against this state. If a character "remembers" something they never witnessed, or pulls a weapon they lost two chapters ago, the auditor catches it.
 
-在此基础上，每个题材有专属规则（禁忌、语言约束、节奏、审计维度），每本书有独立的 `book_rules.md`（主角人设、数值上限、自定义禁令）、`story_bible.md`（世界观设定）、`author_intent.md`（长期方向）和 `current_focus.md`（近期关注点）。`volume_outline.md` 仍然是默认规划，但在 v2 输入治理模式下不再天然压过当前任务意图。
+The Settler no longer asks the model to output full markdown files. It produces a JSON delta, and the code layer applies and validates it immutably before persistence. Markdown remains as a readable projection. Existing books migrate from legacy Markdown on first run.
 
-## 使用模式
+On Node 22+, a SQLite temporal memory database (`story/memory.db`) is automatically enabled, supporting relevance-based retrieval of historical facts, hooks, and chapter summaries — preventing context bloat from full-file injection.
 
-InkOS 提供四种交互方式，底层共享同一组原子操作：
+<p align="center">
+  <img src="assets/arch-memory.svg" width="900" alt="Memory and state">
+</p>
 
-### 1. 完整管线（一键式）
+### Control Surface and Runtime Artifacts
+
+Alongside runtime state, InkOS splits guardrails from customization into reviewable control docs:
+
+- `story/author_intent.md`: long-horizon author intent
+- `story/current_focus.md`: near-term steering
+- `story/runtime/chapter-XXXX.intent.md`: chapter goal, keep/avoid list, conflict resolution
+- `story/runtime/chapter-XXXX.context.json`: the actual context selected for this chapter
+- `story/runtime/chapter-XXXX.rule-stack.yaml`: priority layers and override relationships
+- `story/runtime/chapter-XXXX.trace.json`: compilation trace for this chapter
+
+That means briefs, outline nodes, book rules, and current requests are no longer mashed into one prompt blob; InkOS compiles them first, then writes.
+
+### Writing Rule System
+
+The Writer agent has ~25 universal writing rules (character craft, narrative technique, logical consistency, language constraints, de-AI-ification), applicable to all genres.
+
+On top of that, each genre has dedicated rules (prohibitions, language constraints, pacing, audit dimensions), and each book has its own `book_rules.md` (protagonist personality, numerical caps, custom prohibitions), `story_bible.md` (worldbuilding), `author_intent.md` (long-horizon direction), and `current_focus.md` (near-term steering). `volume_outline.md` still acts as the default plan, but in v2 input governance it no longer automatically overrides the current chapter intent.
+
+## Usage Modes
+
+InkOS provides four interaction modes, all sharing the same atomic operations:
+
+### 1. Full Pipeline (One Command)
 
 ```bash
-inkos write next 吞天魔帝          # 写草稿 → 审计 → 按配置自动修订
-inkos write next 吞天魔帝 --count 5 # 连续写 5 章
+inkos write next my-book              # Draft → audit → auto-revise, all in one
+inkos write next my-book --count 5    # Write 5 chapters in sequence
 ```
 
-`write next` 现在默认走 `plan -> compose -> write` 的输入治理链路，审计后的自动修订轮数默认是 1。若你需要回退到旧的 prompt 拼装路径，可在 `inkos.json` 中显式设置：
+`write next` now uses the `plan -> compose -> write` governance chain by default. If you need the older prompt-assembly path, set this explicitly in `inkos.json`:
 
 ```json
 {
@@ -510,137 +506,124 @@ inkos write next 吞天魔帝 --count 5 # 连续写 5 章
 }
 ```
 
-默认值为 `v2`。`legacy` 仅作为显式 fallback 保留。
+The default is now `v2`. `legacy` remains available as an explicit fallback.
 
-### 2. 原子命令（可组合，适合外部 Agent 调用）
-
-```bash
-inkos plan chapter 吞天魔帝 --context "本章重点写师徒矛盾" --json
-inkos compose chapter 吞天魔帝 --json
-inkos draft 吞天魔帝 --context "本章重点写师徒矛盾" --json
-inkos audit 吞天魔帝 31 --json
-inkos revise 吞天魔帝 31 --json
-```
-
-每个命令独立执行单一操作，`--json` 输出结构化数据。`plan` / `compose` 负责控制输入，`draft` / `audit` / `revise` 负责正文与质量链路。可被外部 AI Agent 通过 `exec` 调用，也可用于脚本编排。
-
-### 3. 自然语言 Agent 模式
+### 2. Atomic Commands (Composable, External Agent Friendly)
 
 ```bash
-inkos agent "帮我写一本都市修仙，主角是个程序员"
-inkos agent "写下一章，重点写师徒矛盾"
-inkos agent "先扫描市场趋势，然后根据结果创建一本新书"
+inkos plan chapter my-book --context "Focus on the mentor conflict first" --json
+inkos compose chapter my-book --json
+inkos draft my-book --context "Focus on the dungeon boss encounter and party dynamics" --json
+inkos audit my-book 31 --json
+inkos revise my-book 31 --json
 ```
 
-Agent 模式暴露的是按场景收窄后的工具集：建书、读写控制面、规划、编排、写作、审稿、修订、短篇、封面、Play 等能力会按当前 session 类型开放。推荐的 Agent 工作流是：先调整控制面，再 `plan` / `compose`，最后决定写草稿还是跑完整管线。
+Each command performs a single operation independently. `--json` outputs structured data. `plan` / `compose` govern inputs; `draft` / `audit` / `revise` handle prose and quality checks. They can be called by external AI agents via `exec`, or used in scripts.
 
-### 4. Studio Play 模式
+### 3. Natural Language Agent Mode
 
-Studio 里的「开放世界」和「分支互动」是交互式创作入口。它们不要求你先建书，也不要求写死 RPG 数值。你可以描述“世界怎样运行、时间怎样推进、角色是否自主行动、物品和证据怎样影响故事”，系统会生成可继续玩的世界，并把每回合状态写回本地。
+```bash
+inkos agent "Write a LitRPG novel where the MC is a healer class in a dungeon world"
+inkos agent "Write the next chapter, focus on the boss fight and loot distribution"
+inkos agent "Create a progression fantasy about a mage who can only use one spell"
+```
 
-## Studio 实测截图与生成结果
+Agent mode exposes tools according to the current session kind: book creation, control-surface edits, planning, composition, writing, audit, revision, Short, cover, and Play tools are only made available where they make sense. The recommended agent flow is: adjust the control surface first, then `plan` / `compose`, then choose draft-only or full-pipeline writing.
+
+### 4. Studio Play Mode
+
+Studio's **Open World** and **Branching Interactive** entries launch interactive creation without first creating a book. Describe how the world runs, how time advances, whether characters act as agents, and how items/evidence matter. InkOS writes the result back to a local world state so the session can continue.
+
+## Studio Screenshots and Run Outputs
 
 <p align="center">
-  <img src="assets/studio-dashboard.png" width="760" alt="InkOS Studio 开始创作入口">
+  <img src="assets/studio-dashboard.png" width="760" alt="InkOS Studio creation entry screenshot">
 </p>
 
 <p align="center">
-  <strong>InkOS Short 手机封面</strong><br>
-  <img src="assets/inkos-short-demo-cover.png" width="260" alt="短篇封面">
+  <img src="assets/inkos-short-demo-cover.png" width="230" alt="Short-fiction cover output">
+  <img src="assets/play-openworld-romance.png" width="230" alt="Romance interactive-world output">
+  <img src="assets/play-openworld-detective.png" width="230" alt="Detective interactive-world output">
+  <img src="assets/play-item-warcraft.png" width="230" alt="Interactive-world item image output">
 </p>
 
-<p align="center">
-  <strong>InkOS Play 恋爱互动</strong><br>
-  <img src="assets/play-openworld-romance.png" width="560" alt="恋爱互动">
-</p>
+The first image is a local Studio screenshot. The other images are real local outputs from InkOS Short and InkOS Play: mobile-first short-fiction covers, open-world scenes, detective evidence visuals, and item imagery.
 
-<p align="center">
-  <strong>InkOS Play 侦探互动</strong><br>
-  <img src="assets/play-openworld-detective.png" width="560" alt="侦探互动">
-</p>
+## CLI Reference
 
-<p align="center">
-  <strong>InkOS Play 物品配图</strong><br>
-  <img src="assets/play-item-warcraft.png" width="560" alt="物品配图">
-</p>
+| Command | Description |
+|---------|-------------|
+| `inkos init [name]` | Initialize project (omit name to init current directory) |
+| `inkos book create` | Create a new book (`--genre`, `--chapter-words`, `--target-chapters`, `--brief <file>`, `--lang en/zh`) |
+| `inkos book update [id]` | Update book settings (`--chapter-words`, `--target-chapters`, `--status`, `--lang`) |
+| `inkos book list` | List all books |
+| `inkos book delete <id>` | Delete a book and all its data (`--force` to skip confirmation) |
+| `inkos genre list/show/copy/create` | View, copy, or create genres |
+| `inkos plan chapter [id]` | Generate the next chapter's `intent.md` (`--context` / `--context-file` for current steering) |
+| `inkos compose chapter [id]` | Generate the next chapter's `context.json`, `rule-stack.yaml`, and `trace.json` |
+| `inkos write next [id]` | Full pipeline: write next chapter (`--words` to override, `--count` for batch, `-q` quiet mode) |
+| `inkos write rewrite [id] <n>` | Rewrite chapter N (restores state snapshot, `--force` to skip confirmation) |
+| `inkos draft [id]` | Write draft only (`--words` to override word count, `-q` quiet mode) |
+| `inkos audit [id] [n]` | Audit a specific chapter |
+| `inkos revise [id] [n]` | Revise a specific chapter |
+| `inkos agent <instruction>` | Natural language agent mode |
+| `inkos review list [id]` | Review drafts |
+| `inkos review approve-all [id]` | Batch approve |
+| `inkos status [id]` | Project status |
+| `inkos export [id]` | Export book (`--format txt/md/epub`, `--output <path>`, `--approved-only`) |
+| `inkos radar scan` | Scan market / trend inputs for new-book direction |
+| `inkos fanfic init` | Create a fanfic book from source material (`--from`, `--mode canon/au/ooc/cp`) |
+| `inkos short run` | Generate a standalone short-fiction package |
+| `inkos eval [id]` | Generate a quality evaluation report (`--json`, chapter ranges) |
+| `inkos consolidate [id]` | Consolidate chapter summaries for long-book context control |
+| `inkos forecast create/show/select` | Create, re-check, and select non-canonical long-form branches; selection saves a candidate plan only |
+| `inkos interact` | External-agent / CLI natural-language entry (`--json`, `--message`, `--book`) |
+| `inkos config set-global` | Set the global CLI / daemon / deployment LLM env config (`~/.inkos/.env`) |
+| `inkos config show-global` | Show the global config |
+| `inkos config set/show` | View or update project configuration |
+| `inkos config set-model <agent> <model>` | Per-agent model override (`--base-url`, `--provider`, `--api-key-env`) |
+| `inkos config remove-model <agent>` | Remove a per-agent model override (fall back to the default) |
+| `inkos config show-models` | Show current model routing |
+| `inkos doctor` | Diagnose setup issues (API connectivity test + provider compatibility hints) |
+| `inkos detect [id] [n]` | AIGC detection (`--all` for all chapters, `--stats` for statistics) |
+| `inkos style analyze <file>` | Analyze reference text to extract style fingerprint |
+| `inkos style import <file> [id]` | Import style fingerprint into a book |
+| `inkos import canon [id] --from <parent>` | Import parent canon into a spinoff book |
+| `inkos import chapters [id] --from <path>` | Import existing chapters for continuation (`--split`, `--resume-from`) |
+| `inkos analytics [id]` / `inkos stats [id]` | Book analytics (audit pass rate, top issues, chapter ranking, token usage) |
+| `inkos update` | Update to the latest version |
+| `inkos` / `inkos studio` | Start web workbench (`-p` for port, default 4567) |
+| `inkos tui` | Start terminal full-screen TUI |
+| `inkos up / down` | Start/stop daemon (`-q` quiet mode, auto-writes `inkos.log`) |
 
-第一张是当前 Studio 的本地实测截图。后面四张来自 InkOS Short 和 InkOS Play 的真实本地生成结果：短篇封面用于手机端缩略图点击，Play 图用于展示开放世界、侦探证据、互动场景和物品视觉能力。
+`[id]` is auto-detected when the project has only one book. All commands support `--json` for structured output. `draft` / `write next` / `plan chapter` / `compose chapter` accept `--context` for steering, and `--words` overrides the target chapter size. `book create` supports `--brief <file>` to pass a creative brief — the Architect builds from your ideas instead of generating from scratch. `plan chapter` calls the LLM to create chapter intent; `compose chapter` does not require a live LLM, so you can inspect governed inputs before finishing API setup.
 
-## 命令参考
-
-
-| 命令                                          | 说明                                                                                         |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `inkos init [name]`                         | 初始化项目（省略 name 在当前目录初始化）                                                                    |
-| `inkos book create`                         | 创建新书（`--genre`、`--platform`、`--chapter-words`、`--target-chapters`、`--brief <file>` 传入创作简报） |
-| `inkos book update [id]`                    | 修改书设置（`--chapter-words`、`--target-chapters`、`--status`）                                    |
-| `inkos book list`                           | 列出所有书籍                                                                                     |
-| `inkos book delete <id>`                    | 删除书籍及全部数据（`--force` 跳过确认）                                                                  |
-| `inkos genre list/show/copy/create`         | 查看、复制、创建题材                                                                                 |
-| `inkos plan chapter [id]`                   | 生成下一章的 `intent.md`（`--context` / `--context-file` 传入当前指令）                                  |
-| `inkos compose chapter [id]`                | 生成下一章的 `context.json`、`rule-stack.yaml`、`trace.json`                                       |
-| `inkos write next [id]`                     | 完整管线写下一章（`--words` 覆盖字数，`--count` 连写，`-q` 静默模式）                                            |
-| `inkos write rewrite [id] <n>`              | 重写第 N 章（恢复状态快照，`--force` 跳过确认，`--words` 覆盖字数）                                              |
-| `inkos draft [id]`                          | 只写草稿（`--words` 覆盖字数，`-q` 静默模式）                                                             |
-| `inkos audit [id] [n]`                      | 审计指定章节                                                                                     |
-| `inkos revise [id] [n]`                     | 修订指定章节                                                                                     |
-| `inkos agent <instruction>`                 | 自然语言 Agent 模式                                                                              |
-| `inkos review list [id]`                    | 审阅草稿                                                                                       |
-| `inkos review approve-all [id]`             | 批量通过                                                                                       |
-| `inkos status [id]`                         | 项目状态                                                                                       |
-| `inkos export [id]`                         | 导出书籍（`--format txt/md/epub`、`--output <path>`、`--approved-only`）                           |
-| `inkos radar scan`                          | 扫描平台趋势                                                                                     |
-| `inkos fanfic init`                         | 从原作素材创建同人书（`--from`、`--mode canon/au/ooc/cp`）                                              |
-| `inkos short run`                           | 生成独立短篇包（正文、简介卖点、封面提示词、可选封面图）                                                               |
-| `inkos eval [id]`                           | 生成质量评估报告（支持 `--json`、章节范围）                                                                 |
-| `inkos consolidate [id]`                    | 归并长篇章节摘要，降低长书上下文压力                                                                         |
-| `inkos forecast create/show/select`          | 生成、核验并选择长篇的非正史剧情分支；选择只保存候选计划，不修改正史                                                        |
-| `inkos interact`                            | 外部 agent / CLI 自然语言入口（`--json`、`--message`、`--book`）                                       |
-| `inkos config set-global`                   | 设置 CLI / daemon / 部署环境的全局 LLM env（`~/.inkos/.env`）                                         |
-| `inkos config show-global`                  | 查看全局配置                                                                                     |
-| `inkos config set/show`                     | 查看/更新项目配置                                                                                  |
-| `inkos config set-model <agent> <model>`    | 为指定 agent 设置模型覆盖（`--base-url`、`--provider`、`--api-key-env` 支持多 Provider 路由）                |
-| `inkos config remove-model <agent>`         | 移除 agent 模型覆盖（回退到默认）                                                                       |
-| `inkos config show-models`                  | 查看当前模型路由                                                                                   |
-| `inkos doctor`                              | 诊断配置问题（显示 effective config mode、来源、API 连通性和提供商兼容性提示）                                       |
-| `inkos detect [id] [n]`                     | AIGC 检测（`--all` 全部章节，`--stats` 统计）                                                         |
-| `inkos style analyze <file>`                | 分析参考文本提取文风指纹                                                                               |
-| `inkos style import <file> [id]`            | 导入文风指纹到指定书                                                                                 |
-| `inkos import canon [id] --from <parent>`   | 导入正传正典到番外书                                                                                 |
-| `inkos import chapters [id] --from <path>`  | 导入已有章节续写（`--split`、`--resume-from`）                                                        |
-| `inkos analytics [id]` / `inkos stats [id]` | 书籍数据分析（审计通过率、高频问题、章节排名、token 用量）                                                           |
-| `inkos update`                              | 更新到最新版本                                                                                    |
-| `inkos studio` / `inkos`                    | 启动 Web 工作台（`-p` 指定端口，默认 4567；Studio 使用服务页配置，不使用 env 覆盖）                                    |
-| `inkos tui`                                 | 启动终端全屏 TUI                                                                                 |
-| `inkos up / down`                           | 启动/停止守护进程（`-q` 静默模式，自动写入 `inkos.log`）                                                      |
-
-
-`[id]` 参数在项目只有一本书时可省略，自动检测。所有命令支持 `--json` 输出结构化数据。`draft` / `write next` / `plan chapter` / `compose chapter` 支持 `--context` 传入创作指导，`--words` 覆盖每章目标字数。`book create` 支持 `--brief <file>` 传入创作简报（你的脑洞/设定文档），Architect 会基于此生成设定而非凭空创作。`plan chapter` 会调用 LLM 生成章节意图；`compose chapter` 不要求在线 LLM，可在配置 API Key 之前先检查输入治理结果。
-
-CLI 运行时还支持一次性 LLM 覆盖参数：`--service`、`--model`、`--api-key-env`、`--base-url`、`--api-format <chat|responses>`、`--stream`、`--no-stream`。例如：
+The CLI also accepts one-off LLM override flags at runtime: `--service`, `--model`, `--api-key-env`, `--base-url`, `--api-format <chat|responses>`, `--stream`, `--no-stream`. For example:
 
 ```bash
 inkos write next --service google --model gemini-2.5-flash
 inkos up --service moonshot --model kimi-k2.5 --api-key-env MOONSHOT_API_KEY
 ```
 
-## 路线图
+## Roadmap
 
-- ~~`packages/studio` Web UI 工作台（Vite + React + Hono）~~ — 已发布，`inkos` 或 `inkos studio` 启动
-- ~~互动小说 / 开放世界（分支叙事 + 自由动作 + 自动配图）~~ — Studio Play 已落地
-- 局部干预（重写半章 + 级联更新后续 truth 文件）
-- 自定义 agent 插件系统
-- 平台格式导出（起点、番茄等）
+- [x] ~~`packages/studio` Web UI workbench (Vite + React + Hono)~~ — shipped, run `inkos` or `inkos studio`
+- [x] ~~Interactive fiction / open worlds (branching choices + free actions + generated images)~~ — shipped in Studio Play
+- [ ] Partial chapter intervention (rewrite half a chapter + cascade truth file updates)
+- [ ] Custom agent plugin system
+- [ ] Platform-format export (Qidian, Fanqie, etc.)
 
-## 参与贡献
+## Contributing
 
-欢迎贡献代码。提 issue 或 PR。
+Contributions welcome. Open an issue or PR.
+
+Development is moving quickly. More features and writing-quality improvements will keep landing. Feedback, feature requests, and project follow-up are all welcome. The goal is to build the strongest AI novel-writing Agent.
 
 ```bash
 pnpm install
-pnpm dev          # 监听模式
-pnpm test         # 运行测试
-pnpm typecheck    # 类型检查
+pnpm dev          # Watch mode for all packages
+pnpm test         # Run tests
+pnpm typecheck    # Type-check without emitting
 ```
 
 ## Star History
@@ -652,7 +635,6 @@ pnpm typecheck    # 类型检查
    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Narcooo/inkos&type=date&legend=top-left" />
  </picture>
 </a>
-
 
 ## Skills Download History
 
@@ -666,20 +648,18 @@ pnpm typecheck    # 类型检查
 
 ## Repobeats
 
-![Repobeats analytics image](https://repobeats.axiom.co/api/embed/024114415c1505a8c27fb121e3b392524e48f583.svg)
+![Alt](https://repobeats.axiom.co/api/embed/024114415c1505a8c27fb121e3b392524e48f583.svg "Repobeats analytics image")
 
 ## Contributors
 
 <a href="https://github.com/Narcooo/inkos/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Narcooo/inkos" alt="Contributors" />
+  <img src="https://contrib.rocks/image?repo=Narcooo/inkos" />
 </a>
 
-## 致谢
+## Acknowledgments
 
-InkOS 的 agent 运行时构建在 [pi](https://github.com/badlogic/pi-mono)（`@mariozechner/pi-ai` 与 `@mariozechner/pi-agent-core`，作者 Mario Zechner）之上。感谢 pi 提供的扎实底座。
+InkOS's agent runtime is built on [pi](https://github.com/badlogic/pi-mono) (`@mariozechner/pi-ai` and `@mariozechner/pi-agent-core`) by Mario Zechner. Thanks to pi for the solid foundation.
 
-本开源项目已链接并认可 [LINUX DO](https://linux.do/) 社区，感谢社区成员的反馈、测试与讨论。
-
-## 许可证
+## License
 
 [AGPL-3.0](LICENSE)
