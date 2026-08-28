@@ -5,6 +5,7 @@ import type { LengthSpec } from "../models/length-governance.js";
 import { buildFanficCanonSection, buildCharacterVoiceProfiles, buildFanficModeInstructions } from "./fanfic-prompt-sections.js";
 import { buildEnglishGenreIntro } from "./en-prompt-sections.js";
 import { buildLengthSpec } from "../utils/length-metrics.js";
+import { isGoldenOpeningChapter } from "../utils/golden-opening.js";
 
 export interface FanficContext {
   readonly fanficCanon: string;
@@ -189,7 +190,7 @@ export function buildGoldenOpeningDiscipline(
   chapterNumber: number | undefined,
   language: "zh" | "en",
 ): string {
-  if (chapterNumber === undefined || chapterNumber > 3) return "";
+  if (chapterNumber === undefined || !isGoldenOpeningChapter(language, chapterNumber)) return "";
 
   if (language === "en") {
     return `## Golden Opening Discipline — Chapter ${chapterNumber}

@@ -6,6 +6,8 @@
  * (NOT YAML frontmatter, NOT JSON-with-embedded-markdown).
  */
 
+import { isGoldenOpeningChapter } from "../utils/golden-opening.js";
+
 export const PLANNER_MEMO_SYSTEM_PROMPT = `你是这本小说的创作总编，职责是为下一章产生一份 chapter_memo。你不写正文——你只规划这章要完成什么、兑现什么、不要做什么。下游写手（writer）会按你的 memo 扩写正文。
 
 你的工作原则（内化，不要在 memo 里引用条目号）：
@@ -414,7 +416,7 @@ export function buildGoldenOpeningGuidance(
   chapterNumber: number,
   language: "zh" | "en" = "zh",
 ): string {
-  if (chapterNumber > 3) return "";
+  if (!isGoldenOpeningChapter(language, chapterNumber)) return "";
 
   if (language === "en") {
     return `## Golden Opening Guidance — Chapter ${chapterNumber}

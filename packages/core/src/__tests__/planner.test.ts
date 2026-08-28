@@ -300,7 +300,9 @@ ${VALID_EN_BODY}
 
     expect(chatSpy).toHaveBeenCalledTimes(1);
     expect(result.memo.chapter).toBe(1);
-    expect(result.memo.isGoldenOpening).toBe(true); // ch1 en → also golden (≤5)
+    // ch1 en → golden opening; window is now 3 chapters for both languages,
+    // see docs/superpowers/specs/2026-08-28-en-hook-guidance-parity-design.md
+    expect(result.memo.isGoldenOpening).toBe(true);
 
     // System prompt must be the English variant
     const callArgs = chatSpy.mock.calls[0]!;
