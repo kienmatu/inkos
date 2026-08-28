@@ -111,6 +111,21 @@ describe("CLI integration", () => {
       expect(config.language).toBe("vi");
     });
 
+    it("prints an English-titled next-steps example for the default Vietnamese-UI project, never a Chinese title", async () => {
+      // Vietnamese is UI-only; a book created on this default project is written
+      // in English (toWritingLanguage("vi") === "en"), so the example command
+      // must not use a Chinese book title like the zh-project example does.
+      const viDir = await mkdtemp(join(tmpdir(), "inkos-cli-vi-init-"));
+
+      try {
+        const output = run(["init", viDir]);
+        expect(output).toContain("inkos book create --title 'My Novel'");
+        expect(output).not.toContain("我的小说");
+      } finally {
+        await rm(viDir, { recursive: true, force: true });
+      }
+    });
+
     it("creates .env file", async () => {
       const envContent = await readFile(join(projectDir, ".env"), "utf-8");
       expect(envContent).toContain("INKOS_LLM_API_KEY");

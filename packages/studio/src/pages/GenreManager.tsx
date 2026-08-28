@@ -6,12 +6,33 @@ import { useI18n } from "../hooks/use-i18n";
 import { useColors } from "../hooks/use-colors";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import type { AppLanguage } from "../lib/app-language";
 
-interface GenreInfo {
+export interface GenreInfo {
   readonly id: string;
   readonly name: string;
   readonly source: "project" | "builtin";
   readonly language: "zh" | "en";
+}
+
+// GenreInfo.language is a WRITING language (zh/en only); `uiLang` is the UI
+// language (zh/en/vi). Compare against the WRITING language so a
+// Vietnamese-UI project still sees its (English) built-in genres instead of
+// an empty list.
+//
+// This mirrors @actalk/inkos-core's toWritingLanguage(zh -> zh, everything
+// else including "vi"/undefined -> en) inline rather than importing it:
+// importing toWritingLanguage from the "@actalk/inkos-core" barrel into this
+// file was verified to break the production client bundle (`pnpm --filter
+// studio build`), because it pulls the server-only atomic-file-set.js module
+// (which uses node:fs/node:path) into the vite client build. See
+// ImportManager.tsx for the same workaround.
+export function filterGenresForLanguage(
+  genres: ReadonlyArray<GenreInfo>,
+  uiLang: AppLanguage,
+): ReadonlyArray<GenreInfo> {
+  const writingLang = uiLang === "zh" ? "zh" : "en";
+  return genres.filter((g) => g.language === writingLang || g.source === "project");
 }
 
 interface GenreDetail {
@@ -212,8 +233,8 @@ export function GenreManager({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFu
   const [form, setForm] = useState<GenreFormData>(EMPTY_FORM);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-  // Only show genres matching current language, plus custom project genres
-  const filteredGenres = data?.genres.filter((g) => g.language === lang || g.source === "project") ?? [];
+  // Only show genres matching the current WRITING language, plus custom project genres.
+  const filteredGenres = filterGenresForLanguage(data?.genres ?? [], lang);
   const validSelected = selected && filteredGenres.some((g) => g.id === selected) ? selected : null;
   const selectedGenre = filteredGenres.find((g) => g.id === validSelected) ?? null;
 

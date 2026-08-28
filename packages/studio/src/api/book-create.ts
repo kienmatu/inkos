@@ -1,4 +1,4 @@
-import { normalizePlatformOrOther, defaultChapterLength, type Platform } from "@actalk/inkos-core";
+import { normalizePlatformOrOther, defaultChapterLength, toWritingLanguage, type Platform } from "@actalk/inkos-core";
 export { waitForStudioBookReady } from "../lib/book-ready.js";
 export type { StudioBookDetail, WaitForStudioBookReadyOptions } from "../lib/book-ready.js";
 
@@ -41,12 +41,12 @@ export function buildStudioBookConfig(body: StudioCreateBookBody, now: string): 
     genre: body.genre,
     status: "outlining",
     targetChapters: body.targetChapters ?? 200,
-    chapterWordCount: body.chapterWordCount ?? defaultChapterLength(body.language === "en" ? "en" : "zh"),
-    ...(body.language === "en"
-      ? { language: "en" as const }
-      : body.language === "zh"
-        ? { language: "zh" as const }
-        : {}),
+    // body.language is a UI language ("zh"/"en"/"vi") reaching this WRITING-language
+    // field; normalize instead of dropping unrecognized values, so "vi" (and any
+    // other unexpected value) yields English, never a silent fall-through to the
+    // Chinese-defaulting genre profile.
+    chapterWordCount: body.chapterWordCount ?? defaultChapterLength(toWritingLanguage(body.language)),
+    ...(body.language !== undefined ? { language: toWritingLanguage(body.language) } : {}),
     createdAt: now,
     updatedAt: now,
   };

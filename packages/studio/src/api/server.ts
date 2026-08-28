@@ -1265,6 +1265,7 @@ async function executeConfirmedProductionAction(args: {
     const title = requirePayloadText(payload?.title, pick(lang, "确认建书缺少书名，请重新生成确认卡。", "The book creation confirmation is missing a title. Regenerate the confirmation card."));
     tool = createSubAgentTool(args.pipeline, null, args.root, {
       actionPayload,
+      language: toWritingLanguage(lang),
       workerSkills: (worker) => worker === "architect" ? productionSkills("longWriting") : [],
     });
     agent = "architect";
@@ -2722,7 +2723,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
 
   // Read the project language fresh from inkos.json on every call, so a language
   // switch takes effect on the next request instead of being frozen at startup.
-  // A missing/corrupt inkos.json means "no project language configured" -> zh.
+  // A missing/corrupt inkos.json means "no project language configured" -> vi.
   async function currentProjectLanguage(): Promise<StudioLanguage> {
     const raw = await loadRawConfig(root).catch(() => ({} as Record<string, unknown>));
     return normalizeStudioLanguage(raw.language);
@@ -4694,6 +4695,19 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
       const configLanguage = toWritingLanguage(config.language);
       const bookLanguage = activeBookConfig?.language === "en" ? "en" : activeBookConfig?.language === "zh" ? "zh" : undefined;
       const requestedLanguage = actionPayload?.shortRun?.language ?? actionPayload?.createBook?.language;
+      // NOTE: surfaceLanguage is a WRITING language ("zh"|"en"), never the UI
+      // language ("zh"|"en"|"vi") — it is built from toWritingLanguage(config.language),
+      // the book's own `language` field, or inferLanguage(), none of which can produce
+      // "vi". It is passed as `language:` into executeConfirmedProductionAction and
+      // runAgentSession below, where ~40 user-facing strings resolve via
+      // pick(lang, zh, en, vi?) keyed off THIS value. Consequence: on this call path
+      // the `vi` slot of `pick` is unreachable, and a Vietnamese-UI project that has
+      // a legacy "zh" book will see these chat/task strings in CHINESE, not Vietnamese
+      // or English. This is a known limitation, not an oversight — restructuring this
+      // call path to thread the actual UI language through is out of scope here
+      // because of how large and risky that change would be; do not "fix" it by
+      // quietly passing the UI language into `surfaceLanguage`, since production
+      // code downstream depends on it staying a writing language.
       const surfaceLanguage = agentBookId
         ? (bookLanguage ?? configLanguage)
         : (requestedLanguage ?? inferLanguage(instruction));
@@ -5310,7 +5324,15 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
   // --- Language setup ---
 
   app.post("/api/v1/project/language", async (c) => {
-    const { language } = await c.req.json<{ language: StudioLanguage }>();
+    const { language } = await c.req.json<{ language: unknown }>();
+    // Closed whitelist, matching PUT /api/v1/project: reject unknown values
+    // instead of coercing/persisting them. This route has had no caller since
+    // the first-run LanguageSelector was deleted, but keep it hardened in case
+    // something starts calling it again.
+    const STUDIO_LANGUAGES: readonly StudioLanguage[] = ["zh", "en", "vi"];
+    if (typeof language !== "string" || !(STUDIO_LANGUAGES as readonly string[]).includes(language)) {
+      return c.json({ error: `Invalid language: ${String(language)}` }, 400);
+    }
     const configPath = join(root, "inkos.json");
     try {
       const raw = await readFile(configPath, "utf-8");
@@ -6074,7 +6096,10 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
       targetChapters: body.targetChapters ?? 100,
       chapterWordCount: body.chapterWordCount ?? 3000,
       fanficMode: (body.mode ?? "canon") as "canon",
-      ...(body.language ? { language: body.language as "zh" | "en" } : {}),
+      // body.language is a UI language ("zh"/"en"/"vi"); normalize through
+      // toWritingLanguage instead of casting, so "vi" (or any other stray
+      // value) becomes "en", never a silently-cast "vi" persisted to book.json.
+      ...(body.language !== undefined ? { language: toWritingLanguage(body.language) } : {}),
       createdAt: now,
       updatedAt: now,
     };

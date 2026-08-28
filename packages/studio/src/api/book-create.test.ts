@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { defaultChapterLength } from "@actalk/inkos-core";
 import { buildStudioBookConfig, normalizeStudioPlatform, waitForStudioBookReady } from "./book-create";
 
 describe("normalizeStudioPlatform", () => {
@@ -50,6 +51,25 @@ describe("buildStudioBookConfig", () => {
     expect(config.platform).toBe("other");
     expect(config.language).toBe("en");
     expect(config.id).toBe("english-book");
+  });
+
+  it("normalizes a Vietnamese UI language to English, never Chinese (CRITICAL 1)", () => {
+    // "vi" is a UI-only language; no book is ever written in Vietnamese.
+    // toWritingLanguage maps anything that isn't "zh" (including "vi") to "en".
+    const config = buildStudioBookConfig(
+      {
+        title: "Vietnamese UI Book",
+        genre: "other",
+        language: "vi",
+      },
+      "2026-03-30T00:00:00.000Z",
+    );
+
+    expect(config.language).toBe("en");
+    expect(config.language).not.toBe("vi");
+    expect(config.language).not.toBe("zh");
+    // The chapter-length default must also follow English, not fall back to Chinese.
+    expect(config.chapterWordCount).toBe(defaultChapterLength("en"));
   });
 });
 

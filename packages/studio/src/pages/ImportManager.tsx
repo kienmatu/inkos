@@ -8,6 +8,17 @@ import { tr } from "../lib/app-language";
 import { FileInput, BookCopy, Feather, BookMarked, Upload, Wand2 } from "lucide-react";
 import { waitForStudioBookReady } from "../lib/book-ready";
 
+// Mirrors @actalk/inkos-core's toWritingLanguage contract (zh -> zh, anything
+// else including "vi"/undefined -> en) without importing it: importing
+// toWritingLanguage from the "@actalk/inkos-core" barrel into this file was
+// verified to break the production client bundle (`pnpm --filter studio
+// build`), because it pulls the server-only atomic-file-set.js module (which
+// uses node:fs/node:path) into the vite client build. See GenreManager.tsx
+// for the same workaround and rationale.
+function toWritingLanguageLocal(lang: string | undefined): "zh" | "en" {
+  return lang === "zh" ? "zh" : "en";
+}
+
 interface BookSummary {
   readonly id: string;
   readonly title: string;
@@ -50,7 +61,11 @@ export function ImportManager({ nav, theme, t, initialTab }: { nav: Nav; theme: 
   const [ffText, setFfText] = useState("");
   const [ffMode, setFfMode] = useState("canon");
   const [ffGenre, setFfGenre] = useState("other");
-  const [ffLang, setFfLang] = useState(lang);
+  // `lang` is the UI language ("zh"/"en"/"vi"); the book's language field only
+  // ever accepts "zh"/"en". Seed with toWritingLanguageLocal(lang) so the
+  // <select> below (which only offers zh/en) always starts with a valid
+  // selection instead of an unmatched "vi".
+  const [ffLang, setFfLang] = useState(() => toWritingLanguageLocal(lang));
 
   // Spinoff (番外) state
   const [spTitle, setSpTitle] = useState("");
@@ -62,7 +77,8 @@ export function ImportManager({ nav, theme, t, initialTab }: { nav: Nav; theme: 
   const [imRef, setImRef] = useState("");
   const [imIdea, setImIdea] = useState("");
   const [imGenre, setImGenre] = useState("other");
-  const [imLang, setImLang] = useState(lang);
+  // Same UI-vs-writing language rationale as ffLang above.
+  const [imLang, setImLang] = useState(() => toWritingLanguageLocal(lang));
 
   useEffect(() => {
     if (initialTab) {
