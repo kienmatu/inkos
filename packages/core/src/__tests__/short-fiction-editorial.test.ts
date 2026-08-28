@@ -172,7 +172,7 @@ describe("batch-mode chapter shaping", () => {
     const zh = buildShortFictionDraftContinuationUserPrompt({ ...CONTINUATION, mode: "batch" }, "zh");
 
     expect(en).toMatch(/find (these|this) chapters? entr/i);
-    expect(zh).toContain("在上面的故事方案里找到这几章的条目");
+    expect(zh).toContain("在下面的故事方案里找到这几章的条目");
   });
 
   it("leaves the repair path byte-identical", () => {

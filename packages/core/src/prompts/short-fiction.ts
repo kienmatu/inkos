@@ -343,7 +343,7 @@ export function buildShortFictionDraftContinuationUserPrompt(
       `Stay calibrated to the complete ${input.chapterCount}-chapter short at about ${input.charsPerChapter} words per chapter.`,
       "Do not rewrite finished chapters, do not write summary notes, do not apologize, do not output review comments.",
       ...(input.mode === "batch" ? [
-        "Before writing, find these chapter entries in the story plan above and follow them: this batch's job is that specific beat, not a generic escalation.",
+        "Before writing, find these chapter entries in the story plan below and follow them: this batch's job is that specific beat, not a generic escalation.",
         "Vary how the chapter earns its ending. Every chapter still needs a reason to read on — but that reason can be a decision just made, a question just opened, a small discovery, or dread, not only a cliffhanger. Ten consecutive cliffhangers read as exhausting rather than gripping; the hook is the reason, not the bang.",
         "Do not open a chapter by summarizing what already happened. Continue from inside the story; the reader has just read the previous chapter.",
       ] : []),
@@ -376,7 +376,7 @@ export function buildShortFictionDraftContinuationUserPrompt(
     `仍然按完整短篇 ${input.chapterCount} 章、每章约 ${input.charsPerChapter} 字校准。`,
     "不要重写已完成章节，不要写总结说明，不要道歉，不要输出审稿意见。",
     ...(input.mode === "batch" ? [
-      "动笔前先在上面的故事方案里找到这几章的条目并照着写：这一批的任务是那个具体的节拍，不是泛泛地加码。",
+      "动笔前先在下面的故事方案里找到这几章的条目并照着写：这一批的任务是那个具体的节拍，不是泛泛地加码。",
       "章尾的写法要有变化。每一章仍然要给出继续读的理由，但那个理由可以是刚做出的决定、刚打开的疑问、一处小发现或一股不安，不是只有悬崖式断章。连着十章都用悬崖结尾读起来只会累，不会抓人；钩子是那个理由，不是那声炸响。",
       "不要用回顾前情开场。直接从故事内部接着写，读者刚读完上一章。",
     ] : []),
