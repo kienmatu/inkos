@@ -8,9 +8,9 @@ import { tr } from "../lib/app-language";
 import { FileInput, BookCopy, Feather, BookMarked, Upload, Wand2 } from "lucide-react";
 import { waitForStudioBookReady } from "../lib/book-ready";
 
-// Mirrors @actalk/inkos-core's toWritingLanguage contract (zh -> zh, anything
+// Mirrors @kienmatu/inkos-core's toWritingLanguage contract (zh -> zh, anything
 // else including "vi"/undefined -> en) without importing it: importing
-// toWritingLanguage from the "@actalk/inkos-core" barrel into this file was
+// toWritingLanguage from the "@kienmatu/inkos-core" barrel into this file was
 // verified to break the production client bundle (`pnpm --filter studio
 // build`), because it pulls the server-only atomic-file-set.js module (which
 // uses node:fs/node:path) into the vite client build. See GenreManager.tsx
