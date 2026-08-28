@@ -51,12 +51,13 @@ export function buildWriterSystemPrompt(
         buildChapterMemoContract("en", governed),
         buildLengthGuidance(resolvedLengthSpec, "en"),
         buildGoldenOpeningDiscipline(chapterNumber, "en"),
+        bookRules?.enableFullCastTracking ? buildFullCastTracking("en") : "",
         buildGenreRules(genreProfile, genreBody, "en"),
-        buildProtagonistRules(bookRules),
+        buildProtagonistRules(bookRules, "en"),
         buildNarrativePersonRule(bookRules, isEnglish ? "en" : "zh"),
-        buildBookRulesBody(bookRulesBody),
-        buildStyleGuide(styleGuide),
-        buildStyleFingerprint(styleFingerprint),
+        buildBookRulesBody(bookRulesBody, "en"),
+        buildStyleGuide(styleGuide, "en"),
+        buildStyleFingerprint(styleFingerprint, "en"),
         fanficContext ? buildFanficCanonSection(fanficContext.fanficCanon, fanficContext.fanficMode) : "",
         fanficContext ? buildCharacterVoiceProfiles(fanficContext.fanficCanon) : "",
         fanficContext ? buildFanficModeInstructions(fanficContext.fanficMode, fanficContext.allowedDeviations) : "",
@@ -212,7 +213,16 @@ The discipline that runs across all three opening chapters: paragraphs of three 
 // Full cast tracking (conditional)
 // ---------------------------------------------------------------------------
 
-function buildFullCastTracking(): string {
+function buildFullCastTracking(language: "zh" | "en" = "zh"): string {
+  if (language === "en") {
+    return `## Full-cast tracking
+
+This book has full-cast tracking mode enabled. At the end of each chapter, POST_SETTLEMENT must additionally contain:
+- The roster of characters who appear in this chapter (name + one-line state change)
+- Changes in relationships between characters (if any)
+- Characters who do not appear but are referred to (name + reason mentioned)`;
+  }
+
   return `## 全员追踪
 
 本书启用全员追踪模式。每章结束时，POST_SETTLEMENT 必须额外包含：
@@ -290,10 +300,38 @@ function buildNarrativePersonRule(bookRules: BookRules | null, language: "zh" | 
 }
 
 
-function buildProtagonistRules(bookRules: BookRules | null): string {
+function buildProtagonistRules(bookRules: BookRules | null, language: "zh" | "en" = "zh"): string {
   if (!bookRules?.protagonist) return "";
 
   const p = bookRules.protagonist;
+
+  if (language === "en") {
+    const lines = [`## Protagonist hard rules (${p.name})`];
+
+    if (p.personalityLock.length > 0) {
+      lines.push(`\nPersonality lock: ${p.personalityLock.join(", ")}`);
+    }
+    if (p.behavioralConstraints.length > 0) {
+      lines.push("\nBehavioral constraints:");
+      for (const c of p.behavioralConstraints) {
+        lines.push(`- ${c}`);
+      }
+    }
+
+    if (bookRules.prohibitions.length > 0) {
+      lines.push("\nProhibitions for this book:");
+      for (const p of bookRules.prohibitions) {
+        lines.push(`- ${p}`);
+      }
+    }
+
+    if (bookRules.genreLock?.forbidden && bookRules.genreLock.forbidden.length > 0) {
+      lines.push(`\nStyle no-go zone: the following must not appear: ${bookRules.genreLock.forbidden.join(", ")}`);
+    }
+
+    return lines.join("\n");
+  }
+
   const lines = [`## 主角铁律（${p.name}）`];
 
   if (p.personalityLock.length > 0) {
@@ -324,8 +362,9 @@ function buildProtagonistRules(bookRules: BookRules | null): string {
 // Book rules body (user-written markdown)
 // ---------------------------------------------------------------------------
 
-function buildBookRulesBody(body: string): string {
+function buildBookRulesBody(body: string, language: "zh" | "en" = "zh"): string {
   if (!body) return "";
+  if (language === "en") return `## Book-specific rules\n\n${body}`;
   return `## 本书专属规则\n\n${body}`;
 }
 
@@ -333,8 +372,9 @@ function buildBookRulesBody(body: string): string {
 // Style guide
 // ---------------------------------------------------------------------------
 
-function buildStyleGuide(styleGuide: string): string {
+function buildStyleGuide(styleGuide: string, language: "zh" | "en" = "zh"): string {
   if (!styleGuide || styleGuide === "(文件尚未创建)") return "";
+  if (language === "en") return `## Style guide\n\n${styleGuide}`;
   return `## 文风指南\n\n${styleGuide}`;
 }
 
@@ -342,8 +382,17 @@ function buildStyleGuide(styleGuide: string): string {
 // Style fingerprint (Phase 9: C3)
 // ---------------------------------------------------------------------------
 
-function buildStyleFingerprint(fingerprint?: string): string {
+function buildStyleFingerprint(fingerprint?: string, language: "zh" | "en" = "zh"): string {
   if (!fingerprint) return "";
+
+  if (language === "en") {
+    return `## Style fingerprint (target to emulate)
+
+Below are writing-style traits extracted from the reference text. Your output must match these traits as closely as possible:
+
+${fingerprint}`;
+  }
+
   return `## 文风指纹（模仿目标）
 
 以下是从参考文本中提取的写作风格特征。你的输出必须尽量贴合这些特征：

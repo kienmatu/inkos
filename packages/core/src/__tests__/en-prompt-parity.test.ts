@@ -55,6 +55,38 @@ const BOOK_RULES_FULL_CAST: BookRules = {
   allowedDeviations: [],
 };
 
+// Book rules populated across every field buildProtagonistRules() and the
+// writer system prompt's other book-rules-gated branches read: a protagonist
+// with a personality lock, behavioral constraints, and a genre-lock forbidden
+// list; book-level prohibitions; and full-cast tracking. Every one of these
+// fields, when non-empty, used to make buildWriterSystemPrompt("en") render a
+// Chinese-only heading (buildProtagonistRules, buildFullCastTracking) — this
+// fixture exists to keep that regression caught.
+const BOOK_RULES_WRITER_FULL: BookRules = {
+  version: "1.0",
+  protagonist: {
+    name: "Lian Feng",
+    personalityLock: ["stubborn", "loyal"],
+    behavioralConstraints: ["never abandons an ally mid-fight"],
+  },
+  genreLock: {
+    primary: "cultivation",
+    forbidden: ["modern slang", "sci-fi tech"],
+  },
+  numericalSystemOverrides: undefined,
+  eraConstraints: undefined,
+  prohibitions: ["no on-page character death before chapter 10"],
+  chapterTypesOverride: [],
+  fatigueWordsOverride: [],
+  additionalAuditDimensions: [],
+  enableFullCastTracking: true,
+  allowedDeviations: [],
+};
+
+const BOOK_RULES_BODY_EN = "## Extra notes\n\nKeep the tone hopeful even during setbacks.";
+const STYLE_GUIDE_EN = "Favor short declarative sentences. Avoid semicolons.";
+const STYLE_FINGERPRINT_EN = "Clipped dialogue tags, frequent one-line paragraphs for emphasis.";
+
 /**
  * Substrings that legitimately contain CJK inside an English prompt. Each entry
  * must name why it is not a leak. Keep this list as short as the truth allows —
@@ -67,16 +99,36 @@ const CJK_ALLOWLIST: ReadonlyArray<{ readonly text: string; readonly why: string
   },
 ];
 
-// Widened from the brief's CJK-ideograph allowlist regex: flag any character
-// outside printable ASCII except a short list of characters legitimately used
-// throughout the English prompts. This catches non-CJK stray non-ASCII too,
-// not just Chinese. The brief's own review named only the em dash (—, U+2014)
-// and rightward arrow (→, U+2192); running the guard against the real English
-// prompts also turned up "<=" / ">=" comparisons written with the Unicode
-// operators ≤ (U+2264) and ≥ (U+2265) in planner-prompts.ts (hook-count caps
-// and floors) — legitimate math notation, not a translation leak, so they are
-// allowed here too.
-const ALLOWED_NON_ASCII = new Set(["—", "→", "≤", "≥"]);
+/**
+ * Individual non-ASCII characters that legitimately appear inside English
+ * prompts. Each entry names why it is not a leak — same discipline as
+ * CJK_ALLOWLIST above. Keep this list as short as the truth allows.
+ *
+ * Widened from the brief's CJK-ideograph allowlist regex (which only caught
+ * CJK ideographs and fullwidth forms) to flag ANY character outside printable
+ * ASCII except what's explicitly allowed here, so stray non-CJK non-ASCII is
+ * caught too, not just Chinese.
+ */
+const NON_ASCII_ALLOWLIST: ReadonlyArray<{ readonly char: string; readonly why: string }> = [
+  {
+    char: "—",
+    why: "Em dash (U+2014), used throughout the English prompts as a sentence-break punctuation mark — a deliberate stylistic choice, not a translation artifact.",
+  },
+  {
+    char: "→",
+    why: "Rightward arrow (U+2192), used throughout the English prompts to denote a mapping/transition (e.g. '[passage location] -> [function]'), not a translation artifact.",
+  },
+  {
+    char: "≤",
+    why: "Less-than-or-equal sign (U+2264), used in planner-prompts.ts English hook-ledger rules for numeric caps, e.g. \"the ≤ 2 new hooks cap still applies\" (line ~139) and \"cap ≤ 2\" (line ~195). Verified: genuine mathematical operator embedded in English prose comparing chapter/hook counts, not a fullwidth variant and not the tail of an untranslated Chinese phrase — the surrounding text on each line is fully English.",
+  },
+  {
+    char: "≥",
+    why: "Greater-than-or-equal sign (U+2265), used in planner-prompts.ts English hook-ledger rules, e.g. \"open ≥ resolve\" (line ~139/195) and \"has not advanced in ≥ 5 chapters\" (line ~208). Verified: genuine mathematical operator embedded in English prose, not a fullwidth variant and not the tail of an untranslated Chinese phrase — the surrounding text on each line is fully English.",
+  },
+];
+
+const ALLOWED_NON_ASCII = new Set(NON_ASCII_ALLOWLIST.map((entry) => entry.char));
 
 function hasDisallowedNonAscii(line: string): boolean {
   for (const ch of line) {
@@ -103,6 +155,23 @@ const ENGLISH_PROMPTS: ReadonlyArray<{ readonly name: string; readonly build: ()
     name: "writer system prompt (legacy)",
     build: () => buildWriterSystemPrompt(
       BOOK, GENRE, null, "", "", "", undefined, 7, "full", undefined, "en", "legacy",
+    ),
+  },
+  {
+    name: "writer system prompt (protagonist rules, book-rules body, style guide, fingerprint, full-cast)",
+    build: () => buildWriterSystemPrompt(
+      BOOK,
+      GENRE,
+      BOOK_RULES_WRITER_FULL,
+      BOOK_RULES_BODY_EN,
+      "",
+      STYLE_GUIDE_EN,
+      STYLE_FINGERPRINT_EN,
+      4,
+      "full",
+      undefined,
+      "en",
+      "governed",
     ),
   },
   { name: "golden opening discipline", build: () => buildGoldenOpeningDiscipline(1, "en") },
