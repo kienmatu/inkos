@@ -2057,7 +2057,7 @@ type ShortFictionRunParamsType = Static<typeof ShortFictionRunParams>;
 
 // 启动 pipeline 之前校验 charsPerChapter 是否落在最终语言的合法区间：
 // 确认卡 payload 在 language 缺省时只能做 600-1200 并集校验，这里能拿到最终
-// 语言（payload.language ?? 会话语言 ?? zh，与 runner 的默认一致），越界立即
+// 语言（payload.language ?? 会话语言 ?? en，与 runner 的默认一致），越界立即
 // 抛出带合法范围的双语错误，不让任务开跑后才在 runner 中途失败。
 function assertShortRunCharsPerChapter(
   value: number | undefined,
@@ -2096,7 +2096,7 @@ export function createShortFictionRunTool(
       const language = shortPayload?.language ?? options.language;
       const charsPerChapter = shortPayload?.charsPerChapter ?? params.charsPerChapter;
       const activatedSkills = resolveProductionToolSkills(options);
-      assertShortRunCharsPerChapter(charsPerChapter, language ?? "zh");
+      assertShortRunCharsPerChapter(charsPerChapter, language ?? "en");
       const result = await runPipelineWithAgentContext(
         pipeline,
         _signal,
@@ -2566,7 +2566,7 @@ type GenerateCoverParamsType = Static<typeof GenerateCoverParams>;
 
 export function createGenerateCoverTool(
   projectRoot: string,
-  options: { readonly actionPayload?: ActionPayload } = {},
+  options: { readonly actionPayload?: ActionPayload; readonly language?: "zh" | "en" } = {},
 ): AgentTool<typeof GenerateCoverParams> {
   return {
     name: "generate_cover",
@@ -2595,6 +2595,7 @@ export function createGenerateCoverTool(
         coverModel: params.coverModel,
         coverSize: params.coverSize,
         coverApiKeyEnv: params.coverApiKeyEnv,
+        language: options.language,
         signal: _signal,
       });
       return textResult(

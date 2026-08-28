@@ -142,7 +142,7 @@ describe("short-fiction English parsing and rendering", () => {
     expect(draft.chapters[1]?.charCount).toBe(12);
   });
 
-  it("keeps zh default counting by characters", () => {
+  it("counts zh chapters by characters when language is explicitly zh", () => {
     const draft = parseShortFictionBatchDraft([
       "=== SHORT_FICTION_TITLE ===",
       "电梯多一层",
@@ -150,7 +150,7 @@ describe("short-fiction English parsing and rendering", () => {
       "第十三个按钮",
       "=== CHAPTER 1 CONTENT ===",
       "深夜电梯 停在十三层",
-    ].join("\n"), { expectedChapters: 1 });
+    ].join("\n"), { expectedChapters: 1, language: "zh" });
     expect(draft.chapters[0]?.charCount).toBe(9); // whitespace excluded, characters counted
   });
 

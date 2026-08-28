@@ -570,6 +570,13 @@ describe("short-fiction prompt builders default their omitted language argument 
         .filter((line) => hasDisallowedNonAscii(line));
       expect(offending, `untranslated / stray non-ASCII lines in ${name}`).toEqual([]);
     });
+
+    it(`${name} does not size English text in characters when language is omitted`, () => {
+      const offending = build()
+        .split("\n")
+        .filter((line) => /\d\s*(chars|characters)\b/i.test(line));
+      expect(offending, `character-counted lengths in ${name}`).toEqual([]);
+    });
   }
 
   it("parseShortFictionOutline(rawContent) falls back to an English title when language is omitted", () => {

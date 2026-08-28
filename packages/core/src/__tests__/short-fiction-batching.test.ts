@@ -300,8 +300,8 @@ describe("resolveChaptersPerBatch", () => {
     expect(resolveChaptersPerBatch(charsPerChapter, language)).toBe(expected);
   });
 
-  it("defaults to zh when no language is given", () => {
-    expect(resolveChaptersPerBatch(1000)).toBe(2);
+  it("defaults to en when no language is given", () => {
+    expect(resolveChaptersPerBatch(1000)).toBe(1);
   });
 
   it("clamps to the maximum even when chapters are short enough to fit more", () => {
@@ -528,7 +528,7 @@ function fullDraftMarkdown(chapterCount: number): string {
 }
 
 describe("reviseDraft batching", () => {
-  const v1 = parseShortFictionBatchDraft(fullDraftMarkdown(12), { expectedChapters: 12 });
+  const v1 = parseShortFictionBatchDraft(fullDraftMarkdown(12), { expectedChapters: 12, language: "zh" });
 
   function reviserAgent() {
     return new ShortFictionDraftReviserAgent({
@@ -627,7 +627,7 @@ describe("continueDraft chunking", () => {
           "第一版正文，电梯停在十三层。".repeat(20),
         ].join("\n")),
       ].join("\n"),
-      { expectedChapters: 12 },
+      { expectedChapters: 12, language: "zh" },
     );
     const agent = writerAgent();
     const chat = spyChat(agent);
@@ -651,7 +651,7 @@ describe("continueDraft chunking", () => {
   it("returns the draft untouched when nothing is missing", async () => {
     const agent = writerAgent();
     const chat = spyChat(agent);
-    const complete = parseShortFictionBatchDraft(fullDraftMarkdown(12), { expectedChapters: 12 });
+    const complete = parseShortFictionBatchDraft(fullDraftMarkdown(12), { expectedChapters: 12, language: "zh" });
 
     const result = await agent.continueDraft({
       direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
@@ -682,7 +682,7 @@ describe("runner batch progress", () => {
       await mkdir(join(root, "shorts", "elevator", "outline"), { recursive: true });
       await writeFile(join(root, "shorts", "elevator", "outline", "v002.md"), "## 既有大纲\n12章完整方案", "utf-8");
 
-      const draft = parseShortFictionBatchDraft(fullDraftMarkdown(12), { expectedChapters: 12 });
+      const draft = parseShortFictionBatchDraft(fullDraftMarkdown(12), { expectedChapters: 12, language: "zh" });
       // One empty chapter so continueDraft (and its "Completing" progress) runs.
       const partialDraft = {
         ...draft,
@@ -715,7 +715,7 @@ describe("runner batch progress", () => {
       const runtime = { client: { provider: "openai" } as never, model: "fake", projectRoot: root };
       const messages: string[] = [];
       await runShortFictionProduction({
-        projectRoot: root, direction: "恐怖短篇", storyId: "elevator",
+        projectRoot: root, direction: "恐怖短篇", storyId: "elevator", language: "zh",
         chapterCount: 12, charsPerChapter: 1000, cover: false,
         runtimes: {
           planner: runtime, outlineReview: runtime, writer: runtime,

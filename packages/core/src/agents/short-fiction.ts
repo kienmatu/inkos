@@ -82,18 +82,15 @@ export const SHORT_FICTION_MAX_CHAPTERS_PER_BATCH = 3;
 // zh chapters are measured in characters (~1.44 chars/token), en chapters in
 // words (~1.3 tokens/word). See length-metrics.ts for the units.
 //
-// Deliberately NOT part of the "language defaults to en" cleanup
-// (2026-08-28): this default selects a batching-math constant, not
-// language-specific output text, so a forgotten argument here cannot "silently
-// emit Chinese into an English path" the way a prompt-builder default can.
-// It is also never reached with an undefined language in production — every
-// caller (ShortFictionWriterAgent methods) is invoked from
-// short-fiction-runner.ts's produceShort(), which always resolves and passes
-// an explicit language first. resolveChaptersPerBatch(1000) is pinned to this
-// default by a dedicated test (short-fiction-batching.test.ts).
+// Defaults to "en" per AGENTS.md:33 ("A function that takes a language and
+// can be called without one must default to en"). This is called with the
+// same possibly-undefined input.language as the prompt builders two lines
+// away (see writeDraft/reviseDraft/writeContinuation below) and must agree
+// with them: an English prose request sized with the zh token ratio
+// undercounts the English output by ~1.9x and risks truncation.
 export function resolveChaptersPerBatch(
   charsPerChapter: number,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): number {
   const tokensPerChapter = language === "en"
     ? charsPerChapter * 1.3
@@ -497,19 +494,12 @@ export function parseShortFictionBatchDraft(
   options?: { readonly expectedChapters?: number; readonly language?: ShortFictionLanguage },
 ): ShortFictionBatchDraft {
   const expectedChapters = options?.expectedChapters ?? SHORT_FICTION_DEFAULT_CHAPTERS;
-  // Deliberately NOT flipped to "en" (2026-08-28 language-default cleanup):
-  // this is a parser, not a generator — it extracts a language from text
-  // already produced, it does not choose which language new text is written
-  // in, so it cannot cause the "forgotten argument silently emits Chinese
-  // into an English path" failure the AGENTS.md rule targets. Every
-  // production call site (agents/short-fiction.ts's own writeDraft /
-  // continueDraft / reviseDraft) passes its own resolved language explicitly.
-  // Flipping this default would also have broken a large existing suite of
-  // Chinese-fixture tests (short-fiction-batching.test.ts,
-  // short-fiction-resume.test.ts, short-fiction-public.test.ts) that
-  // intentionally omit language and rely on this default while parsing
-  // Chinese draft fixtures — out of proportion to this task's scope.
-  const language = options?.language ?? "zh";
+  // Defaults to "en" per AGENTS.md:33. This selects the counting mode
+  // (resolveLengthCountingMode below) and generates emitted text/numbers —
+  // the untitled-story fallback title and per-chapter fallback titles — so
+  // an unresolved language here is exactly the "forgotten argument silently
+  // emits Chinese into an English path" failure the rule targets.
+  const language = options?.language ?? "en";
   const countingMode = resolveLengthCountingMode(language);
   const fallbackTitle = untitledShortTitle(language);
   const storyTitle = normalizeTitle(

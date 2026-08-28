@@ -172,21 +172,11 @@ async function produceShort(
   outDir: string,
   providedStoryId: string | undefined,
 ): Promise<ShortFictionRunResult> {
-  // Deliberately NOT flipped to "en" (2026-08-28 language-default cleanup):
-  // this is the top-level pipeline default, and the CLI (packages/cli/src/
-  // commands/short-fiction.ts) always resolves --lang to a concrete "zh"/"en"
-  // before calling runShortFictionProduction, so this default is never hit in
-  // production. Flipping it would instead only affect callers that omit
-  // `language` and rely on it defaulting to Chinese — which is exactly what a
-  // large existing test suite does (short-fiction-resume.test.ts and several
-  // short-fiction-en.test.ts / short-fiction-batching.test.ts cases pass
-  // Chinese fixtures through the full pipeline without ever setting
-  // `language`, asserting on zh-specific output like "第12章" and
-  // "第二轮改稿未采用" in the written artifacts). Flipping this one line would
-  // have broken all of them for a code path with no real forgotten-argument
-  // exposure today. Left as a named follow-up rather than silently expanded
-  // scope; see zh-default-parity-report.md.
-  const language = options.language ?? "zh";
+  // Defaults to "en" per AGENTS.md:33. `runShortFictionProduction` is public
+  // (see index.ts) and `createShortFictionRunTool` is public (agent/index.ts),
+  // and `language` is optional on both, so `undefined` can and does reach
+  // here in production, not just inside this repo's own two callers.
+  const language = options.language ?? "en";
   const chapterCount = boundedInteger(
     options.chapterCount,
     SHORT_FICTION_DEFAULT_CHAPTERS,

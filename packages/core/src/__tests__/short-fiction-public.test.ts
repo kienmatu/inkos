@@ -70,7 +70,7 @@ describe("public short-fiction chain", () => {
 三年前那张转账单
 === CHAPTER 2 CONTENT ===
 第二天早上，家庭群里全是骂我的语音。我没有回，只把三年前的转账单发给律师。十分钟后，丈夫第一次打电话求我回家谈谈。
-`, { expectedChapters: 2 });
+`, { expectedChapters: 2, language: "zh" });
 
     expect(draft.storyTitle).toBe("我离婚后，全家悔疯了");
     expect(draft.openingHook).toContain("离婚协议");
@@ -99,7 +99,7 @@ describe("public short-fiction chain", () => {
 === CHAPTER 3 TITLE ===
 凌晨三点，陆景琛踹开老宅院门，举着铁棍砸碎电视。
 林晚坐在闺蜜家，把早就准备好的直播链接发给了董事会。
-`, { expectedChapters: 3 });
+`, { expectedChapters: 3, language: "zh" });
 
     expect(draft.chapters[1]?.title).toBe("她逼小三亲自递上了最后的刀");
     expect(draft.chapters[1]?.content).toContain("陈磊的慌张");
@@ -116,7 +116,7 @@ describe("public short-fiction chain", () => {
 旧章
 === CHAPTER 1 CONTENT ===
 旧正文有一处时间线问题。
-`, { expectedChapters: 1 });
+`, { expectedChapters: 1, language: "zh" });
 
     const chatSpy = vi
       .spyOn(ShortFictionDraftReviserAgent.prototype as never, "chat" as never)

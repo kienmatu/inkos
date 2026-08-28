@@ -861,7 +861,7 @@ function createModeTools(params: CreateAgentToolsForModeParams) {
       })];
     }
     if (isConfirmed("generate_cover")) {
-      return [createGenerateCoverTool(params.projectRoot, { actionPayload: params.actionPayload })];
+      return [createGenerateCoverTool(params.projectRoot, { actionPayload: params.actionPayload, language: lang })];
     }
     return [proposalTool, materialTool, materialRetrievalTool];
   }
@@ -972,7 +972,7 @@ function createModeTools(params: CreateAgentToolsForModeParams) {
 
   const bookTools = [
     subAgentTool,
-    createGenerateCoverTool(params.projectRoot, { actionPayload: params.actionPayload }),
+    createGenerateCoverTool(params.projectRoot, { actionPayload: params.actionPayload, language: lang }),
     createReadTool(params.projectRoot, { allowSystemPaths: params.allowSystemFileRead }),
     createWriteTruthFileTool(params.pipeline, params.projectRoot, params.bookId),
     createRenameEntityTool(params.pipeline, params.projectRoot, params.bookId),
