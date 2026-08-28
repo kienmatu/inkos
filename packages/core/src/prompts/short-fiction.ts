@@ -30,6 +30,25 @@ export interface ShortFictionDraftPromptInput {
   readonly outlineMarkdown: string;
   readonly chapterCount: number;
   readonly charsPerChapter: number;
+  // Inclusive 1-based chapter bounds for one batch. Absent means "the whole
+  // story in one pass", which is the pre-batching behaviour.
+  readonly chapterRange?: readonly [number, number];
+}
+
+function rangeChapters(input: ShortFictionDraftPromptInput): number[] {
+  const [from, to] = input.chapterRange ?? [1, input.chapterCount];
+  const chapters: number[] = [];
+  for (let n = from; n <= to; n += 1) chapters.push(n);
+  return chapters;
+}
+
+function isFirstBatch(input: ShortFictionDraftPromptInput): boolean {
+  return (input.chapterRange?.[0] ?? 1) === 1;
+}
+
+/** "4-6" for a span, "13" for a single chapter — never "13-13". */
+function chapterRangeLabel(from: number, to: number): string {
+  return from === to ? `${from}` : `${from}-${to}`;
 }
 
 export interface ShortFictionDraftContinuationPromptInput extends ShortFictionDraftPromptInput {
@@ -215,7 +234,7 @@ export function buildShortFictionOutlineRevisionFollowup(
 export function buildShortFictionWriterSystemPrompt(language: ShortFictionLanguage = "zh"): string {
   if (language === "en") {
     return [
-      "You are an English short-fiction BatchWriter. You write the complete short story in one API pass, following the story plan.",
+      "You are an English short-fiction BatchWriter. You write short-story prose following the story plan.",
       "Write natural, native English prose. Vary sentence length; mix short punchy sentences with longer flowing ones, and keep the narrative voice consistent throughout.",
       "This is not serialized-novel continuation and not chapter synopsis. Every chapter needs drama happening on the page: character action, dialogue or reaction, a shift in the situation, and a reason to keep reading at the chapter break.",
       "Keep the drama dialed up, web-fiction style: real-world pressure may be amplified as far as readers will still believe, but never so absurd that immersion breaks.",
@@ -225,7 +244,7 @@ export function buildShortFictionWriterSystemPrompt(language: ShortFictionLangua
     ].join("\n");
   }
   return [
-    "你是中文短篇 BatchWriter。你要根据故事方案一次 API 写完整短篇正文。",
+    "你是中文短篇 BatchWriter。你要根据故事方案写短篇正文。",
     "这不是长篇连载续写，也不是章节梗概。每章都要有当场发生的戏：人物行动、对话或反应、局面变化、章尾继续读的理由。",
     "网文戏剧性要足：现实压力可以放大到读者愿意信的程度，但不能荒诞到失去代入。",
     "标题和章节标题要像平台内容，不要文艺化总结。正文保持移动端节奏，段落短但不要写成电报体。",
@@ -241,7 +260,9 @@ export function buildShortFictionWriterUserPrompt(
   if (language === "en") {
     return [
       "## Task",
-      `Write the complete ${input.chapterCount}-chapter story in one pass, about ${input.charsPerChapter} words per chapter.`,
+      input.chapterRange
+        ? `Write ONLY ${input.chapterRange[0] === input.chapterRange[1] ? `chapter ${input.chapterRange[0]}` : `chapters ${chapterRangeLabel(input.chapterRange[0], input.chapterRange[1])}`}, about ${input.charsPerChapter} words each. The complete story is ${input.chapterCount} chapters — calibrate pacing to the whole story, not to this batch.`
+        : `Write the complete ${input.chapterCount}-chapter story in one pass, about ${input.charsPerChapter} words per chapter.`,
       "Read the full story plan before writing. The prose must carry the plan's pressure chain, evidence chain, reversal chain, and emotional payoff — do not swerve into a different story midway.",
       "",
       buildShortFictionCraftPrompt("en"),
@@ -253,24 +274,25 @@ export function buildShortFictionWriterUserPrompt(
       input.outlineMarkdown,
       "",
       "## Output Format",
-      "=== SHORT_FICTION_TITLE ===",
-      "The story title — plain text, platform-ready, nothing else",
-      "=== SHORT_FICTION_OPENING_HOOK ===",
-      "An optional pre-story hook of about 130 words; if no standalone teaser is needed, still write the small first-screen scene that opens chapter 1",
-      ...Array.from({ length: input.chapterCount }, (_, index) => {
-        const chapter = index + 1;
-        return [
-          `=== CHAPTER ${chapter} TITLE ===`,
-          "Chapter title — plain text only, no #, no \"Chapter N\" prefix",
-          `=== CHAPTER ${chapter} CONTENT ===`,
-          `Chapter ${chapter} prose — full scenes, no synopsis, no author notes`,
-        ].join("\n");
-      }),
+      ...(isFirstBatch(input) ? [
+        "=== SHORT_FICTION_TITLE ===",
+        "The story title — plain text, platform-ready, nothing else",
+        "=== SHORT_FICTION_OPENING_HOOK ===",
+        "An optional pre-story hook of about 130 words; if no standalone teaser is needed, still write the small first-screen scene that opens chapter 1",
+      ] : []),
+      ...rangeChapters(input).map((chapter) => [
+        `=== CHAPTER ${chapter} TITLE ===`,
+        "Chapter title — plain text only, no #, no \"Chapter N\" prefix",
+        `=== CHAPTER ${chapter} CONTENT ===`,
+        `Chapter ${chapter} prose — full scenes, no synopsis, no author notes`,
+      ].join("\n")),
     ].join("\n");
   }
   return [
     "## 任务",
-    `一次写完整 ${input.chapterCount} 章，每章约 ${input.charsPerChapter} 字。`,
+    input.chapterRange
+      ? `只写第 ${chapterRangeLabel(input.chapterRange[0], input.chapterRange[1])} 章，每章约 ${input.charsPerChapter} 字。整篇共 ${input.chapterCount} 章，节奏按整篇校准，不要按这一批校准。`
+      : `一次写完整 ${input.chapterCount} 章，每章约 ${input.charsPerChapter} 字。`,
     "先读完整故事方案，再写正文。正文要承接大纲的压力链、证据链、反转链和情绪回报，不要临时改成另一种故事。",
     "",
     buildShortFictionCraftPrompt(),
@@ -282,19 +304,18 @@ export function buildShortFictionWriterUserPrompt(
     input.outlineMarkdown,
     "",
     "## 输出格式",
-    "=== SHORT_FICTION_TITLE ===",
-    "短篇标题，只写纯文本平台标题",
-    "=== SHORT_FICTION_OPENING_HOOK ===",
-    "可选正文前小钩子，约 200 字；如果不需要独立引子，也要写第 1 章第一屏的入局小场面",
-    ...Array.from({ length: input.chapterCount }, (_, index) => {
-      const chapter = index + 1;
-      return [
-        `=== CHAPTER ${chapter} TITLE ===`,
-        "章节标题，只写纯文本，不要 #，不要第几章前缀",
-        `=== CHAPTER ${chapter} CONTENT ===`,
-        `第${chapter}章正文，写完整场面，不要梗概，不要作者备注`,
-      ].join("\n");
-    }),
+    ...(isFirstBatch(input) ? [
+      "=== SHORT_FICTION_TITLE ===",
+      "短篇标题，只写纯文本平台标题",
+      "=== SHORT_FICTION_OPENING_HOOK ===",
+      "可选正文前小钩子，约 200 字；如果不需要独立引子，也要写第 1 章第一屏的入局小场面",
+    ] : []),
+    ...rangeChapters(input).map((chapter) => [
+      `=== CHAPTER ${chapter} TITLE ===`,
+      "章节标题，只写纯文本，不要 #，不要第几章前缀",
+      `=== CHAPTER ${chapter} CONTENT ===`,
+      `第${chapter}章正文，写完整场面，不要梗概，不要作者备注`,
+    ].join("\n")),
   ].join("\n");
 }
 
