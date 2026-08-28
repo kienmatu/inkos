@@ -58,9 +58,9 @@ export function buildWriterSystemPrompt(
         buildBookRulesBody(bookRulesBody, "en"),
         buildStyleGuide(styleGuide, "en"),
         buildStyleFingerprint(styleFingerprint, "en"),
-        fanficContext ? buildFanficCanonSection(fanficContext.fanficCanon, fanficContext.fanficMode) : "",
-        fanficContext ? buildCharacterVoiceProfiles(fanficContext.fanficCanon) : "",
-        fanficContext ? buildFanficModeInstructions(fanficContext.fanficMode, fanficContext.allowedDeviations) : "",
+        fanficContext ? buildFanficCanonSection(fanficContext.fanficCanon, fanficContext.fanficMode, "en") : "",
+        fanficContext ? buildCharacterVoiceProfiles(fanficContext.fanficCanon, "en") : "",
+        fanficContext ? buildFanficModeInstructions(fanficContext.fanficMode, fanficContext.allowedDeviations, "en") : "",
         // Pre-write checklist moved to style_guide.md (v10)
         outputSection,
       ]
