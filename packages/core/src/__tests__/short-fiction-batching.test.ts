@@ -173,3 +173,167 @@ describe("revision followup chapter range", () => {
     }
   });
 });
+
+import { vi } from "vitest";
+import {
+  ShortFictionWriterAgent,
+  SHORT_FICTION_CHAPTERS_PER_BATCH,
+  chunkChapters,
+  stripOuterCodeFence,
+} from "../agents/short-fiction.js";
+
+function writerAgent() {
+  return new ShortFictionWriterAgent({
+    client: { provider: "openai" } as never,
+    model: "fake",
+    projectRoot: "/tmp/does-not-matter",
+  });
+}
+
+function spyChat(agent: object) {
+  return vi.spyOn(
+    agent as unknown as { chat: (...args: unknown[]) => Promise<unknown> },
+    "chat",
+  );
+}
+
+function batchReply(chapters: readonly number[], withHeader: boolean): string {
+  return [
+    ...(withHeader ? ["=== SHORT_FICTION_TITLE ===", "电梯多一层"] : []),
+    ...chapters.map((n) => [
+      `=== CHAPTER ${n} TITLE ===`,
+      `第${n}章`,
+      `=== CHAPTER ${n} CONTENT ===`,
+      "深夜的电梯停在不存在的十三层，门开了。".repeat(20),
+    ].join("\n")),
+  ].join("\n");
+}
+
+/** Read the user-turn text out of the messages array passed to chat(). */
+function userText(call: unknown[]): string {
+  const messages = call[0] as ReadonlyArray<{ role: string; content: string }>;
+  return messages.filter((m) => m.role === "user").map((m) => m.content).join("\n");
+}
+
+/** Which chapters is this call being asked to write? */
+function requestedChapters(call: unknown[], upTo = 18): number[] {
+  const text = userText(call);
+  const chapters: number[] = [];
+  for (let n = 1; n <= upTo; n += 1) if (text.includes(`=== CHAPTER ${n} CONTENT ===`)) chapters.push(n);
+  return chapters;
+}
+
+describe("chunkChapters", () => {
+  it("splits into fixed-size groups with a short final group", () => {
+    expect(chunkChapters([1, 2, 3, 4, 5, 6, 7], 3)).toEqual([[1, 2, 3], [4, 5, 6], [7]]);
+    expect(chunkChapters([1, 2, 3], 3)).toEqual([[1, 2, 3]]);
+    expect(chunkChapters([], 3)).toEqual([]);
+  });
+});
+
+describe("stripOuterCodeFence", () => {
+  it("removes a wrapping fence with or without a language tag", () => {
+    expect(stripOuterCodeFence("```markdown\n=== CHAPTER 1 TITLE ===\n一\n```")).toBe("=== CHAPTER 1 TITLE ===\n一");
+    expect(stripOuterCodeFence("```\nplain\n```")).toBe("plain");
+  });
+
+  it("leaves unfenced text and inner fences alone", () => {
+    expect(stripOuterCodeFence("=== CHAPTER 1 CONTENT ===\n正文")).toBe("=== CHAPTER 1 CONTENT ===\n正文");
+    expect(stripOuterCodeFence("正文\n```js\ncode\n```\n更多正文")).toBe("正文\n```js\ncode\n```\n更多正文");
+  });
+});
+
+describe("writeDraft batching", () => {
+  it("uses a batch size of 3", () => {
+    expect(SHORT_FICTION_CHAPTERS_PER_BATCH).toBe(3);
+  });
+
+  it("issues four calls for a 12-chapter story with non-overlapping ranges", async () => {
+    const agent = writerAgent();
+    const chat = spyChat(agent);
+    const seen: number[][] = [];
+    chat.mockImplementation((...args: unknown[]) => {
+      const group = requestedChapters(args, 12);
+      seen.push(group);
+      return Promise.resolve({ content: batchReply(group, group[0] === 1), usage: undefined });
+    });
+
+    const draft = await agent.writeDraft({
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+    });
+
+    expect(seen).toEqual([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]);
+    expect(draft.chapters).toHaveLength(12);
+    expect(draft.chapters.every((c) => c.content.trim().length > 0)).toBe(true);
+    expect(draft.storyTitle).toBe("电梯多一层");
+  });
+
+  it("ends a 13-chapter story with a one-chapter batch", async () => {
+    const agent = writerAgent();
+    const seen: number[][] = [];
+    spyChat(agent).mockImplementation((...args: unknown[]) => {
+      const group = requestedChapters(args, 13);
+      seen.push(group);
+      return Promise.resolve({ content: batchReply(group, group[0] === 1), usage: undefined });
+    });
+
+    await agent.writeDraft({
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 13, charsPerChapter: 1000,
+    });
+
+    expect(seen).toEqual([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13]]);
+  });
+
+  it("gives later batches the earlier prose without asking to rewrite it, and without claiming a truncation", async () => {
+    const agent = writerAgent();
+    const chat = spyChat(agent);
+    chat.mockImplementation((...args: unknown[]) => {
+      const group = requestedChapters(args, 12);
+      return Promise.resolve({ content: batchReply(group, group[0] === 1), usage: undefined });
+    });
+
+    await agent.writeDraft({
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+    });
+
+    const secondCall = userText(chat.mock.calls[1] as unknown[]);
+    expect(secondCall).toContain("深夜的电梯停在不存在的十三层");   // chapters 1-3 prose is present
+    expect(secondCall).toContain("不要重写已完成章节");              // do-not-rewrite guard
+    expect(secondCall).toContain("继续同一篇的写作");                // batch framing, not repair
+    expect(secondCall).not.toContain("被截断");
+  });
+
+  it("strips a wrapping code fence so no chapter ends with a stray fence", async () => {
+    const agent = writerAgent();
+    spyChat(agent).mockImplementation((...args: unknown[]) => {
+      const group = requestedChapters(args, 12);
+      return Promise.resolve({
+        content: "```markdown\n" + batchReply(group, group[0] === 1) + "\n```",
+        usage: undefined,
+      });
+    });
+
+    const draft = await agent.writeDraft({
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+    });
+
+    expect(draft.chapters.every((c) => !c.content.includes("```"))).toBe(true);
+    expect(draft.chapters.every((c) => c.content.trim().length > 0)).toBe(true);
+  });
+
+  it("reports progress per batch", async () => {
+    const agent = writerAgent();
+    spyChat(agent).mockImplementation((...args: unknown[]) => {
+      const group = requestedChapters(args, 12);
+      return Promise.resolve({ content: batchReply(group, group[0] === 1), usage: undefined });
+    });
+    const seen: string[] = [];
+
+    await agent.writeDraft({
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      onBatchProgress: (info) => seen.push(`${info.batch}/${info.totalBatches}:${info.chapters.join(",")}`),
+    });
+
+    expect(seen).toEqual(["1/4:1,2,3", "2/4:4,5,6", "3/4:7,8,9", "4/4:10,11,12"]);
+  });
+});
