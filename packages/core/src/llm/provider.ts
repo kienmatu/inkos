@@ -736,6 +736,13 @@ function isTransientLLMTransportError(error: unknown): boolean {
  * and just delays the real error.
  */
 export function isTransientLLMHttpError(error: unknown): boolean {
+  if (error instanceof PartialResponseError && error.reason === "output-limit") {
+    // A PartialResponseError's own message embeds the partial content length
+    // ("Stream interrupted after 429 chars: ..."), which can coincidentally
+    // match the HTTP-status pattern below. An output-limit is never an HTTP
+    // status blip — see isRetryableLLMError for the same guard.
+    return false;
+  }
   const text = collectErrorText(error).toLowerCase();
   if (text.includes("model_not_available") || text.includes("model not available")) {
     return false;
@@ -761,9 +768,18 @@ function isIncompleteLLMResponseError(error: unknown): boolean {
     || text.includes("llm returned empty response");
 }
 
-function isRetryableLLMError(error: unknown): boolean {
+export function isRetryableLLMError(error: unknown): boolean {
   // PartialResponseError = 流在生成中途被掐断（网关切长连接等）。重试会完整
   // 重新生成一次，比把半截内容当成功交付（截断的章节/设定文件）要正确。
+  //
+  // Exception: reason === "output-limit" means the stream ran all the way to
+  // the endpoint's own output cap. Retrying with an identical prompt hits the
+  // same cap by construction — it's not transient, and burns a full
+  // generation (plus backoff) before the caller's own halve-and-retry logic
+  // (short-fiction's runChapterBatches) ever gets a chance to split the batch.
+  if (error instanceof PartialResponseError && error.reason === "output-limit") {
+    return false;
+  }
   return error instanceof PartialResponseError
     || isIncompleteLLMResponseError(error)
     || isTransientLLMTransportError(error)

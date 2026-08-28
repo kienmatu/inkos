@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PartialResponseError, wrapLLMError } from "../llm/provider.js";
+import { PartialResponseError, wrapLLMError, isRetryableLLMError, isTransientLLMHttpError } from "../llm/provider.js";
 
 // Reaching wrapLLMError through chatCompletion() would require mocking the
 // underlying pi-ai transport (the "openai" SDK's own HTTP client), which does
@@ -32,5 +32,45 @@ describe("wrapLLMError", () => {
 
     expect(wrapped).not.toBeInstanceOf(PartialResponseError);
     expect(String(wrapped)).toContain("400");
+  });
+});
+
+describe("isRetryableLLMError", () => {
+  it("is not retryable for an output-limit PartialResponseError", () => {
+    const error = new PartialResponseError(
+      "x".repeat(100),
+      new Error("model reached the output limit (length)"),
+      "output-limit",
+    );
+
+    // Retrying an output-limit with the same prompt hits the same cap by
+    // construction — it's not transient. Retrying it anyway burns a full
+    // generation (plus backoff) before short-fiction's own halve-and-retry
+    // logic ever gets a chance to split the batch.
+    expect(isRetryableLLMError(error)).toBe(false);
+  });
+
+  it("is not retryable for an output-limit PartialResponseError whose partial length looks like an HTTP status", () => {
+    // 429 chars: the message reads "Stream interrupted after 429 chars: ...",
+    // which would match isTransientLLMHttpError's \b(429|502|503|504)\b check
+    // if that guard didn't special-case PartialResponseError first.
+    const error = new PartialResponseError(
+      "x".repeat(429),
+      new Error("model reached the output limit (length)"),
+      "output-limit",
+    );
+
+    expect(isTransientLLMHttpError(error)).toBe(false);
+    expect(isRetryableLLMError(error)).toBe(false);
+  });
+
+  it("is still retryable for an interrupted PartialResponseError (a genuine transport failure)", () => {
+    const error = new PartialResponseError(
+      "x".repeat(429),
+      new Error("stream reset"),
+      "interrupted",
+    );
+
+    expect(isRetryableLLMError(error)).toBe(true);
   });
 });
