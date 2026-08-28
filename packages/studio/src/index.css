@@ -1,8 +1,14 @@
 /*
   InkOS Studio — Atmospheric Literary Workbench
-  Fonts: Instrument Serif (Headings/Literary), DM Sans (UI), JetBrains Mono (Data)
+  Fonts: Playfair Display (Headings/Literary), Be Vietnam Pro (UI), JetBrains Mono (Data)
+
+  Instrument Serif and DM Sans were replaced because neither ships Google's
+  `vietnamese` subset. Vietnamese needs Latin Extended Additional (U+1EA0-1EF9);
+  without those glyphs the browser stacks diacritics onto base letters by hand,
+  which renders "Thể loại" with the marks overlapping. All three families below
+  carry the vietnamese subset, so the marks come from real glyphs.
 */
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..700;1,400..700&family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @import "tailwindcss";
 
@@ -37,8 +43,11 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-serif: 'Instrument Serif', Georgia, serif;
-  --font-sans: 'DM Sans', system-ui, sans-serif;
+  /* Fallbacks are Vietnamese-capable too: system-ui resolves to SF Pro / Segoe UI,
+     and Noto Serif ships full Vietnamese, so a failed webfont load degrades
+     without breaking diacritics. */
+  --font-serif: 'Playfair Display', 'Noto Serif', Georgia, serif;
+  --font-sans: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
