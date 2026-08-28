@@ -81,6 +81,16 @@ export const SHORT_FICTION_MAX_CHAPTERS_PER_BATCH = 3;
 
 // zh chapters are measured in characters (~1.44 chars/token), en chapters in
 // words (~1.3 tokens/word). See length-metrics.ts for the units.
+//
+// Deliberately NOT part of the "language defaults to en" cleanup
+// (2026-08-28): this default selects a batching-math constant, not
+// language-specific output text, so a forgotten argument here cannot "silently
+// emit Chinese into an English path" the way a prompt-builder default can.
+// It is also never reached with an undefined language in production — every
+// caller (ShortFictionWriterAgent methods) is invoked from
+// short-fiction-runner.ts's produceShort(), which always resolves and passes
+// an explicit language first. resolveChaptersPerBatch(1000) is pinned to this
+// default by a dedicated test (short-fiction-batching.test.ts).
 export function resolveChaptersPerBatch(
   charsPerChapter: number,
   language: ShortFictionLanguage = "zh",
@@ -470,7 +480,7 @@ export class ShortFictionPackagingAgent extends BaseAgent {
 
 export function parseShortFictionOutline(
   rawContent: string,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): ShortFictionOutline {
   const fallbackTitle = untitledShortTitle(language);
   const storyTitle = normalizeTitle(
@@ -487,6 +497,18 @@ export function parseShortFictionBatchDraft(
   options?: { readonly expectedChapters?: number; readonly language?: ShortFictionLanguage },
 ): ShortFictionBatchDraft {
   const expectedChapters = options?.expectedChapters ?? SHORT_FICTION_DEFAULT_CHAPTERS;
+  // Deliberately NOT flipped to "en" (2026-08-28 language-default cleanup):
+  // this is a parser, not a generator — it extracts a language from text
+  // already produced, it does not choose which language new text is written
+  // in, so it cannot cause the "forgotten argument silently emits Chinese
+  // into an English path" failure the AGENTS.md rule targets. Every
+  // production call site (agents/short-fiction.ts's own writeDraft /
+  // continueDraft / reviseDraft) passes its own resolved language explicitly.
+  // Flipping this default would also have broken a large existing suite of
+  // Chinese-fixture tests (short-fiction-batching.test.ts,
+  // short-fiction-resume.test.ts, short-fiction-public.test.ts) that
+  // intentionally omit language and rely on this default while parsing
+  // Chinese draft fixtures — out of proportion to this task's scope.
   const language = options?.language ?? "zh";
   const countingMode = resolveLengthCountingMode(language);
   const fallbackTitle = untitledShortTitle(language);
@@ -552,7 +574,7 @@ export function findEmptyShortFictionChapters(draft: ShortFictionBatchDraft): nu
 
 export function renderShortFictionDraftMarkdown(
   draft: ShortFictionBatchDraft,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): string {
   const hookHeading = language === "en" ? "## Opening Hook" : "## 开篇钩子";
   return [
@@ -669,7 +691,7 @@ function normalizeTitle(raw: string): string {
     .trim() ?? "";
 }
 
-function normalizeChapterTitle(raw: string, number: number, language: ShortFictionLanguage = "zh"): string {
+function normalizeChapterTitle(raw: string, number: number, language: ShortFictionLanguage = "en"): string {
   const prefixPattern = language === "en"
     ? new RegExp(`^Chapter\\s*${number}\\s*[:：.\\-–—]?\\s*`, "i")
     : new RegExp(`^第\\s*${number}\\s*章\\s*`);
@@ -680,7 +702,7 @@ function normalizeChapterTitle(raw: string, number: number, language: ShortFicti
 export function formatShortFictionChapterHeading(
   number: number,
   title: string,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): string {
   const trimmed = title.trim();
   if (!trimmed) return fallbackChapterTitle(number, language);

@@ -172,6 +172,20 @@ async function produceShort(
   outDir: string,
   providedStoryId: string | undefined,
 ): Promise<ShortFictionRunResult> {
+  // Deliberately NOT flipped to "en" (2026-08-28 language-default cleanup):
+  // this is the top-level pipeline default, and the CLI (packages/cli/src/
+  // commands/short-fiction.ts) always resolves --lang to a concrete "zh"/"en"
+  // before calling runShortFictionProduction, so this default is never hit in
+  // production. Flipping it would instead only affect callers that omit
+  // `language` and rely on it defaulting to Chinese — which is exactly what a
+  // large existing test suite does (short-fiction-resume.test.ts and several
+  // short-fiction-en.test.ts / short-fiction-batching.test.ts cases pass
+  // Chinese fixtures through the full pipeline without ever setting
+  // `language`, asserting on zh-specific output like "第12章" and
+  // "第二轮改稿未采用" in the written artifacts). Flipping this one line would
+  // have broken all of them for a code path with no real forgotten-argument
+  // exposure today. Left as a named follow-up rather than silently expanded
+  // scope; see zh-default-parity-report.md.
   const language = options.language ?? "zh";
   const chapterCount = boundedInteger(
     options.chapterCount,
@@ -549,7 +563,7 @@ async function writeDraftArtifacts(
   baseDir: string,
   version: string,
   draft: ShortFictionBatchDraft,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): Promise<void> {
   const draftDir = join(baseDir, "drafts", version);
   await commitAtomicFileSet({
@@ -573,7 +587,7 @@ async function writeFinalArtifacts(
   root: string,
   baseDir: string,
   draft: ShortFictionBatchDraft,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): Promise<void> {
   const finalDir = join(baseDir, "final");
   const markdown = renderShortFictionDraftMarkdown(draft, language);
@@ -599,7 +613,7 @@ async function writePackageArtifacts(
   root: string,
   baseDir: string,
   salesPackage: ShortFictionSalesPackage,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): Promise<void> {
   const finalDir = join(baseDir, "final");
   const headings = language === "en"
@@ -1052,7 +1066,7 @@ function resolveCoverEndpoint(coverEndpoint?: string, coverBaseUrl?: string): st
 function buildCoverImagePrompt(
   salesPackage: ShortFictionSalesPackage,
   mode: CoverPromptMode,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): string {
   if (language === "en") {
     const base = [

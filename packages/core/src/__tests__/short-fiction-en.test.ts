@@ -101,11 +101,18 @@ describe("short-fiction English prompt branch", () => {
     expect(prompt).toContain("650 words per chapter");
   });
 
-  it("keeps the zh default identical to the explicit zh branch", () => {
-    expect(buildShortFictionWriterSystemPrompt()).toBe(buildShortFictionWriterSystemPrompt("zh"));
-    expect(buildShortFictionOutlineSystemPrompt()).toBe(buildShortFictionOutlineSystemPrompt("zh"));
-    expect(buildShortFictionWriterSystemPrompt()).toContain("中文短篇 BatchWriter");
-    const zhWriterUser = buildShortFictionWriterUserPrompt({ ...DRAFT_INPUT, charsPerChapter: 1000 });
+  // AGENTS.md "Language defaults in code": a function that takes a language
+  // and can be called without one must default to "en", so this used to be
+  // "keeps the zh default identical to the explicit zh branch" — that was the
+  // exact bug the rule exists to catch (a forgotten argument silently emitted
+  // Chinese into an English path). The omitted-argument-defaults-to-English
+  // behavior for the short-fiction builders is now covered centrally in
+  // en-prompt-parity.test.ts alongside every other prompt-builder family, per
+  // AGENTS.md's own precedent; this test instead pins that the explicit "zh"
+  // branch is unaffected by the default flip.
+  it("keeps the explicit zh branch unchanged by the default flip", () => {
+    expect(buildShortFictionWriterSystemPrompt("zh")).toContain("中文短篇 BatchWriter");
+    const zhWriterUser = buildShortFictionWriterUserPrompt({ ...DRAFT_INPUT, charsPerChapter: 1000 }, "zh");
     expect(zhWriterUser).toContain("高潮即场景");
     expect(zhWriterUser).toContain("每章约 1000 字");
   });

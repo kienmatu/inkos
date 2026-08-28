@@ -368,7 +368,7 @@ describe("writeDraft batching", () => {
     });
 
     const draft = await agent.writeDraft({
-      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
     });
 
     expect(seen).toEqual([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12]]);
@@ -387,7 +387,7 @@ describe("writeDraft batching", () => {
     });
 
     await agent.writeDraft({
-      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 13, charsPerChapter: 1000,
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 13, charsPerChapter: 1000, language: "zh",
     });
 
     expect(seen).toEqual([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12], [13]]);
@@ -402,7 +402,7 @@ describe("writeDraft batching", () => {
     });
 
     await agent.writeDraft({
-      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
     });
 
     const secondCall = userText(chat.mock.calls[1] as unknown[]);
@@ -423,7 +423,7 @@ describe("writeDraft batching", () => {
     });
 
     const draft = await agent.writeDraft({
-      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
     });
 
     expect(draft.chapters.every((c) => !c.content.includes("```"))).toBe(true);
@@ -439,7 +439,7 @@ describe("writeDraft batching", () => {
     const seen: string[] = [];
 
     await agent.writeDraft({
-      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
       onBatchProgress: (info) => seen.push(`${info.batch}/${info.totalBatches}:${info.chapters.join(",")}`),
     });
 
@@ -469,7 +469,7 @@ describe("adaptive batch halving", () => {
     });
 
     const draft = await agent.writeDraft({
-      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
     });
 
     expect(seen).toEqual([[1, 2], [3, 4], [5, 6], [5], [6], [7, 8], [9, 10], [11, 12]]);
@@ -491,7 +491,7 @@ describe("adaptive batch halving", () => {
     });
 
     await expect(agent.writeDraft({
-      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
     })).rejects.toThrow(/output limit/);
   });
 
@@ -505,7 +505,7 @@ describe("adaptive batch halving", () => {
     });
 
     await expect(agent.writeDraft({
-      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
     })).rejects.toThrow(/401/);
     // batch 1 succeeded, batch 2 failed once — no halving attempts
     expect(chat).toHaveBeenCalledTimes(2);
@@ -563,7 +563,7 @@ describe("reviseDraft batching", () => {
     });
 
     const revised = await agent.reviseDraft({
-      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
       draft: v1, review: "第六章反扑不够",
     });
 
@@ -591,7 +591,7 @@ describe("reviseDraft batching", () => {
     });
 
     await agent.reviseDraft({
-      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
       draft: v1, review: "第六章反扑不够",
     });
 
@@ -608,7 +608,7 @@ describe("reviseDraft batching", () => {
     ));
 
     await expect(agent.reviseDraft({
-      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
       draft: v1, review: "第六章反扑不够",
     })).rejects.toThrow(/output limit/);
   });
@@ -639,7 +639,7 @@ describe("continueDraft chunking", () => {
     });
 
     const repaired = await agent.continueDraft({
-      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
       draft: partial,
     });
 
@@ -654,7 +654,7 @@ describe("continueDraft chunking", () => {
     const complete = parseShortFictionBatchDraft(fullDraftMarkdown(12), { expectedChapters: 12 });
 
     const result = await agent.continueDraft({
-      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
       draft: complete,
     });
 

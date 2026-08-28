@@ -282,6 +282,11 @@ describe("public short-fiction chain", () => {
         coverModel: "gpt-image-2",
         coverApiKeyEnv: "INKOS_TEST_COVER_KEY",
         signal: controller.signal,
+        // Explicit: this test's whole point is the zh scaffold text below, and
+        // language now defaults to "en" (AGENTS.md "Language defaults in
+        // code"). Without this, the assertions on Chinese scaffold text would
+        // fail against the new English default.
+        language: "zh",
       });
 
       expect(result.coverPromptPath).toBe("covers/demo/cover-prompt.md");
@@ -303,6 +308,50 @@ describe("public short-fiction chain", () => {
       expect(body).not.toContain("不添加文字");
       expect(body).not.toContain("水印");
       expect(body).not.toContain("固定模板");
+    } finally {
+      globalThis.fetch = originalFetch;
+      delete process.env.INKOS_TEST_COVER_KEY;
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // AGENTS.md "Language defaults in code": createGenerateCoverTool in
+  // agent-tools.ts (the chat-driven "regenerate cover" tool) calls
+  // generateShortFictionCover without ever setting `language` — it has no
+  // language field in its tool params at all. Before this cleanup that meant
+  // an English-pipeline user asking the assistant to regenerate a cover
+  // silently got a Chinese cover prompt, because generateShortFictionCover
+  // forwards `options.language` straight into buildCoverImagePrompt, whose
+  // default was "zh". This test exercises exactly that call shape (no
+  // `language` field) and asserts the now-English default, matching this
+  // task's fix.
+  it("defaults to English scaffold text when language is omitted, matching AGENTS.md's language-default rule", async () => {
+    const root = await mkdtemp(join(tmpdir(), "inkos-cover-tool-en-default-"));
+    const originalFetch = globalThis.fetch;
+    process.env.INKOS_TEST_COVER_KEY = "sk-cover";
+    try {
+      const fetchMock = vi.fn(async (_url: unknown, _init?: { readonly body?: unknown }) => new Response(JSON.stringify({
+        data: [{ b64_json: "ZmFrZQ==" }],
+      }), { status: 200, headers: { "content-type": "application/json" } }));
+      globalThis.fetch = fetchMock as never;
+
+      await generateShortFictionCover({
+        projectRoot: root,
+        title: "The Divorce Papers She Kept",
+        intro: "Three years of receipts, and one signature left.",
+        sellingPoints: ["marriage betrayal", "evidence payback"],
+        coverPrompt: "The heroine smirks, holding the divorce papers.",
+        outputDir: "covers/demo-en",
+        coverEndpoint: "https://images.example.test/v1/images/generations",
+        coverModel: "gpt-image-2",
+        coverApiKeyEnv: "INKOS_TEST_COVER_KEY",
+        // language intentionally omitted — this is the exact shape of the
+        // real createGenerateCoverTool call site.
+      });
+
+      const body = String(fetchMock.mock.calls[0]?.[1]?.body ?? "");
+      expect(body).toContain("Generate a cover image from the title, synopsis, selling points, and visual notes the user provided.");
+      expect(body).not.toMatch(/[一-鿿]/);
     } finally {
       globalThis.fetch = originalFetch;
       delete process.env.INKOS_TEST_COVER_KEY;

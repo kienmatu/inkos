@@ -7,7 +7,7 @@ describe("short-fiction writer craft prompt", () => {
     outlineMarkdown: "## 大纲\n第1章 入局",
     chapterCount: 12,
     charsPerChapter: 1000,
-  });
+  }, "zh");
 
   it("tells the writer to play out the climax as a scene, not summarize it (B3)", () => {
     expect(prompt).toContain("高潮即场景");
