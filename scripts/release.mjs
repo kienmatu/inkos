@@ -25,6 +25,40 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // Publish order matters: dependents must find the new core on the registry.
 const PUBLISH_ORDER = ["core", "studio", "cli"];
 
+const USAGE = `Release driver — bump version, build, test, commit, tag, publish.
+
+Usage
+  node scripts/release.mjs [patch|minor|major|<version>] [flags]
+  ./release.sh [patch|minor|major|<version>] [flags]
+
+Version argument (default: patch)
+  patch        0.1.3 -> 0.1.4
+  minor        0.1.3 -> 0.2.0
+  major        0.1.3 -> 1.0.0
+  <version>    an explicit version, e.g. 0.4.0
+
+Flags
+  --dry-run     bump, build and test, then revert — no commit, tag or publish
+  --no-publish  bump, build, test, commit and tag, but skip npm publish
+  --no-test     skip \`pnpm test\`
+  --push        push the commit and tag to origin after a successful publish
+  -y, --yes     skip the confirmation prompt
+  -h, --help    show this help
+
+Steps
+  1. preflight   clean working tree, unused tag, print the plan, confirm
+  2. bump        root + every package manifest, including internal dep ranges
+  3. verify      pnpm build, pnpm test, publish-manifest check
+                 (a failure here reverts the bump)
+  4. commit      "chore: bump version to X.Y.Z" + tag vX.Y.Z
+  5. publish     core -> studio -> cli, so dependents resolve the new core
+
+Examples
+  ./release.sh minor --dry-run
+  ./release.sh minor --push -y
+  ./release.sh 0.4.0 --no-publish
+`;
+
 function parseArgs(argv) {
   const options = {
     bump: "patch",
@@ -33,6 +67,7 @@ function parseArgs(argv) {
     test: true,
     push: false,
     yes: false,
+    help: false,
   };
 
   for (const arg of argv) {
@@ -43,8 +78,10 @@ function parseArgs(argv) {
       case "--push": options.push = true; break;
       case "--yes":
       case "-y": options.yes = true; break;
+      case "--help":
+      case "-h": options.help = true; break;
       default:
-        if (arg.startsWith("-")) throw new Error(`Unknown flag: ${arg}`);
+        if (arg.startsWith("-")) throw new Error(`Unknown flag: ${arg}\nRun with --help for usage.`);
         options.bump = arg;
     }
   }
@@ -93,6 +130,11 @@ async function confirm(question) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
+
+  if (options.help) {
+    console.log(USAGE);
+    return;
+  }
 
   // 1. Preflight — a dirty tree would get swept into the version commit.
   const status = capture("git", ["status", "--porcelain"]);
