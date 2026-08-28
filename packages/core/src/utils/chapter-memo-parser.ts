@@ -23,6 +23,23 @@ export class PlannerParseError extends Error {
 // - 1 char for "## 不要做" / "## Do not" because "无" / "N/A" / "none" /
 //   "—" are all legitimate for a chapter with no extra prohibitions; we
 //   only need to ensure the section is not whitespace-only.
+/**
+ * The canonical memo section names. The parser matches on these, the planner
+ * emits them, and the writer's memo contract must cite them — sourcing all three
+ * from one place is what stops the contract from naming sections that no memo
+ * contains.
+ */
+export const MEMO_SECTION_NAMES: ReadonlyArray<{ readonly zh: string; readonly en: string }> = [
+  { zh: "## 当前任务", en: "## Current task" },
+  { zh: "## 读者此刻在等什么", en: "## What the reader is waiting for right now" },
+  { zh: "## 该兑现的 / 暂不掀的", en: "## To pay off / to keep buried" },
+  { zh: "## 日常/过渡承担什么任务", en: "## What the slow / transitional beats carry" },
+  { zh: "## 关键抉择过三连问", en: "## Three-question check on the key choice" },
+  { zh: "## 章尾必须发生的改变", en: "## Required end-of-chapter change" },
+  { zh: "## 本章 hook 账", en: "## Hook ledger for this chapter" },
+  { zh: "## 不要做", en: "## Do not" },
+];
+
 interface RequiredSection {
   readonly zh: string;
   readonly en: string;
