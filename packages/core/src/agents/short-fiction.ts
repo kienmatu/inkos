@@ -303,18 +303,48 @@ export class ShortFictionDraftReviserAgent extends BaseAgent {
   }
 
   async reviseDraft(input: ShortFictionDraftRevisionInput): Promise<ShortFictionBatchDraft> {
-    const response = await retryShortFictionCall(() =>
-      this.chat([
-        { role: "system", content: buildShortFictionWriterSystemPrompt(input.language) },
-        { role: "user", content: buildShortFictionWriterUserPrompt(input, input.language) },
-        { role: "assistant", content: input.draft.rawContent.trim() || renderShortFictionDraftMarkdown(input.draft, input.language) },
-        { role: "user", content: buildShortFictionDraftRevisionFollowup(input, input.language) },
-      ], {
-        temperature: 0.45,
-        maxTokens: estimateShortFictionMaxTokens(input.chapterCount, input.charsPerChapter),
-      }), this.name, this.log);
+    const allChapters = Array.from({ length: input.chapterCount }, (_, index) => index + 1);
+    const groups = chunkChapters(allChapters, SHORT_FICTION_CHAPTERS_PER_BATCH);
+    const v1Markdown = input.draft.rawContent.trim()
+      || renderShortFictionDraftMarkdown(input.draft, input.language);
 
-    return parseShortFictionBatchDraft(response.content, { expectedChapters: input.chapterCount, language: input.language });
+    const fragments = await runChapterBatches({
+      agentName: this.name,
+      ...(this.log ? { log: this.log } : {}),
+      groups,
+      charsPerChapter: input.charsPerChapter,
+      temperature: 0.45,
+      chat: (messages, options) => this.chat(messages, options),
+      ...(input.onBatchProgress ? { onBatchProgress: input.onBatchProgress } : {}),
+      buildMessages: (chapters, fragmentsSoFar) => {
+        const chapterRange: readonly [number, number] = [chapters[0]!, chapters[chapters.length - 1]!];
+        const revisedSoFarMarkdown = fragmentsSoFar.length === 0
+          ? undefined
+          : renderShortFictionDraftMarkdown(
+              parseShortFictionBatchDraft(fragmentsSoFar.join("\n\n"), {
+                expectedChapters: chapters[0]! - 1,
+                language: input.language,
+              }),
+              input.language,
+            );
+
+        return [
+          { role: "system", content: buildShortFictionWriterSystemPrompt(input.language) },
+          { role: "user", content: buildShortFictionWriterUserPrompt({ ...input, chapterRange }, input.language) },
+          { role: "assistant", content: v1Markdown },
+          { role: "user", content: buildShortFictionDraftRevisionFollowup({
+            ...input,
+            chapterRange,
+            ...(revisedSoFarMarkdown ? { revisedSoFarMarkdown } : {}),
+          }, input.language) },
+        ];
+      },
+    });
+
+    return parseShortFictionBatchDraft(fragments.join("\n\n"), {
+      expectedChapters: input.chapterCount,
+      language: input.language,
+    });
   }
 }
 

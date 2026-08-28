@@ -400,3 +400,79 @@ describe("adaptive batch halving", () => {
     expect(chat).toHaveBeenCalledTimes(2);
   });
 });
+
+import { ShortFictionDraftReviserAgent, parseShortFictionBatchDraft } from "../agents/short-fiction.js";
+
+function fullDraftMarkdown(chapterCount: number): string {
+  return [
+    "=== SHORT_FICTION_TITLE ===",
+    "电梯多一层",
+    ...Array.from({ length: chapterCount }, (_, i) => [
+      `=== CHAPTER ${i + 1} TITLE ===`,
+      `第${i + 1}章`,
+      `=== CHAPTER ${i + 1} CONTENT ===`,
+      "第一版正文，电梯停在十三层。".repeat(20),
+    ].join("\n")),
+  ].join("\n");
+}
+
+describe("reviseDraft batching", () => {
+  const v1 = parseShortFictionBatchDraft(fullDraftMarkdown(12), { expectedChapters: 12 });
+
+  function reviserAgent() {
+    return new ShortFictionDraftReviserAgent({
+      client: { provider: "openai" } as never, model: "fake", projectRoot: "/tmp/does-not-matter",
+    });
+  }
+
+  it("issues four calls for a 12-chapter revision and merges into a full draft", async () => {
+    const agent = reviserAgent();
+    const chat = spyChat(agent);
+    const seen: number[][] = [];
+    chat.mockImplementation((...args: unknown[]) => {
+      const group = requestedChapters(args, 12);
+      seen.push(group);
+      return Promise.resolve({ content: batchReply(group, group[0] === 1), usage: undefined });
+    });
+
+    const revised = await agent.reviseDraft({
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      draft: v1, review: "第六章反扑不够",
+    });
+
+    expect(seen).toEqual([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]);
+    expect(revised.chapters).toHaveLength(12);
+    expect(revised.chapters.every((c) => c.content.trim().length > 0)).toBe(true);
+  });
+
+  it("sends the v1 draft on every batch and the revised-so-far prose from batch two", async () => {
+    const agent = reviserAgent();
+    const chat = spyChat(agent);
+    chat.mockImplementation((...args: unknown[]) => {
+      const group = requestedChapters(args, 12);
+      return Promise.resolve({ content: batchReply(group, group[0] === 1), usage: undefined });
+    });
+
+    await agent.reviseDraft({
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      draft: v1, review: "第六章反扑不够",
+    });
+
+    const secondMessages = (chat.mock.calls[1] as unknown[])[0] as ReadonlyArray<{ role: string; content: string }>;
+    expect(secondMessages.some((m) => m.role === "assistant" && m.content.includes("第一版正文"))).toBe(true);
+    expect(userText(chat.mock.calls[1] as unknown[])).toContain("第二版已完成章节");
+    expect(userText(chat.mock.calls[0] as unknown[])).not.toContain("第二版已完成章节");
+  });
+
+  it("propagates a single-chapter output-limit failure instead of returning a partial revision", async () => {
+    const agent = reviserAgent();
+    spyChat(agent).mockRejectedValue(new PartialResponseError(
+      "half", new Error("model reached the output limit (length)"), "output-limit",
+    ));
+
+    await expect(agent.reviseDraft({
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      draft: v1, review: "第六章反扑不够",
+    })).rejects.toThrow(/output limit/);
+  });
+});
