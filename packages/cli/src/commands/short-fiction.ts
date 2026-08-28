@@ -37,8 +37,15 @@ shortCommand
   .option("--story-id <id>", "Output story id under shorts/")
   .option("--out-dir <path>", "Output directory", "shorts")
   .option("--lang <language>", "Writing language: zh or en", "zh")
-  .option("--chapters <n>", "Complete short chapter count (8-18)", String(SHORT_FICTION_DEFAULT_CHAPTERS))
-  .option("--chars <n>", "Per-chapter length: zh characters (900-1200) or en words (900-1500)")
+  .option(
+    "--chapters <n>",
+    `Complete short chapter count (${SHORT_FICTION_MIN_CHAPTERS}-${SHORT_FICTION_MAX_CHAPTERS})`,
+    String(SHORT_FICTION_DEFAULT_CHAPTERS),
+  )
+  .option(
+    "--chars <n>",
+    `Per-chapter length: zh characters (${SHORT_FICTION_MIN_CHARS_PER_CHAPTER}-${SHORT_FICTION_MAX_CHARS_PER_CHAPTER}) or en words (${SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER}-${SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER})`,
+  )
   .option("--llm-base-url <url>", "Override LLM base URL")
   .option("--model <model>", "Fallback model for all short stages")
   .option("--planner-model <model>", "Model for outline creation/revision")
