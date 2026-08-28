@@ -31,6 +31,10 @@ pnpm test         # Run all tests
 pnpm typecheck    # Type-check without emitting
 ```
 
+Releases run through `./release.sh` (`./release.sh --help`), which bumps every manifest,
+builds, tests, commits, tags, and publishes in dependency order. See the Releasing section
+in [AGENTS.md](AGENTS.md) — do not bump or publish by hand.
+
 ## Commit Convention
 
 ```

@@ -142,3 +142,35 @@ Resulting impact:    what downstream no longer re-checks; where illegal state ex
 7. Test illegal states: restore, migration, IO, LLM messages, and tool loops must cover bad
    data, missing fields, uncommitted requests, orphaned `toolResult`, empty assistant
    messages, and trailing thinking.
+
+## Releasing
+
+Releases go through `./release.sh` (wrapping `scripts/release.mjs`). Do not bump versions,
+tag, or publish by hand — the four manifests, the internal dependency ranges, and the
+publish order all have to move together.
+
+```bash
+./release.sh --help          # usage, flags, and the five steps
+./release.sh minor --dry-run # bump, build, test, then revert — touches no registry
+./release.sh minor           # the real thing
+```
+
+The version argument is `patch` (default), `minor`, `major`, or an explicit version.
+`0.1.3` goes to `0.1.4`, `0.2.0`, and `1.0.0` respectively.
+
+What the script guarantees, and why each step exists:
+
+1. **Preflight** — refuses a dirty working tree, so unrelated work cannot ride along in the
+   version commit, and refuses a tag that already exists.
+2. **Bump** — delegates to `scripts/set-package-versions.mjs`, which rewrites the root
+   manifest, every package manifest, and internal dependency ranges to the same version.
+3. **Verify** — `pnpm build`, `pnpm test`, and the publish-manifest check run *after* the
+   bump, since that is the tree that ships. A failure reverts the bump.
+4. **Commit and tag** — `chore: bump version to X.Y.Z` plus tag `vX.Y.Z`, before anything
+   reaches the registry, so a published version always has a commit behind it.
+5. **Publish** — `core` then `studio` then `cli`. Dependents resolve the new core from the
+   registry, so it has to be there first. `prepack` rewrites `workspace:*` to the real
+   version and `postpack` restores it.
+
+Pushing is opt-in (`--push`); without it the script prints the push commands and stops, so
+a botched release stays local.
