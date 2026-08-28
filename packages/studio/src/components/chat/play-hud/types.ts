@@ -88,5 +88,5 @@ export const LADDER_LABEL_EN: Record<string, string> = {
 };
 export const LADDER_LABEL_VI: Record<string, string> = {
   unknown: "Chưa biết", hinted: "Có manh mối", seen: "Đã thấy", collected: "Đã thu thập",
-  verified: "Đã xác minh", weaponized: "Đã dùng làm vũ khí", exposed: "Đã phơi bày", exhausted: "Đã cạn",
+  verified: "Đã xác minh", weaponized: "Đã vũ khí hóa", exposed: "Đã phơi bày", exhausted: "Đã khai thác hết",
 };

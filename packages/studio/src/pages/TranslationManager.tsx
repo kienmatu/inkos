@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Theme } from "../hooks/use-theme";
 import type { TFunction } from "../hooks/use-i18n";
 import { useColors } from "../hooks/use-colors";
+import { tr } from "../lib/app-language";
 import { fetchJson, useApi } from "../hooks/use-api";
 import { Download, FileText, Languages, Loader2, Play, Upload } from "lucide-react";
 
@@ -123,6 +124,9 @@ const LANGUAGE_PRESETS_EN = [
 
 export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunction }) {
   const c = useColors(theme);
+  // Content-language data (source/target for translation, and the presets used to
+  // pick them): zh/en only, per the project invariant. Not UI chrome, so this
+  // stays keyed off isZh rather than routed through tr().
   const isZh = t("nav.connected") === "已连接";
   const languagePresets = isZh ? LANGUAGE_PRESETS_ZH : LANGUAGE_PRESETS_EN;
   const { data, loading, error, refetch } = useApi<TranslationListResponse>("/translations");
@@ -179,7 +183,7 @@ export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; 
       });
       setUploaded(res);
       if (!title.trim()) setTitle(file.name.replace(/\.[^.]+$/u, ""));
-      setStatus(isZh ? `已上传：${res.storedPath}` : `Uploaded: ${res.storedPath}`);
+      setStatus(tr(`已上传：${res.storedPath}`, `Uploaded: ${res.storedPath}`, `Đã tải lên: ${res.storedPath}`));
     } catch (err) {
       setStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -204,7 +208,7 @@ export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; 
         }),
       });
       setSelectedId(res.projectId);
-      setStatus(isZh ? `已创建翻译项目：${res.title}` : `Created translation project: ${res.title}`);
+      setStatus(tr(`已创建翻译项目：${res.title}`, `Created translation project: ${res.title}`, `Đã tạo dự án dịch: ${res.title}`));
       await refetch();
     } catch (err) {
       setStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
@@ -223,9 +227,11 @@ export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ batchSize: 8 }),
       });
-      setStatus(isZh
-        ? `翻译 ${res.translatedSegments} 段，审校 ${res.reviewedChapters} 章。${res.skillIds?.length ? `Skill：${res.skillIds.join(" · ")}。` : ""}报告：${res.reportPath}`
-        : `Translated ${res.translatedSegments} segments, reviewed ${res.reviewedChapters} chapters. ${res.skillIds?.length ? `Skills: ${res.skillIds.join(" · ")}. ` : ""}Report: ${res.reportPath}`);
+      setStatus(tr(
+        `翻译 ${res.translatedSegments} 段，审校 ${res.reviewedChapters} 章。${res.skillIds?.length ? `Skill：${res.skillIds.join(" · ")}。` : ""}报告：${res.reportPath}`,
+        `Translated ${res.translatedSegments} segments, reviewed ${res.reviewedChapters} chapters. ${res.skillIds?.length ? `Skills: ${res.skillIds.join(" · ")}. ` : ""}Report: ${res.reportPath}`,
+        `Đã dịch ${res.translatedSegments} đoạn, đã soát ${res.reviewedChapters} chương. ${res.skillIds?.length ? `Skill: ${res.skillIds.join(" · ")}. ` : ""}Báo cáo: ${res.reportPath}`,
+      ));
       await refetch();
       const updated = await fetchJson<TranslationDetailResponse>(`/translations/${encodeURIComponent(selected.projectId)}`);
       setDetail(updated);
@@ -247,7 +253,7 @@ export function TranslationManager({ nav, theme, t }: { nav: Nav; theme: Theme; 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ format }),
       });
-      setStatus(isZh ? `已导出 ${format}: ${res.outputPath}` : `Exported ${format}: ${res.outputPath}`);
+      setStatus(tr(`已导出 ${format}: ${res.outputPath}`, `Exported ${format}: ${res.outputPath}`, `Đã xuất ${format}: ${res.outputPath}`));
     } catch (err) {
       setStatus(`Error: ${err instanceof Error ? err.message : String(err)}`);
     } finally {

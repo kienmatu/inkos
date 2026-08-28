@@ -5,6 +5,7 @@ import type { SSEMessage } from "../../hooks/use-sse";
 import { useChatStore } from "../../store/chat";
 import { fetchJson } from "../../hooks/use-api";
 import { PanelRightClose, PanelRightOpen, ArrowLeft, Loader2, Pencil, Save, X } from "lucide-react";
+import { tr } from "../../lib/app-language";
 import { Streamdown } from "streamdown";
 import { cjk } from "@streamdown/cjk";
 import { ProgressSection } from "../sidebar/ProgressSection";
@@ -58,7 +59,11 @@ function renderTruthBody(
     const { isEmpty, body: stateBody } = presentCurrentState(content);
     return isEmpty ? (
       <p className="text-[14px] leading-6 text-muted-foreground/60 italic">
-        还没有运行状态。开始写作后，每写完一章这里会自动记录最新的故事进展。
+        {tr(
+          "还没有运行状态。开始写作后，每写完一章这里会自动记录最新的故事进展。",
+          "No run state yet. Once you start writing, the latest story progress is recorded here after each chapter.",
+          "Chưa có trạng thái nào. Sau khi bắt đầu viết, diễn biến mới nhất sẽ được ghi lại ở đây sau mỗi chương.",
+        )}
       </p>
     ) : (
       <Streamdown plugins={streamdownPlugins} mode="static">{stateBody}</Streamdown>
@@ -67,7 +72,11 @@ function renderTruthBody(
   if (file === "emotional_arcs.md" && !hasTableRows(content)) {
     return (
       <p className="text-[14px] leading-6 text-muted-foreground/60 italic">
-        还没有情感弧线记录。开始写作后，这里会记录角色在各章的情绪变化。
+        {tr(
+          "还没有情感弧线记录。开始写作后，这里会记录角色在各章的情绪变化。",
+          "No emotional arcs recorded yet. Once you start writing, each character's emotional shifts per chapter appear here.",
+          "Chưa có ghi nhận cung cảm xúc. Sau khi bắt đầu viết, thay đổi cảm xúc của nhân vật qua từng chương sẽ hiện ở đây.",
+        )}
       </p>
     );
   }
@@ -95,7 +104,7 @@ function ArtifactView({ bookId }: { readonly bookId: string }) {
 
   const isChapter = artifactChapter !== null;
   const label = isChapter
-    ? `第 ${artifactChapter} 章`
+    ? tr(`第 ${artifactChapter} 章`, `Chapter ${artifactChapter}`, `Chương ${artifactChapter}`)
     : artifactFile ? artifactLabel(artifactFile) : "";
 
   useEffect(() => {
@@ -194,7 +203,7 @@ function ArtifactView({ bookId }: { readonly bookId: string }) {
             <Loader2 size={16} className="text-muted-foreground animate-spin" />
           </div>
         ) : content === null ? (
-          <p className="text-[14px] leading-6 text-muted-foreground/50 italic px-4 py-3">文件不存在</p>
+          <p className="text-[14px] leading-6 text-muted-foreground/50 italic px-4 py-3">{tr("文件不存在", "File not found", "Không tìm thấy tệp")}</p>
         ) : editing ? (
           <textarea
             value={editContent}
@@ -211,9 +220,7 @@ function ArtifactView({ bookId }: { readonly bookId: string }) {
   );
 }
 
-function PanelView({ bookId, theme: _theme, t, sse }: BookSidebarProps) {
-  const isZh = t("nav.connected") === "\u5DF2\u8FDE\u63A5";
-
+function PanelView({ bookId, theme: _theme, t: _t, sse }: BookSidebarProps) {
   // Show writing indicator only during pipeline operations (write/audit/revise)
   const [activeOp, setActiveOp] = useState<string | null>(null);
   useEffect(() => {
@@ -235,9 +242,9 @@ function PanelView({ bookId, theme: _theme, t, sse }: BookSidebarProps) {
   }, [sse.messages]);
 
   const OP_LABELS: Record<string, string> = {
-    write: isZh ? "正在写作中..." : "Writing...",
-    audit: isZh ? "正在审计中..." : "Auditing...",
-    revise: isZh ? "正在修订中..." : "Revising...",
+    write: tr("正在写作中...", "Writing...", "Đang viết..."),
+    audit: tr("正在审计中...", "Auditing...", "Đang kiểm tra..."),
+    revise: tr("正在修订中...", "Revising...", "Đang sửa..."),
   };
 
   return (
@@ -251,7 +258,7 @@ function PanelView({ bookId, theme: _theme, t, sse }: BookSidebarProps) {
         </div>
       )}
       <ProgressSection sse={sse} />
-      <ChaptersSection bookId={bookId} isZh={isZh} />
+      <ChaptersSection bookId={bookId} />
       <CharacterSection bookId={bookId} />
       <FoundationSection bookId={bookId} />
       <SummarySection bookId={bookId} />
@@ -331,7 +338,7 @@ export function BookSidebarToggle({ bookId, theme, t, sse }: BookSidebarProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-3 py-2 border-b border-border/20">
-              <span className="text-[15px] leading-6 font-medium text-muted-foreground">书籍信息</span>
+              <span className="text-[15px] leading-6 font-medium text-muted-foreground">{tr("书籍信息", "Book info", "Thông tin sách")}</span>
               <button onClick={() => setOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <PanelRightClose size={14} />
               </button>

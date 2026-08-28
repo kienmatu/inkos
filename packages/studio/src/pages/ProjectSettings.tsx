@@ -5,6 +5,7 @@ import { usePreferencesStore } from "../store/preferences";
 import type { Theme } from "../hooks/use-theme";
 import type { TFunction } from "../hooks/use-i18n";
 import { useColors } from "../hooks/use-colors";
+import { tr } from "../lib/app-language";
 import {
   buildDetectionConfig,
   buildNotifyChannel,
@@ -92,7 +93,6 @@ const fieldClass = "w-full rounded-lg border border-border bg-secondary/30 px-3 
 
 export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunction }) {
   const c = useColors(theme);
-  const isZh = t("nav.connected") === "\u5DF2\u8FDE\u63A5";
   const { data: overridesData, refetch: refetchOverrides } = useApi<{ overrides: Record<string, unknown> }>("/project/model-overrides");
   const { data: defaultModelData, refetch: refetchDefaultModel } = useApi<{ service: string | null; defaultModel: string | null }>("/project/default-model");
   const { data: researchSearchData, refetch: refetchResearchSearch } = useApi<{ researchSearch: Partial<ResearchSearchDraft> }>("/project/research-search");
@@ -188,7 +188,7 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
       const serialized = await serializeSkillFolder(files);
       await postApi("/skills/import", { files: serialized });
       await refetchSkills();
-    }, isZh ? "Skill 文件夹已导入" : "Skill folder imported");
+    }, tr("Skill 文件夹已导入", "Skill folder imported", "Đã nhập thư mục skill"));
   };
 
   const updateChannel = (index: number, patch: Partial<NotifyChannelDraft>) => {
@@ -239,28 +239,34 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
       </SettingsCard>
 
       <SettingsCard
-        title={isZh ? "Agent Skills" : "Agent Skills"}
-        description={isZh ? "导入标准 SKILL.md 专业能力包。Chat 可以按意图自主使用，也可以在输入框用 + 号强制启用。" : "Import standard SKILL.md expertise packages. Chat can choose a skill from intent, or you can force one from the + menu."}
+        title={tr("Agent Skills", "Agent Skills", "Agent Skills")}
+        description={tr(
+          "导入标准 SKILL.md 专业能力包。Chat 可以按意图自主使用，也可以在输入框用 + 号强制启用。",
+          "Import standard SKILL.md expertise packages. Chat can choose a skill from intent, or you can force one from the + menu.",
+          "Nhập các gói skill chuẩn SKILL.md. Chat có thể tự chọn skill theo ý định, hoặc bạn có thể bắt buộc dùng một skill từ menu +.",
+        )}
         icon={<Bot size={18} />}
       >
         <div className="space-y-3">
           {skillsData?.diagnostics?.length ? (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
-              <div className="font-semibold">{isZh ? "部分外部 Skill 未加载" : "Some external skills were not loaded"}</div>
+              <div className="font-semibold">{tr("部分外部 Skill 未加载", "Some external skills were not loaded", "Một số skill bên ngoài chưa được tải")}</div>
               {skillsData.diagnostics.slice(0, 8).map((item, index) => (
                 <div key={`${item.path ?? "skill"}-${index}`} className="mt-1 break-all">
-                  {item.path ? `${item.path}: ` : ""}{item.message ?? (isZh ? "格式无效" : "Invalid format")}
+                  {item.path ? `${item.path}: ` : ""}{item.message ?? tr("格式无效", "Invalid format", "Định dạng không hợp lệ")}
                 </div>
               ))}
             </div>
           ) : null}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-secondary/20 p-3">
             <div>
-              <div className="text-sm font-semibold">{isZh ? "导入外部 Skill" : "Import external skill"}</div>
+              <div className="text-sm font-semibold">{tr("导入外部 Skill", "Import external skill", "Nhập skill bên ngoài")}</div>
               <p className="mt-1 text-xs text-muted-foreground">
-                {isZh
-                  ? "兼容 AgentSkills / OpenClaw：选择包含 SKILL.md 的完整文件夹，静态参考资料会一并导入；脚本不会自动执行。"
-                  : "AgentSkills / OpenClaw compatible: select a complete folder containing SKILL.md. Static references are imported; scripts are never auto-executed."}
+                {tr(
+                  "兼容 AgentSkills / OpenClaw：选择包含 SKILL.md 的完整文件夹，静态参考资料会一并导入；脚本不会自动执行。",
+                  "AgentSkills / OpenClaw compatible: select a complete folder containing SKILL.md. Static references are imported; scripts are never auto-executed.",
+                  "Tương thích AgentSkills / OpenClaw: chọn thư mục đầy đủ có chứa SKILL.md. Các tệp tham khảo tĩnh sẽ được nhập theo; script sẽ không tự động chạy.",
+                )}
               </p>
             </div>
             <button
@@ -271,8 +277,8 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
             >
               <FolderUp size={16} />
               {saving === "skill-import"
-                ? (isZh ? "导入中..." : "Importing...")
-                : (isZh ? "选择 Skill 文件夹" : "Choose skill folder")}
+                ? tr("导入中...", "Importing...", "Đang nhập...")
+                : tr("选择 Skill 文件夹", "Choose skill folder", "Chọn thư mục skill")}
             </button>
             <input
               ref={skillFolderInputRef}
@@ -287,7 +293,7 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
             />
           </div>
           {skills.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">{isZh ? "还没有 Skill。" : "No skills yet."}</p>
+            <p className="text-xs text-muted-foreground italic">{tr("还没有 Skill。", "No skills yet.", "Chưa có skill nào.")}</p>
           ) : (
             <div className="grid gap-2 md:grid-cols-2">
               {skills.map((skill) => (
@@ -301,7 +307,7 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
                         </span>
                       </div>
                       <div className="mt-0.5 font-mono text-[11px] text-muted-foreground/70">@{skill.id}</div>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">{skill.description || (isZh ? "无说明" : "No description")}</p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">{skill.description || tr("无说明", "No description", "Không có mô tả")}</p>
                     </div>
                     {skill.editable ? (
                       <button
@@ -309,9 +315,9 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
                         onClick={() => runSave(`delete-skill:${skill.id}`, async () => {
                           await fetchJson(`/skills/${encodeURIComponent(skill.id)}`, { method: "DELETE" });
                           await refetchSkills();
-                        }, isZh ? "Skill 已删除" : "Skill deleted")}
+                        }, tr("Skill 已删除", "Skill deleted", "Đã xóa skill"))}
                         className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                        aria-label={isZh ? `删除 ${skill.name}` : `Delete ${skill.name}`}
+                        aria-label={tr(`删除 ${skill.name}`, `Delete ${skill.name}`, `Xóa ${skill.name}`)}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -325,15 +331,19 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
       </SettingsCard>
 
       <SettingsCard
-        title={isZh ? "提示词" : "Prompt packs"}
-        description={isZh ? "集中查看和调整内置提示词。修改会保存为项目级覆盖文件，不会改动内置默认值。" : "Review and tune built-in prompt packs. Edits are saved as project overrides without changing the defaults."}
+        title={tr("提示词", "Prompt packs", "Gói prompt")}
+        description={tr(
+          "集中查看和调整内置提示词。修改会保存为项目级覆盖文件，不会改动内置默认值。",
+          "Review and tune built-in prompt packs. Edits are saved as project overrides without changing the defaults.",
+          "Xem và tinh chỉnh các gói prompt có sẵn tại một nơi. Thay đổi được lưu thành tệp ghi đè cấp dự án, không ảnh hưởng đến giá trị mặc định.",
+        )}
         icon={<FileText size={18} />}
       >
         <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
           <div className="rounded-xl border border-border/60 bg-secondary/20 p-3">
             {promptGroups.length === 0 ? (
               <p className="text-xs text-muted-foreground italic">
-                {isZh ? "没有可编辑提示词。" : "No prompt packs available."}
+                {tr("没有可编辑提示词。", "No prompt packs available.", "Không có gói prompt nào để chỉnh sửa.")}
               </p>
             ) : (
               <div className="space-y-4">
@@ -364,7 +374,7 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
                             <span className="truncate text-sm font-semibold">{prompt.title}</span>
                             {prompt.overridden ? (
                               <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
-                                {isZh ? "已改" : "custom"}
+                                {tr("已改", "custom", "đã sửa")}
                               </span>
                             ) : null}
                           </div>
@@ -386,7 +396,7 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
                     <div className="text-base font-bold">{selectedPrompt.title}</div>
                     <div className="mt-1 font-mono text-xs text-muted-foreground">{selectedPrompt.id}</div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      {isZh ? "当前来源" : "Source"}: {selectedPrompt.source}
+                      {tr("当前来源", "Source", "Nguồn")}: {selectedPrompt.source}
                       {selectedPrompt.path ? ` · ${selectedPrompt.path}` : ""}
                     </div>
                   </div>
@@ -396,19 +406,19 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
                       onClick={() => runSave(`reset-prompt:${selectedPrompt.id}`, async () => {
                         await fetchJson(`/prompt-packs/${encodeURIComponent(selectedPrompt.id)}`, { method: "DELETE" });
                         await refetchPromptPacks();
-                      }, isZh ? "提示词已恢复默认" : "Prompt reset to default")}
+                      }, tr("提示词已恢复默认", "Prompt reset to default", "Đã khôi phục prompt về mặc định"))}
                       disabled={saving === `reset-prompt:${selectedPrompt.id}` || !selectedPrompt.overridden}
                       className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold ${c.btnSecondary} disabled:opacity-40`}
                     >
                       <RotateCcw size={14} />
-                      {isZh ? "恢复默认" : "Reset"}
+                      {tr("恢复默认", "Reset", "Khôi phục mặc định")}
                     </button>
                     <button
                       type="button"
                       onClick={() => runSave(`prompt:${selectedPrompt.id}`, async () => {
                         await putApi(`/prompt-packs/${encodeURIComponent(selectedPrompt.id)}`, { content: promptDraft });
                         await refetchPromptPacks();
-                      }, isZh ? "提示词已保存" : "Prompt saved")}
+                      }, tr("提示词已保存", "Prompt saved", "Đã lưu prompt"))}
                       disabled={saving === `prompt:${selectedPrompt.id}` || !promptDirty}
                       className={`rounded-lg px-4 py-2 text-sm font-bold ${c.btnPrimary} disabled:opacity-40`}
                     >
@@ -427,7 +437,7 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
 
                 <details className="rounded-xl border border-border/50 bg-background/50 p-3">
                   <summary className="cursor-pointer text-sm font-semibold text-muted-foreground">
-                    {isZh ? "查看内置默认" : "View built-in default"}
+                    {tr("查看内置默认", "View built-in default", "Xem bản mặc định có sẵn")}
                   </summary>
                   <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-secondary/30 p-3 text-xs leading-5 text-muted-foreground">
                     {selectedPrompt.defaultContent ?? ""}
@@ -436,7 +446,7 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                {isZh ? "选择左侧提示词后编辑。" : "Select a prompt on the left to edit it."}
+                {tr("选择左侧提示词后编辑。", "Select a prompt on the left to edit it.", "Chọn một prompt ở bên trái để chỉnh sửa.")}
               </p>
             )}
           </div>
@@ -538,8 +548,12 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
       </SettingsCard>
 
       <SettingsCard
-        title={isZh ? "联网研究搜索服务" : "Research Search Provider"}
-        description={isZh ? "给 research_web 配置外部搜索 API。未配置时仍可用服务器环境变量 TAVILY_API_KEY 作为兜底。" : "Configure the external search API used by research_web. If unset, the server may still use TAVILY_API_KEY as a fallback."}
+        title={tr("联网研究搜索服务", "Research Search Provider", "Dịch vụ tìm kiếm nghiên cứu")}
+        description={tr(
+          "给 research_web 配置外部搜索 API。未配置时仍可用服务器环境变量 TAVILY_API_KEY 作为兜底。",
+          "Configure the external search API used by research_web. If unset, the server may still use TAVILY_API_KEY as a fallback.",
+          "Cấu hình API tìm kiếm bên ngoài cho research_web. Nếu chưa cấu hình, server vẫn có thể dùng biến môi trường TAVILY_API_KEY làm phương án dự phòng.",
+        )}
         icon={<Search size={18} />}
       >
         <label className="flex items-center gap-2 text-sm">
@@ -548,12 +562,12 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
             checked={researchSearch.enabled}
             onChange={(e) => setResearchSearch((prev) => ({ ...prev, enabled: e.target.checked }))}
           />
-          {isZh ? "启用项目级搜索配置" : "Enable project-level search config"}
+          {tr("启用项目级搜索配置", "Enable project-level search config", "Bật cấu hình tìm kiếm cấp dự án")}
         </label>
         <Collapse open={researchSearch.enabled}>
           <div className="grid gap-2 pt-1 md:grid-cols-2">
             <label className="space-y-1 text-xs text-muted-foreground">
-              <span>{isZh ? "搜索服务" : "Provider"}</span>
+              <span>{tr("搜索服务", "Provider", "Nhà cung cấp")}</span>
               <select
                 value={researchSearch.provider}
                 onChange={(e) => setResearchSearch((prev) => ({ ...prev, provider: e.target.value === "custom" ? "custom" : "tavily" }))}
@@ -564,7 +578,7 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
               </select>
             </label>
             <label className="space-y-1 text-xs text-muted-foreground">
-              <span>{isZh ? "API Key 环境变量名" : "API key env var"}</span>
+              <span>{tr("API Key 环境变量名", "API key env var", "Tên biến môi trường API key")}</span>
               <input
                 value={researchSearch.apiKeyEnv}
                 onChange={(e) => setResearchSearch((prev) => ({ ...prev, apiKeyEnv: e.target.value }))}
@@ -573,7 +587,7 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
               />
             </label>
             <label className="space-y-1 text-xs text-muted-foreground md:col-span-2">
-              <span>{isZh ? "Base URL（可选，自定义兼容端点）" : "Base URL (optional custom compatible endpoint)"}</span>
+              <span>{tr("Base URL（可选，自定义兼容端点）", "Base URL (optional custom compatible endpoint)", "Base URL (tùy chọn, endpoint tương thích tùy chỉnh)")}</span>
               <input
                 value={researchSearch.baseUrl}
                 onChange={(e) => setResearchSearch((prev) => ({ ...prev, baseUrl: e.target.value }))}
@@ -582,12 +596,12 @@ export function ProjectSettings({ nav, theme, t }: { nav: Nav; theme: Theme; t: 
               />
             </label>
             <label className="space-y-1 text-xs text-muted-foreground md:col-span-2">
-              <span>{isZh ? "API Key（可选；留空则读环境变量）" : "API key (optional; leave blank to use env var)"}</span>
+              <span>{tr("API Key（可选；留空则读环境变量）", "API key (optional; leave blank to use env var)", "API key (tùy chọn; để trống sẽ dùng biến môi trường)")}</span>
               <input
                 value={researchSearch.apiKey}
                 onChange={(e) => setResearchSearch((prev) => ({ ...prev, apiKey: e.target.value }))}
                 type="password"
-                placeholder={isZh ? "可直接填 key，或只填环境变量名" : "Paste key, or use env var only"}
+                placeholder={tr("可直接填 key，或只填环境变量名", "Paste key, or use env var only", "Dán key trực tiếp, hoặc chỉ điền tên biến môi trường")}
                 className={`${fieldClass} font-mono`}
               />
             </label>
