@@ -476,3 +476,52 @@ describe("reviseDraft batching", () => {
     })).rejects.toThrow(/output limit/);
   });
 });
+
+describe("continueDraft chunking", () => {
+  it("repairs ten missing chapters in four calls, keeping the repair framing", async () => {
+    const partial = parseShortFictionBatchDraft(
+      [
+        "=== SHORT_FICTION_TITLE ===",
+        "电梯多一层",
+        ...[1, 2].map((n) => [
+          `=== CHAPTER ${n} TITLE ===`,
+          `第${n}章`,
+          `=== CHAPTER ${n} CONTENT ===`,
+          "第一版正文，电梯停在十三层。".repeat(20),
+        ].join("\n")),
+      ].join("\n"),
+      { expectedChapters: 12 },
+    );
+    const agent = writerAgent();
+    const chat = spyChat(agent);
+    const seen: number[][] = [];
+    chat.mockImplementation((...args: unknown[]) => {
+      const group = requestedChapters(args, 12);
+      seen.push(group);
+      return Promise.resolve({ content: batchReply(group, false), usage: undefined });
+    });
+
+    const repaired = await agent.continueDraft({
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      draft: partial,
+    });
+
+    expect(seen).toEqual([[3, 4, 5], [6, 7, 8], [9, 10, 11], [12]]);
+    expect(repaired.chapters.every((c) => c.content.trim().length > 0)).toBe(true);
+    expect(userText(chat.mock.calls[0] as unknown[])).toContain("被截断");
+  });
+
+  it("returns the draft untouched when nothing is missing", async () => {
+    const agent = writerAgent();
+    const chat = spyChat(agent);
+    const complete = parseShortFictionBatchDraft(fullDraftMarkdown(12), { expectedChapters: 12 });
+
+    const result = await agent.continueDraft({
+      direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000,
+      draft: complete,
+    });
+
+    expect(chat).not.toHaveBeenCalled();
+    expect(result).toBe(complete);
+  });
+});

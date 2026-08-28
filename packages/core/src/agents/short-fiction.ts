@@ -255,26 +255,40 @@ export class ShortFictionWriterAgent extends BaseAgent {
     const missingChapters = findEmptyShortFictionChapters(input.draft);
     if (missingChapters.length === 0) return input.draft;
 
-    const response = await retryShortFictionCall(() =>
-      this.chat([
-        { role: "system", content: buildShortFictionWriterSystemPrompt(input.language) },
-        { role: "user", content: buildShortFictionDraftContinuationUserPrompt({
-          direction: input.direction,
-          outlineMarkdown: input.outlineMarkdown,
-          chapterCount: input.chapterCount,
-          charsPerChapter: input.charsPerChapter,
-          existingDraftMarkdown: renderShortFictionDraftMarkdown(input.draft, input.language),
-          missingChapters,
-        }, input.language) },
-      ], {
-        temperature: 0.68,
-        maxTokens: estimateShortFictionMaxTokens(missingChapters.length, input.charsPerChapter),
-      }), this.name, this.log);
+    const groups = chunkChapters(missingChapters, SHORT_FICTION_CHAPTERS_PER_BATCH);
+    const baseRaw = input.draft.rawContent.trim();
 
-    return parseShortFictionBatchDraft(
-      `${input.draft.rawContent.trim()}\n\n${response.content.trim()}`,
-      { expectedChapters: input.chapterCount, language: input.language },
-    );
+    const fragments = await runChapterBatches({
+      agentName: this.name,
+      log: this.log,
+      groups,
+      charsPerChapter: input.charsPerChapter,
+      temperature: 0.68,
+      chat: (messages, options) => this.chat(messages, options),
+      onBatchProgress: input.onBatchProgress,
+      buildMessages: (chapters, fragmentsSoFar) => {
+        const soFar = parseShortFictionBatchDraft([baseRaw, ...fragmentsSoFar].join("\n\n"), {
+          expectedChapters: input.chapterCount,
+          language: input.language,
+        });
+        return [
+          { role: "system", content: buildShortFictionWriterSystemPrompt(input.language) },
+          { role: "user", content: buildShortFictionDraftContinuationUserPrompt({
+            direction: input.direction,
+            outlineMarkdown: input.outlineMarkdown,
+            chapterCount: input.chapterCount,
+            charsPerChapter: input.charsPerChapter,
+            existingDraftMarkdown: renderShortFictionDraftMarkdown(soFar, input.language),
+            missingChapters: chapters,
+          }, input.language) },
+        ];
+      },
+    });
+
+    return parseShortFictionBatchDraft([baseRaw, ...fragments].join("\n\n"), {
+      expectedChapters: input.chapterCount,
+      language: input.language,
+    });
   }
 }
 
