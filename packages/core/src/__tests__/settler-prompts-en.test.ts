@@ -80,6 +80,26 @@ describe("settler English branch", () => {
     expect(prompt).toContain("=== TAG ===");
   });
 
+  it("defaults to the English user prompt when language is omitted", () => {
+    const params = {
+      chapterNumber: 12,
+      title: "The Ledger",
+      content: "Elena opened the drawer.",
+      currentState: "state",
+      ledger: "",
+      hooks: "hooks",
+      chapterSummaries: "(not created yet)",
+      subplotBoard: "(not created yet)",
+      emotionalArcs: "(not created yet)",
+      characterMatrix: "(not created yet)",
+      volumeOutline: "outline",
+    } as const;
+    const omitted = buildSettlerUserPrompt(params);
+    expect(omitted).not.toMatch(CJK);
+    expect(omitted).toBe(buildSettlerUserPrompt({ ...params, language: "en" }));
+    expect(omitted).not.toBe(buildSettlerUserPrompt({ ...params, language: "zh" }));
+  });
+
   it("leaves the Chinese system prompt byte-identical", () => {
     const prompt = buildSettlerSystemPrompt(BOOK, { ...GENRE, language: "zh" }, null, "zh");
     expect(prompt).toContain("## 伏笔追踪规则（严格执行）");

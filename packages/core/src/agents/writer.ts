@@ -601,7 +601,11 @@ export class WriterAgent extends BaseAgent {
         updatedEmotionalArcs: "",
         updatedCharacterMatrix: "",
       };
-    } catch {
+    } catch (error) {
+      this.logWarn(resolvedLang, {
+        zh: `第${params.chapterNumber}章结算增量输出解析失败，已回退到旧版解析器：${String(error)}`,
+        en: `Chapter ${params.chapterNumber} settler delta output failed to parse; falling back to the legacy settlement parser: ${String(error)}`,
+      });
       const settlement = parseSettlementOutput(response.content, params.genreProfile);
       mergedSettlement = governedControlBlock
         ? {

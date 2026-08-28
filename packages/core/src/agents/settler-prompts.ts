@@ -320,7 +320,7 @@ Rules:
 }
 
 export function buildSettlerUserPrompt(params: {
-  readonly language: "zh" | "en";
+  readonly language?: "zh" | "en";
   readonly chapterNumber: number;
   readonly title: string;
   readonly content: string;
@@ -337,7 +337,9 @@ export function buildSettlerUserPrompt(params: {
   readonly governedControlBlock?: string;
   readonly validationFeedback?: string;
 }): string {
-  const isEnglish = params.language === "en";
+  // Default to English: a forgotten argument must not silently emit Chinese
+  // into an English prompt path.
+  const isEnglish = (params.language ?? "en") === "en";
 
   const ledgerBlock = params.ledger
     ? isEnglish
