@@ -70,7 +70,7 @@ function RoleEntry({ role }: { readonly role: RoleRef }) {
       className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors text-left"
     >
       <Users size={16} className="shrink-0 text-muted-foreground/60" />
-      <span className="text-[15px] leading-6 font-medium text-foreground font-['SimSun','Songti_SC','STSong',serif] flex-1 truncate">
+      <span className="text-[15px] leading-6 font-medium text-foreground font-serif flex-1 truncate">
         {role.name}
       </span>
       <span className={cn("text-[12px] px-1.5 py-0.5 rounded-full shrink-0", badge.color)}>
@@ -93,7 +93,7 @@ function CharacterCard({ char }: { readonly char: CharacterInfo }) {
         className="w-full flex items-center gap-2 px-2.5 py-2 text-left"
       >
         <Users size={16} className="shrink-0 text-muted-foreground/60" />
-        <span className="text-[15px] leading-6 font-medium text-foreground font-['SimSun','Songti_SC','STSong',serif] flex-1 truncate">
+        <span className="text-[15px] leading-6 font-medium text-foreground font-serif flex-1 truncate">
           {char.name}
         </span>
         {role && (

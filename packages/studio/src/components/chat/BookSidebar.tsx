@@ -16,7 +16,7 @@ import { CharacterSection } from "../sidebar/CharacterSection";
 import { FrontmatterCards } from "../sidebar/FrontmatterCards";
 import { PendingHooksView } from "../sidebar/PendingHooksView";
 import {
-  FOUNDATION_FILE_LABELS,
+  foundationFileLabel,
   frontmatterToCards,
   hasTableRows,
   presentCurrentState,
@@ -39,7 +39,7 @@ const streamdownPlugins = { cjk };
 // character's name, foundation files their friendly label, everything else its
 // path as a last resort.
 function artifactLabel(file: string): string {
-  return roleFromPath(file)?.name ?? FOUNDATION_FILE_LABELS[file] ?? file;
+  return roleFromPath(file)?.name ?? foundationFileLabel(file) ?? file;
 }
 
 // Read-mode body for an opened file. A few files need reader-friendly handling
@@ -211,7 +211,7 @@ function ArtifactView({ bookId }: { readonly bookId: string }) {
             className="w-full h-full min-h-[300px] bg-transparent text-[15px] leading-7 px-4 py-3 resize-none outline-none border-0 font-mono"
           />
         ) : (
-          <div className="px-4 py-3 text-[15px] leading-7">
+          <div className="px-4 py-3 text-[15px] leading-7 break-words [overflow-wrap:anywhere]">
             {renderTruthBody(isChapter ? null : artifactFile, content, frontmatter, body)}
           </div>
         )}
