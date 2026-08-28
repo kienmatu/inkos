@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { buildAgentSystemPrompt } from "../agent/agent-system-prompt.js";
 import { createSkillRegistry } from "../skills/index.js";
+import {
+  SHORT_FICTION_MIN_CHARS_PER_CHAPTER,
+  SHORT_FICTION_MAX_CHARS_PER_CHAPTER,
+  SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER,
+  SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER,
+} from "../models/short-fiction-format.js";
 
 describe("buildAgentSystemPrompt", () => {
   describe("mode isolation", () => {
@@ -260,14 +266,14 @@ describe("buildAgentSystemPrompt", () => {
       const zhPrompt = buildAgentSystemPrompt(null, "zh", "short");
       expect(zhPrompt).not.toContain("language=zh、chapters");
       expect(zhPrompt).toContain("language 填用户要求的产出语言");
-      expect(zhPrompt).toContain("900-1200");
-      expect(zhPrompt).toContain("600-800");
+      expect(zhPrompt).toContain(`${SHORT_FICTION_MIN_CHARS_PER_CHAPTER}-${SHORT_FICTION_MAX_CHARS_PER_CHAPTER}`);
+      expect(zhPrompt).toContain(`${SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER}-${SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER}`);
 
       const enPrompt = buildAgentSystemPrompt(null, "en", "short");
       expect(enPrompt).not.toContain("language=en, chapters");
       expect(enPrompt).toContain("the output language the user asked for");
-      expect(enPrompt).toContain("900-1200");
-      expect(enPrompt).toContain("600-800");
+      expect(enPrompt).toContain(`${SHORT_FICTION_MIN_CHARS_PER_CHAPTER}-${SHORT_FICTION_MAX_CHARS_PER_CHAPTER}`);
+      expect(enPrompt).toContain(`${SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER}-${SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER}`);
     });
   });
 

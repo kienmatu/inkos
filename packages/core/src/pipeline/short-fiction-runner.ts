@@ -24,6 +24,7 @@ import {
   renderShortFictionDraftMarkdown,
   validateShortFictionDraftForFinal,
   type ShortFictionBatchDraft,
+  type ShortFictionBatchProgress,
   type ShortFictionLanguage,
   type ShortFictionReference,
   type ShortFictionSalesPackage,
@@ -47,6 +48,13 @@ import { toPosixPath as projectPath } from "../utils/posix-path.js";
 import { commitAtomicFileSet, type AtomicFileWrite } from "../utils/atomic-file-set.js";
 
 const SHORT_FICTION_DRAFT_COMPLETION_ATTEMPTS = 3;
+
+function batchProgressMessage(stage: string, info: ShortFictionBatchProgress): string {
+  const first = info.chapters[0];
+  const last = info.chapters[info.chapters.length - 1];
+  const range = first === last ? `${first}` : `${first}-${last}`;
+  return `${stage} chapters ${range} (batch ${info.batch}/${info.totalBatches})...`;
+}
 
 export interface ShortFictionRunRuntimes {
   readonly planner: AgentContext;
@@ -164,7 +172,11 @@ async function produceShort(
   outDir: string,
   providedStoryId: string | undefined,
 ): Promise<ShortFictionRunResult> {
-  const language = options.language ?? "zh";
+  // Defaults to "en" per AGENTS.md:33. `runShortFictionProduction` is public
+  // (see index.ts) and `createShortFictionRunTool` is public (agent/index.ts),
+  // and `language` is optional on both, so `undefined` can and does reach
+  // here in production, not just inside this repo's own two callers.
+  const language = options.language ?? "en";
   const chapterCount = boundedInteger(
     options.chapterCount,
     SHORT_FICTION_DEFAULT_CHAPTERS,
@@ -172,7 +184,7 @@ async function produceShort(
     SHORT_FICTION_MIN_CHAPTERS,
     SHORT_FICTION_MAX_CHAPTERS,
   );
-  // charsPerChapter is the language's native unit: zh chars (900-1200) or en words (600-800).
+  // charsPerChapter is the language's native unit: zh chars (900-1200) or en words (900-1500).
   const charsPerChapter = language === "en"
     ? boundedInteger(
         options.charsPerChapter,
@@ -281,6 +293,7 @@ async function produceShort(
       chapterCount,
       charsPerChapter,
       language,
+      onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Writing", info)),
     });
     let missingFromDraft = findEmptyShortFictionChapters(draftV1);
     if (missingFromDraft.length > 0) {
@@ -294,6 +307,7 @@ async function produceShort(
           charsPerChapter,
           language,
           draft: draftV1,
+          onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Completing", info)),
         });
         missingFromDraft = findEmptyShortFictionChapters(draftV1);
         if (missingFromDraft.length > 0) {
@@ -328,6 +342,7 @@ async function produceShort(
         chapterCount,
         charsPerChapter,
         language,
+        onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Revising", info)),
       });
       validateShortFictionDraftForFinal(draftV2, { expectedChapters: chapterCount });
       await writeDraftArtifacts(root, baseDir, "v002", draftV2, language);
@@ -538,7 +553,7 @@ async function writeDraftArtifacts(
   baseDir: string,
   version: string,
   draft: ShortFictionBatchDraft,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): Promise<void> {
   const draftDir = join(baseDir, "drafts", version);
   await commitAtomicFileSet({
@@ -562,7 +577,7 @@ async function writeFinalArtifacts(
   root: string,
   baseDir: string,
   draft: ShortFictionBatchDraft,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): Promise<void> {
   const finalDir = join(baseDir, "final");
   const markdown = renderShortFictionDraftMarkdown(draft, language);
@@ -588,7 +603,7 @@ async function writePackageArtifacts(
   root: string,
   baseDir: string,
   salesPackage: ShortFictionSalesPackage,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): Promise<void> {
   const finalDir = join(baseDir, "final");
   const headings = language === "en"
@@ -1041,7 +1056,7 @@ function resolveCoverEndpoint(coverEndpoint?: string, coverBaseUrl?: string): st
 function buildCoverImagePrompt(
   salesPackage: ShortFictionSalesPackage,
   mode: CoverPromptMode,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): string {
   if (language === "en") {
     const base = [

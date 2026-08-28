@@ -1338,7 +1338,7 @@ async function executeConfirmedProductionAction(args: {
   } else if (args.requestedIntent === "generate_cover") {
     const payload = actionPayload?.generateCover;
     const title = requirePayloadText(payload?.title, pick(lang, "确认生成封面缺少标题，请重新生成确认卡。", "The cover generation confirmation is missing a title. Regenerate the confirmation card.", "Xác nhận tạo bìa sách thiếu tiêu đề. Vui lòng tạo lại thẻ xác nhận."));
-    tool = createGenerateCoverTool(args.root, { actionPayload });
+    tool = createGenerateCoverTool(args.root, { actionPayload, language: toWritingLanguage(lang) });
     params = {
       title,
       ...(payload?.intro ? { intro: payload.intro } : {}),

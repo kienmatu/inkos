@@ -596,11 +596,21 @@ export function assertWithinContextWindow(params: {
 
 // === Error Wrapping ===
 
-function wrapLLMError(error: unknown, context?: { readonly baseUrl?: string; readonly model?: string; readonly service?: string }): Error {
+// Exported for direct unit testing: reaching this function through
+// chatCompletion() requires mocking the underlying pi-ai transport (the
+// "openai" SDK's own HTTP client), which does not honor a mocked
+// globalThis.fetch. Testing wrapLLMError directly exercises the exact
+// classification logic without fighting that transport layer.
+export function wrapLLMError(error: unknown, context?: { readonly baseUrl?: string; readonly model?: string; readonly service?: string }): Error {
   const msg = String(error);
   const ctxLine = context
     ? `\n  (baseUrl: ${context.baseUrl}, model: ${context.model})`
     : "";
+
+  // A PartialResponseError already carries a precise reason. Its message embeds
+  // the partial length ("...after 4001 chars..."), which can contain 400/401/
+  // 403/429 and get misread as an HTTP status by the substring checks below.
+  if (error instanceof PartialResponseError) return error;
 
   if (msg.includes("400")) {
     // 抽上游 error body 的 message / reason / code（和下方 5xx 一致），让真实错因浮到用户面前
@@ -726,6 +736,13 @@ function isTransientLLMTransportError(error: unknown): boolean {
  * and just delays the real error.
  */
 export function isTransientLLMHttpError(error: unknown): boolean {
+  if (error instanceof PartialResponseError && error.reason === "output-limit") {
+    // A PartialResponseError's own message embeds the partial content length
+    // ("Stream interrupted after 429 chars: ..."), which can coincidentally
+    // match the HTTP-status pattern below. An output-limit is never an HTTP
+    // status blip — see isRetryableLLMError for the same guard.
+    return false;
+  }
   const text = collectErrorText(error).toLowerCase();
   if (text.includes("model_not_available") || text.includes("model not available")) {
     return false;
@@ -751,9 +768,18 @@ function isIncompleteLLMResponseError(error: unknown): boolean {
     || text.includes("llm returned empty response");
 }
 
-function isRetryableLLMError(error: unknown): boolean {
+export function isRetryableLLMError(error: unknown): boolean {
   // PartialResponseError = 流在生成中途被掐断（网关切长连接等）。重试会完整
   // 重新生成一次，比把半截内容当成功交付（截断的章节/设定文件）要正确。
+  //
+  // Exception: reason === "output-limit" means the stream ran all the way to
+  // the endpoint's own output cap. Retrying with an identical prompt hits the
+  // same cap by construction — it's not transient, and burns a full
+  // generation (plus backoff) before the caller's own halve-and-retry logic
+  // (short-fiction's runChapterBatches) ever gets a chance to split the batch.
+  if (error instanceof PartialResponseError && error.reason === "output-limit") {
+    return false;
+  }
   return error instanceof PartialResponseError
     || isIncompleteLLMResponseError(error)
     || isTransientLLMTransportError(error)

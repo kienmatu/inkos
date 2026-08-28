@@ -1243,7 +1243,11 @@ describe("stream interruption detection", () => {
 
     await expect(chatCompletion(nativeStreamClient(), "glm-compat", [{ role: "user", content: "写正文" }]))
       .rejects.toThrow(/output limit|length|Stream interrupted/i);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    // Output-limit is not retried: an identical prompt hits the same cap by
+    // construction, so isRetryableLLMError excludes it (see provider.ts) and
+    // the error reaches the caller after a single attempt, letting
+    // short-fiction's own halve-and-retry logic act on it immediately.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     vi.unstubAllGlobals();
   });
 
@@ -1299,6 +1303,7 @@ describe("stream interruption detection", () => {
 
     await expect(chatCompletion(makeClient(), "test-model", [{ role: "user", content: "写" }]))
       .rejects.toThrow(/output limit|length|Stream interrupted/i);
-    expect(mockStreamSimple).toHaveBeenCalledTimes(3);
+    // Output-limit is not retried — see the sibling native-stream test above.
+    expect(mockStreamSimple).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,4 +1,6 @@
 import { BaseAgent } from "./base.js";
+import type { LLMMessage, LLMResponse } from "../llm/provider.js";
+import { PartialResponseError } from "../llm/provider.js";
 import { countChapterLength, resolveLengthCountingMode } from "../utils/length-metrics.js";
 import {
   type ShortFictionLanguage,
@@ -16,21 +18,132 @@ import {
   buildShortFictionWriterSystemPrompt,
   buildShortFictionWriterUserPrompt,
 } from "../prompts/short-fiction.js";
+import {
+  SHORT_FICTION_DEFAULT_CHAPTERS,
+  SHORT_FICTION_MIN_CHAPTERS,
+  SHORT_FICTION_MAX_CHAPTERS,
+  SHORT_FICTION_DEFAULT_CHARS_PER_CHAPTER,
+  SHORT_FICTION_MIN_CHARS_PER_CHAPTER,
+  SHORT_FICTION_MAX_CHARS_PER_CHAPTER,
+  SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER,
+  SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER,
+  SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER,
+} from "../models/short-fiction-format.js";
 
-export const SHORT_FICTION_DEFAULT_CHAPTERS = 12;
-export const SHORT_FICTION_MIN_CHAPTERS = 12;
-export const SHORT_FICTION_MAX_CHAPTERS = 18;
-export const SHORT_FICTION_DEFAULT_CHARS_PER_CHAPTER = 1000;
-export const SHORT_FICTION_MIN_CHARS_PER_CHAPTER = 900;
-export const SHORT_FICTION_MAX_CHARS_PER_CHAPTER = 1200;
+// Re-exported so existing importers of this module (agent-tools.ts,
+// interaction/action-envelope.ts, the pipeline runner, tests) keep working
+// unchanged. The canonical definitions and their comments live in
+// models/short-fiction-format.ts, which both this file and
+// prompts/short-fiction.ts import from — this file cannot re-export the
+// constants FROM there and also have prompts/short-fiction.ts import them
+// from here, because this file already imports prompt builders from
+// prompts/short-fiction.ts, which would make that an import cycle.
+export {
+  SHORT_FICTION_DEFAULT_CHAPTERS,
+  SHORT_FICTION_MIN_CHAPTERS,
+  SHORT_FICTION_MAX_CHAPTERS,
+  SHORT_FICTION_DEFAULT_CHARS_PER_CHAPTER,
+  SHORT_FICTION_MIN_CHARS_PER_CHAPTER,
+  SHORT_FICTION_MAX_CHARS_PER_CHAPTER,
+  SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER,
+  SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER,
+  SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER,
+};
 
-// English shorts are calibrated in words, not characters. length-metrics.ts pins
-// the full-length chapter defaults at zh 3000 chars ≈ en 2000 words (a 2/3 ratio),
-// so the zh short range of 900/1000/1200 chars per chapter converts to
-// 600/650/800 words per chapter (1000 × 2/3 ≈ 667, rounded down to 650).
-export const SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER = 650;
-export const SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER = 600;
-export const SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER = 800;
+// Conservative per-call output budget. Endpoints that ignore max_tokens and
+// enforce their own have been observed cutting at roughly 1,300-2,000 tokens.
+// Sizing below that keeps the common case single-shot; adaptive halving in
+// runChapterBatches covers any endpoint stricter than this.
+//
+// Accepted trade-off (2026-08-28 editorial re-cut): a default English chapter
+// is now SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER (1,200) words, which is
+// ~1,560 estimated output tokens at ~1.3 tokens/word — ABOVE this 1,400
+// budget and inside the 1,300-2,000 window cited above as where strict
+// endpoints cut. resolveChaptersPerBatch cannot return less than 1 chapter,
+// and runChapterBatches (below) rethrows rather than splitting further once a
+// group is already down to one chapter, so on the strictest endpoints English
+// generation has no fallback left below that point. This was considered and
+// the decision was to keep 1,200 words rather than add further error-handling
+// or splitting machinery. On an endpoint that caps output under roughly 1,600
+// tokens, the operator's lever is a lower `--chars` value, not a code change.
+// See "Accepted trade-offs" in
+// docs/superpowers/specs/2026-08-28-short-fiction-editorial-review.md.
+const SHORT_FICTION_BATCH_OUTPUT_TOKEN_BUDGET = 1_400;
+
+// Upper clamp. Never batch more than this many chapters even when they are
+// short enough to fit, so one failed batch never costs too much rework.
+// Currently unreachable: with the re-cut constants the largest value
+// resolveChaptersPerBatch can return is 2 (zh at its 900-character minimum),
+// so this clamp of 3 never actually triggers. It stays as a backstop in case
+// the length constants move again and chapters get short enough to fit 3+
+// per batch.
+export const SHORT_FICTION_MAX_CHAPTERS_PER_BATCH = 3;
+
+// zh chapters are measured in characters (~1.44 chars/token), en chapters in
+// words (~1.3 tokens/word). See length-metrics.ts for the units.
+//
+// Defaults to "en" per AGENTS.md:33 ("A function that takes a language and
+// can be called without one must default to en"). This is called with the
+// same possibly-undefined input.language as the prompt builders two lines
+// away (see writeDraft/reviseDraft/writeContinuation below) and must agree
+// with them: an English prose request sized with the zh token ratio
+// undercounts the English output by ~1.9x and risks truncation.
+export function resolveChaptersPerBatch(
+  charsPerChapter: number,
+  language: ShortFictionLanguage = "en",
+): number {
+  const tokensPerChapter = language === "en"
+    ? charsPerChapter * 1.3
+    : charsPerChapter * 0.7;
+  const fitted = Math.floor(SHORT_FICTION_BATCH_OUTPUT_TOKEN_BUDGET / tokensPerChapter);
+  return Math.min(Math.max(fitted, 1), SHORT_FICTION_MAX_CHAPTERS_PER_BATCH);
+}
+
+export interface ShortFictionBatchProgress {
+  readonly batch: number;
+  readonly totalBatches: number;
+  readonly chapters: readonly number[];
+}
+
+export function chunkChapters(chapters: readonly number[], size: number): number[][] {
+  const groups: number[][] = [];
+  for (let index = 0; index < chapters.length; index += size) {
+    groups.push(chapters.slice(index, index + size));
+  }
+  return groups;
+}
+
+// A batch reply wrapped in ```markdown ... ``` would otherwise leave the closing
+// fence glued to the batch's last chapter once fragments are concatenated —
+// sanitizeChapterContent only strips a fence at the very end of the whole string.
+export function stripOuterCodeFence(text: string): string {
+  const trimmed = text.trim();
+  const lines = trimmed.split("\n");
+  if (lines.length < 2) return trimmed;
+
+  // The opening line must be a fence of 3+ backticks (an optional language tag
+  // allowed); the closing line must be a BARE fence of the exact same length.
+  const openMatch = /^(`{3,})[a-zA-Z0-9_-]*$/.exec(lines[0]!);
+  if (!openMatch) return trimmed;
+  const fenceLength = openMatch[1]!.length;
+  if (lines[lines.length - 1] !== "`".repeat(fenceLength)) return trimmed;
+
+  const middle = lines.slice(1, -1);
+  // Only accept this as a genuine single wrapper if no interior line opens or
+  // closes a fence of the SAME OR LONGER run length — that's the standard,
+  // unambiguous way to nest a fenced block inside another (the outer fence
+  // must use more backticks than anything nested inside it). Without that,
+  // "first line is a fence, last line is a fence" is not enough to tell a real
+  // wrapper apart from an unwrapped fragment that merely opens with one fenced
+  // block and closes with an unrelated later one (see the regression test).
+  const hasAmbiguousInnerFence = middle.some((line) => {
+    const innerRun = /^`{3,}/.exec(line)?.[0].length;
+    return innerRun !== undefined && innerRun >= fenceLength;
+  });
+  if (hasAmbiguousInnerFence) return trimmed;
+
+  return middle.join("\n").trim();
+}
 
 export type { ShortFictionLanguage } from "../prompts/short-fiction.js";
 
@@ -93,6 +206,7 @@ export interface ShortFictionDraftInput {
   readonly chapterCount: number;
   readonly charsPerChapter: number;
   readonly language?: ShortFictionLanguage;
+  readonly onBatchProgress?: (info: ShortFictionBatchProgress) => void;
 }
 
 export interface ShortFictionDraftReviewInput extends ShortFictionDraftInput {
@@ -166,42 +280,96 @@ export class ShortFictionWriterAgent extends BaseAgent {
   }
 
   async writeDraft(input: ShortFictionDraftInput): Promise<ShortFictionBatchDraft> {
-    const response = await retryShortFictionCall(() =>
-      this.chat([
-        { role: "system", content: buildShortFictionWriterSystemPrompt(input.language) },
-        { role: "user", content: buildShortFictionWriterUserPrompt(input, input.language) },
-      ], {
-        temperature: 0.58,
-        maxTokens: estimateShortFictionMaxTokens(input.chapterCount, input.charsPerChapter),
-      }), this.name, this.log);
+    const allChapters = Array.from({ length: input.chapterCount }, (_, index) => index + 1);
+    const groups = chunkChapters(allChapters, resolveChaptersPerBatch(input.charsPerChapter, input.language));
 
-    return parseShortFictionBatchDraft(response.content, { expectedChapters: input.chapterCount, language: input.language });
+    const fragments = await runChapterBatches({
+      agentName: this.name,
+      log: this.log,
+      groups,
+      charsPerChapter: input.charsPerChapter,
+      temperature: 0.58,
+      chat: (messages, options) => this.chat(messages, options),
+      onBatchProgress: input.onBatchProgress,
+      buildMessages: (chapters, fragmentsSoFar) => {
+        const system = { role: "system" as const, content: buildShortFictionWriterSystemPrompt(input.language) };
+
+        // The first batch establishes title, hook and voice. Later batches use
+        // the continuation prompt in batch mode, which carries the prose so far
+        // and forbids rewriting finished chapters.
+        if (chapters[0] === 1) {
+          return [system, {
+            role: "user" as const,
+            content: buildShortFictionWriterUserPrompt({
+              ...input,
+              chapterRange: [chapters[0]!, chapters[chapters.length - 1]!],
+            }, input.language),
+          }];
+        }
+
+        const soFar = parseShortFictionBatchDraft(fragmentsSoFar.join("\n\n"), {
+          expectedChapters: chapters[0]! - 1,
+          language: input.language,
+        });
+        return [system, {
+          role: "user" as const,
+          content: buildShortFictionDraftContinuationUserPrompt({
+            direction: input.direction,
+            outlineMarkdown: input.outlineMarkdown,
+            chapterCount: input.chapterCount,
+            charsPerChapter: input.charsPerChapter,
+            existingDraftMarkdown: renderShortFictionDraftMarkdown(soFar, input.language),
+            missingChapters: chapters,
+            mode: "batch",
+          }, input.language),
+        }];
+      },
+    });
+
+    return parseShortFictionBatchDraft(fragments.join("\n\n"), {
+      expectedChapters: input.chapterCount,
+      language: input.language,
+    });
   }
 
   async continueDraft(input: ShortFictionDraftInput & { readonly draft: ShortFictionBatchDraft }): Promise<ShortFictionBatchDraft> {
     const missingChapters = findEmptyShortFictionChapters(input.draft);
     if (missingChapters.length === 0) return input.draft;
 
-    const response = await retryShortFictionCall(() =>
-      this.chat([
-        { role: "system", content: buildShortFictionWriterSystemPrompt(input.language) },
-        { role: "user", content: buildShortFictionDraftContinuationUserPrompt({
-          direction: input.direction,
-          outlineMarkdown: input.outlineMarkdown,
-          chapterCount: input.chapterCount,
-          charsPerChapter: input.charsPerChapter,
-          existingDraftMarkdown: renderShortFictionDraftMarkdown(input.draft, input.language),
-          missingChapters,
-        }, input.language) },
-      ], {
-        temperature: 0.68,
-        maxTokens: estimateShortFictionMaxTokens(missingChapters.length, input.charsPerChapter),
-      }), this.name, this.log);
+    const groups = chunkChapters(missingChapters, resolveChaptersPerBatch(input.charsPerChapter, input.language));
+    const baseRaw = input.draft.rawContent.trim();
 
-    return parseShortFictionBatchDraft(
-      `${input.draft.rawContent.trim()}\n\n${response.content.trim()}`,
-      { expectedChapters: input.chapterCount, language: input.language },
-    );
+    const fragments = await runChapterBatches({
+      agentName: this.name,
+      log: this.log,
+      groups,
+      charsPerChapter: input.charsPerChapter,
+      temperature: 0.68,
+      chat: (messages, options) => this.chat(messages, options),
+      onBatchProgress: input.onBatchProgress,
+      buildMessages: (chapters, fragmentsSoFar) => {
+        const soFar = parseShortFictionBatchDraft([baseRaw, ...fragmentsSoFar].join("\n\n"), {
+          expectedChapters: input.chapterCount,
+          language: input.language,
+        });
+        return [
+          { role: "system", content: buildShortFictionWriterSystemPrompt(input.language) },
+          { role: "user", content: buildShortFictionDraftContinuationUserPrompt({
+            direction: input.direction,
+            outlineMarkdown: input.outlineMarkdown,
+            chapterCount: input.chapterCount,
+            charsPerChapter: input.charsPerChapter,
+            existingDraftMarkdown: renderShortFictionDraftMarkdown(soFar, input.language),
+            missingChapters: chapters,
+          }, input.language) },
+        ];
+      },
+    });
+
+    return parseShortFictionBatchDraft([baseRaw, ...fragments].join("\n\n"), {
+      expectedChapters: input.chapterCount,
+      language: input.language,
+    });
   }
 }
 
@@ -229,19 +397,60 @@ export class ShortFictionDraftReviserAgent extends BaseAgent {
     return "short-fiction-draft-reviser";
   }
 
+  // The batch chapter-shaping instructions (hook variety, no-recap-opening,
+  // "find this chapter's entry in the plan") deliberately do not reach this
+  // pass — see buildShortFictionDraftRevisionFollowup, which this method
+  // calls instead of buildShortFictionDraftContinuationUserPrompt. This
+  // rewrites against the v1 draft, which already carries the batch shape, and
+  // the followup prompt already carries the writer system prompt, v1, the
+  // revised-so-far prose, and the review notes — adding the shaping block on
+  // top would be redundant instruction, not new information.
   async reviseDraft(input: ShortFictionDraftRevisionInput): Promise<ShortFictionBatchDraft> {
-    const response = await retryShortFictionCall(() =>
-      this.chat([
-        { role: "system", content: buildShortFictionWriterSystemPrompt(input.language) },
-        { role: "user", content: buildShortFictionWriterUserPrompt(input, input.language) },
-        { role: "assistant", content: input.draft.rawContent.trim() || renderShortFictionDraftMarkdown(input.draft, input.language) },
-        { role: "user", content: buildShortFictionDraftRevisionFollowup(input, input.language) },
-      ], {
-        temperature: 0.45,
-        maxTokens: estimateShortFictionMaxTokens(input.chapterCount, input.charsPerChapter),
-      }), this.name, this.log);
+    const allChapters = Array.from({ length: input.chapterCount }, (_, index) => index + 1);
+    const groups = chunkChapters(allChapters, resolveChaptersPerBatch(input.charsPerChapter, input.language));
+    const v1Markdown = input.draft.rawContent.trim()
+      || renderShortFictionDraftMarkdown(input.draft, input.language);
 
-    return parseShortFictionBatchDraft(response.content, { expectedChapters: input.chapterCount, language: input.language });
+    const fragments = await runChapterBatches({
+      agentName: this.name,
+      ...(this.log ? { log: this.log } : {}),
+      groups,
+      charsPerChapter: input.charsPerChapter,
+      temperature: 0.45,
+      chat: (messages, options) => this.chat(messages, options),
+      ...(input.onBatchProgress ? { onBatchProgress: input.onBatchProgress } : {}),
+      buildMessages: (chapters, fragmentsSoFar) => {
+        const chapterRange: readonly [number, number] = [chapters[0]!, chapters[chapters.length - 1]!];
+        const revisedSoFarMarkdown = fragmentsSoFar.length === 0
+          ? undefined
+          : renderShortFictionDraftMarkdown(
+              parseShortFictionBatchDraft(fragmentsSoFar.join("\n\n"), {
+                expectedChapters: chapters[0]! - 1,
+                language: input.language,
+              }),
+              input.language,
+            );
+
+        return [
+          { role: "system", content: buildShortFictionWriterSystemPrompt(input.language) },
+          // Unranged, matching the whole-story v1Markdown assistant turn below —
+          // a ranged seed here would show the model, in its own context, that
+          // the range constraint issued in the followup is one it may ignore.
+          { role: "user", content: buildShortFictionWriterUserPrompt(input, input.language) },
+          { role: "assistant", content: v1Markdown },
+          { role: "user", content: buildShortFictionDraftRevisionFollowup({
+            ...input,
+            chapterRange,
+            ...(revisedSoFarMarkdown ? { revisedSoFarMarkdown } : {}),
+          }, input.language) },
+        ];
+      },
+    });
+
+    return parseShortFictionBatchDraft(fragments.join("\n\n"), {
+      expectedChapters: input.chapterCount,
+      language: input.language,
+    });
   }
 }
 
@@ -268,7 +477,7 @@ export class ShortFictionPackagingAgent extends BaseAgent {
 
 export function parseShortFictionOutline(
   rawContent: string,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): ShortFictionOutline {
   const fallbackTitle = untitledShortTitle(language);
   const storyTitle = normalizeTitle(
@@ -285,7 +494,12 @@ export function parseShortFictionBatchDraft(
   options?: { readonly expectedChapters?: number; readonly language?: ShortFictionLanguage },
 ): ShortFictionBatchDraft {
   const expectedChapters = options?.expectedChapters ?? SHORT_FICTION_DEFAULT_CHAPTERS;
-  const language = options?.language ?? "zh";
+  // Defaults to "en" per AGENTS.md:33. This selects the counting mode
+  // (resolveLengthCountingMode below) and generates emitted text/numbers —
+  // the untitled-story fallback title and per-chapter fallback titles — so
+  // an unresolved language here is exactly the "forgotten argument silently
+  // emits Chinese into an English path" failure the rule targets.
+  const language = options?.language ?? "en";
   const countingMode = resolveLengthCountingMode(language);
   const fallbackTitle = untitledShortTitle(language);
   const storyTitle = normalizeTitle(
@@ -350,7 +564,7 @@ export function findEmptyShortFictionChapters(draft: ShortFictionBatchDraft): nu
 
 export function renderShortFictionDraftMarkdown(
   draft: ShortFictionBatchDraft,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): string {
   const hookHeading = language === "en" ? "## Opening Hook" : "## 开篇钩子";
   return [
@@ -467,7 +681,7 @@ function normalizeTitle(raw: string): string {
     .trim() ?? "";
 }
 
-function normalizeChapterTitle(raw: string, number: number, language: ShortFictionLanguage = "zh"): string {
+function normalizeChapterTitle(raw: string, number: number, language: ShortFictionLanguage = "en"): string {
   const prefixPattern = language === "en"
     ? new RegExp(`^Chapter\\s*${number}\\s*[:：.\\-–—]?\\s*`, "i")
     : new RegExp(`^第\\s*${number}\\s*章\\s*`);
@@ -478,7 +692,7 @@ function normalizeChapterTitle(raw: string, number: number, language: ShortFicti
 export function formatShortFictionChapterHeading(
   number: number,
   title: string,
-  language: ShortFictionLanguage = "zh",
+  language: ShortFictionLanguage = "en",
 ): string {
   const trimmed = title.trim();
   if (!trimmed) return fallbackChapterTitle(number, language);
@@ -501,8 +715,68 @@ function fallbackChapterTitle(number: number, language: ShortFictionLanguage): s
 // charsPerChapter is the language's native unit (zh chars / en words). The 2.2
 // multiplier is calibrated for zh chars (~1-1.5 tokens each); for en words
 // (~1.3-1.5 tokens each) it simply leaves extra headroom, which is safe for a cap.
+// The `4096` floor is currently unreachable: the smallest input this function
+// receives is 1 chapter at SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER (900),
+// giving ceil(900 * 2.2) + 4096 = 6,076, already above the floor. It stays as
+// a backstop in case the length constants shrink again.
 function estimateShortFictionMaxTokens(chapterCount: number, charsPerChapter: number): number {
-  return Math.max(12_288, Math.ceil(chapterCount * charsPerChapter * 2.2) + 4096);
+  return Math.max(4096, Math.ceil(chapterCount * charsPerChapter * 2.2) + 4096);
+}
+
+function isOutputLimitError(error: unknown): boolean {
+  return error instanceof PartialResponseError && error.reason === "output-limit";
+}
+
+/**
+ * Run one batch per group and return the raw fragments in chapter order.
+ * `buildMessages` receives the group and the fragments completed so far, so a
+ * continuation-style prompt can carry the prose already written.
+ */
+async function runChapterBatches(params: {
+  readonly agentName: string;
+  readonly log?: { warn(message: string): void };
+  readonly groups: ReadonlyArray<readonly number[]>;
+  readonly charsPerChapter: number;
+  readonly temperature: number;
+  readonly chat: (messages: ReadonlyArray<LLMMessage>, options: { temperature: number; maxTokens: number }) => Promise<LLMResponse>;
+  readonly buildMessages: (chapters: readonly number[], fragmentsSoFar: readonly string[]) => LLMMessage[];
+  readonly onBatchProgress?: (info: ShortFictionBatchProgress) => void;
+}): Promise<string[]> {
+  const fragments: string[] = [];
+
+  // A group that still hits the output cap is split in half and retried, down to
+  // a single chapter. Completed fragments are never regenerated.
+  const runOneGroup = async (chapters: readonly number[]): Promise<void> => {
+    try {
+      const response = await retryShortFictionCall(() =>
+        params.chat(params.buildMessages(chapters, fragments), {
+          temperature: params.temperature,
+          maxTokens: estimateShortFictionMaxTokens(chapters.length, params.charsPerChapter),
+        }), params.agentName, params.log);
+
+      fragments.push(stripOuterCodeFence(response.content));
+    } catch (error) {
+      if (!isOutputLimitError(error) || chapters.length <= 1) throw error;
+      const mid = Math.ceil(chapters.length / 2);
+      params.log?.warn(
+        `[${params.agentName}] output limit on chapters ${chapters.join(", ")}; splitting the batch: ${String(error)}`,
+      );
+      await runOneGroup(chapters.slice(0, mid));
+      await runOneGroup(chapters.slice(mid));
+    }
+  };
+
+  for (const [index, chapters] of params.groups.entries()) {
+    params.onBatchProgress?.({
+      batch: index + 1,
+      totalBatches: params.groups.length,
+      chapters,
+    });
+
+    await runOneGroup(chapters);
+  }
+
+  return fragments;
 }
 
 async function retryShortFictionCall<T>(

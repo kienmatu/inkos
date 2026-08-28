@@ -70,7 +70,7 @@ describe("public short-fiction chain", () => {
 三年前那张转账单
 === CHAPTER 2 CONTENT ===
 第二天早上，家庭群里全是骂我的语音。我没有回，只把三年前的转账单发给律师。十分钟后，丈夫第一次打电话求我回家谈谈。
-`, { expectedChapters: 2 });
+`, { expectedChapters: 2, language: "zh" });
 
     expect(draft.storyTitle).toBe("我离婚后，全家悔疯了");
     expect(draft.openingHook).toContain("离婚协议");
@@ -99,7 +99,7 @@ describe("public short-fiction chain", () => {
 === CHAPTER 3 TITLE ===
 凌晨三点，陆景琛踹开老宅院门，举着铁棍砸碎电视。
 林晚坐在闺蜜家，把早就准备好的直播链接发给了董事会。
-`, { expectedChapters: 3 });
+`, { expectedChapters: 3, language: "zh" });
 
     expect(draft.chapters[1]?.title).toBe("她逼小三亲自递上了最后的刀");
     expect(draft.chapters[1]?.content).toContain("陈磊的慌张");
@@ -116,7 +116,7 @@ describe("public short-fiction chain", () => {
 旧章
 === CHAPTER 1 CONTENT ===
 旧正文有一处时间线问题。
-`, { expectedChapters: 1 });
+`, { expectedChapters: 1, language: "zh" });
 
     const chatSpy = vi
       .spyOn(ShortFictionDraftReviserAgent.prototype as never, "chat" as never)
@@ -282,6 +282,11 @@ describe("public short-fiction chain", () => {
         coverModel: "gpt-image-2",
         coverApiKeyEnv: "INKOS_TEST_COVER_KEY",
         signal: controller.signal,
+        // Explicit: this test's whole point is the zh scaffold text below, and
+        // language now defaults to "en" (AGENTS.md "Language defaults in
+        // code"). Without this, the assertions on Chinese scaffold text would
+        // fail against the new English default.
+        language: "zh",
       });
 
       expect(result.coverPromptPath).toBe("covers/demo/cover-prompt.md");
@@ -303,6 +308,50 @@ describe("public short-fiction chain", () => {
       expect(body).not.toContain("不添加文字");
       expect(body).not.toContain("水印");
       expect(body).not.toContain("固定模板");
+    } finally {
+      globalThis.fetch = originalFetch;
+      delete process.env.INKOS_TEST_COVER_KEY;
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // AGENTS.md "Language defaults in code": createGenerateCoverTool in
+  // agent-tools.ts (the chat-driven "regenerate cover" tool) calls
+  // generateShortFictionCover without ever setting `language` — it has no
+  // language field in its tool params at all. Before this cleanup that meant
+  // an English-pipeline user asking the assistant to regenerate a cover
+  // silently got a Chinese cover prompt, because generateShortFictionCover
+  // forwards `options.language` straight into buildCoverImagePrompt, whose
+  // default was "zh". This test exercises exactly that call shape (no
+  // `language` field) and asserts the now-English default, matching this
+  // task's fix.
+  it("defaults to English scaffold text when language is omitted, matching AGENTS.md's language-default rule", async () => {
+    const root = await mkdtemp(join(tmpdir(), "inkos-cover-tool-en-default-"));
+    const originalFetch = globalThis.fetch;
+    process.env.INKOS_TEST_COVER_KEY = "sk-cover";
+    try {
+      const fetchMock = vi.fn(async (_url: unknown, _init?: { readonly body?: unknown }) => new Response(JSON.stringify({
+        data: [{ b64_json: "ZmFrZQ==" }],
+      }), { status: 200, headers: { "content-type": "application/json" } }));
+      globalThis.fetch = fetchMock as never;
+
+      await generateShortFictionCover({
+        projectRoot: root,
+        title: "The Divorce Papers She Kept",
+        intro: "Three years of receipts, and one signature left.",
+        sellingPoints: ["marriage betrayal", "evidence payback"],
+        coverPrompt: "The heroine smirks, holding the divorce papers.",
+        outputDir: "covers/demo-en",
+        coverEndpoint: "https://images.example.test/v1/images/generations",
+        coverModel: "gpt-image-2",
+        coverApiKeyEnv: "INKOS_TEST_COVER_KEY",
+        // language intentionally omitted — this is the exact shape of the
+        // real createGenerateCoverTool call site.
+      });
+
+      const body = String(fetchMock.mock.calls[0]?.[1]?.body ?? "");
+      expect(body).toContain("Generate a cover image from the title, synopsis, selling points, and visual notes the user provided.");
+      expect(body).not.toMatch(/[一-鿿]/);
     } finally {
       globalThis.fetch = originalFetch;
       delete process.env.INKOS_TEST_COVER_KEY;

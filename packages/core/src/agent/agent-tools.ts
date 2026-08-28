@@ -20,6 +20,17 @@ import {
   type FanficMode,
 } from "../models/book.js";
 import { generateShortFictionCover, runShortFictionProduction } from "../pipeline/short-fiction-runner.js";
+import {
+  SHORT_FICTION_MIN_CHAPTERS,
+  SHORT_FICTION_MAX_CHAPTERS,
+  SHORT_FICTION_DEFAULT_CHAPTERS,
+  SHORT_FICTION_DEFAULT_CHARS_PER_CHAPTER,
+  SHORT_FICTION_MIN_CHARS_PER_CHAPTER as ZH_MIN_CHARS_PER_CHAPTER,
+  SHORT_FICTION_MAX_CHARS_PER_CHAPTER as ZH_MAX_CHARS_PER_CHAPTER,
+  SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER,
+  SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER,
+  SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER,
+} from "../models/short-fiction-format.js";
 import { runInteractiveFilmCreation, runScriptCreation, runStoryboardCreation } from "../pipeline/script-storyboard-runner.js";
 import { createTranslationProjectFromFile } from "../translation/index.js";
 import { runResearchReport } from "../agents/researcher.js";
@@ -286,12 +297,14 @@ const ProposeActionParams = Type.Object({
       Type.Literal("en"),
     ], { description: "Output language of the short fiction. Fill the language the user asked the story to be written in; it may differ from the conversation language (e.g. a Chinese chat asking for an English short => en). When the user does not name one, it defaults to the conversation language." })),
     chapters: Type.Optional(Type.Number({
-      description: "Confirmed complete short chapter count, 12-18.",
+      minimum: SHORT_FICTION_MIN_CHAPTERS,
+      maximum: SHORT_FICTION_MAX_CHAPTERS,
+      description: `Confirmed complete short chapter count, ${SHORT_FICTION_MIN_CHAPTERS}-${SHORT_FICTION_MAX_CHAPTERS}.`,
     })),
     charsPerChapter: Type.Optional(Type.Number({
-      minimum: 600,
-      maximum: 1200,
-      description: "Confirmed per-chapter length in the story language's native unit. zh shorts only accept 900-1200 Chinese characters; en shorts only accept 600-800 English words. Values outside the selected language's range are rejected before the task starts. Do not put total story length here.",
+      minimum: Math.min(ZH_MIN_CHARS_PER_CHAPTER, SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER),
+      maximum: Math.max(ZH_MAX_CHARS_PER_CHAPTER, SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER),
+      description: `Confirmed per-chapter length in the story language's native unit. zh shorts only accept ${ZH_MIN_CHARS_PER_CHAPTER}-${ZH_MAX_CHARS_PER_CHAPTER} Chinese characters; en shorts only accept ${SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER}-${SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER} English words. Values outside the selected language's range are rejected before the task starts. Do not put total story length here.`,
     })),
     cover: Type.Optional(Type.Boolean({
       description: "Whether to attempt cover generation.",
@@ -2011,10 +2024,14 @@ const ShortFictionRunParams = Type.Object({
     description: "Optional output id under shorts/. Leave empty to derive from the generated title.",
   })),
   chapters: Type.Optional(Type.Number({
-    description: "Target complete short chapter count, 12-18. Default 12.",
+    minimum: SHORT_FICTION_MIN_CHAPTERS,
+    maximum: SHORT_FICTION_MAX_CHAPTERS,
+    description: `Target complete short chapter count, ${SHORT_FICTION_MIN_CHAPTERS}-${SHORT_FICTION_MAX_CHAPTERS}. Default ${SHORT_FICTION_DEFAULT_CHAPTERS}.`,
   })),
   charsPerChapter: Type.Optional(Type.Number({
-    description: "Per-chapter length in the story language's native unit: 900-1200 Chinese characters (default 1000) for zh, or 600-800 English words (default 650) for en. Values outside the story language's range are rejected before the pipeline starts. Do not use total story length here.",
+    minimum: Math.min(ZH_MIN_CHARS_PER_CHAPTER, SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER),
+    maximum: Math.max(ZH_MAX_CHARS_PER_CHAPTER, SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER),
+    description: `Per-chapter length in the story language's native unit: ${ZH_MIN_CHARS_PER_CHAPTER}-${ZH_MAX_CHARS_PER_CHAPTER} Chinese characters (default ${SHORT_FICTION_DEFAULT_CHARS_PER_CHAPTER}) for zh, or ${SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER}-${SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER} English words (default ${SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER}) for en. Values outside the story language's range are rejected before the pipeline starts. Do not use total story length here.`,
   })),
   cover: Type.Optional(Type.Boolean({
     description: "Whether to attempt cover image generation after synopsis and cover prompt. Default true; use false if the user only wants text assets.",
@@ -2040,7 +2057,7 @@ type ShortFictionRunParamsType = Static<typeof ShortFictionRunParams>;
 
 // 启动 pipeline 之前校验 charsPerChapter 是否落在最终语言的合法区间：
 // 确认卡 payload 在 language 缺省时只能做 600-1200 并集校验，这里能拿到最终
-// 语言（payload.language ?? 会话语言 ?? zh，与 runner 的默认一致），越界立即
+// 语言（payload.language ?? 会话语言 ?? en，与 runner 的默认一致），越界立即
 // 抛出带合法范围的双语错误，不让任务开跑后才在 runner 中途失败。
 function assertShortRunCharsPerChapter(
   value: number | undefined,
@@ -2079,7 +2096,7 @@ export function createShortFictionRunTool(
       const language = shortPayload?.language ?? options.language;
       const charsPerChapter = shortPayload?.charsPerChapter ?? params.charsPerChapter;
       const activatedSkills = resolveProductionToolSkills(options);
-      assertShortRunCharsPerChapter(charsPerChapter, language ?? "zh");
+      assertShortRunCharsPerChapter(charsPerChapter, language ?? "en");
       const result = await runPipelineWithAgentContext(
         pipeline,
         _signal,
@@ -2549,7 +2566,7 @@ type GenerateCoverParamsType = Static<typeof GenerateCoverParams>;
 
 export function createGenerateCoverTool(
   projectRoot: string,
-  options: { readonly actionPayload?: ActionPayload } = {},
+  options: { readonly actionPayload?: ActionPayload; readonly language?: "zh" | "en" } = {},
 ): AgentTool<typeof GenerateCoverParams> {
   return {
     name: "generate_cover",
@@ -2578,6 +2595,7 @@ export function createGenerateCoverTool(
         coverModel: params.coverModel,
         coverSize: params.coverSize,
         coverApiKeyEnv: params.coverApiKeyEnv,
+        language: options.language,
         signal: _signal,
       });
       return textResult(

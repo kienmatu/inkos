@@ -15,6 +15,7 @@ const EMPTY_USAGE = {
 const {
   agentInstances,
   runShortFictionProductionMock,
+  generateShortFictionCoverMock,
   runScriptCreationMock,
   runStoryboardCreationMock,
   runInteractiveFilmCreationMock,
@@ -30,6 +31,11 @@ const {
     salesPackagePath: "shorts/story-en/final/sales.md",
     coverPromptPath: "shorts/story-en/final/cover-prompt.md",
     coverImagePath: "shorts/story-en/final/cover.png",
+  })),
+  generateShortFictionCoverMock: vi.fn(async (_options: Record<string, unknown>) => ({
+    title: "story-en",
+    coverPromptPath: "covers/story-en/cover-prompt.md",
+    coverImagePath: "covers/story-en/cover.png",
   })),
   runScriptCreationMock: vi.fn(async (_options: Record<string, unknown>) => ({
     projectId: "script-en",
@@ -58,7 +64,11 @@ const {
 
 vi.mock("../pipeline/short-fiction-runner.js", async () => {
   const actual = await vi.importActual<any>("../pipeline/short-fiction-runner.js");
-  return { ...actual, runShortFictionProduction: runShortFictionProductionMock };
+  return {
+    ...actual,
+    runShortFictionProduction: runShortFictionProductionMock,
+    generateShortFictionCover: generateShortFictionCoverMock,
+  };
 });
 
 vi.mock("../pipeline/script-storyboard-runner.js", async () => {
@@ -112,6 +122,7 @@ vi.mock("@mariozechner/pi-ai", async () => {
 import {
   createInteractiveFilmCreationTool,
   createPlayEditTool,
+  createGenerateCoverTool,
   createPlayReviseTool,
   createPlayStepTool,
   createProposeActionTool,
@@ -150,6 +161,7 @@ describe("agent tools language wiring (en parity)", () => {
     root = await mkdtemp(join(tmpdir(), "inkos-agent-tools-en-"));
     agentInstances.length = 0;
     runShortFictionProductionMock.mockClear();
+    generateShortFictionCoverMock.mockClear();
     runScriptCreationMock.mockClear();
     runStoryboardCreationMock.mockClear();
     runInteractiveFilmCreationMock.mockClear();
@@ -169,6 +181,19 @@ describe("agent tools language wiring (en parity)", () => {
     expect(runShortFictionProductionMock.mock.calls[0]![0]).toMatchObject({ language: "en" });
   });
 
+  it("passes language 'en' from generate_cover to generateShortFictionCover instead of dropping it", async () => {
+    const tool = createGenerateCoverTool(root, { language: "en" });
+
+    await tool.execute("cover-en-1", {
+      title: "The Missing Ledger",
+      intro: "An office suspense story.",
+      sellingPoints: "forged records, tense reversal",
+    } as any);
+
+    expect(generateShortFictionCoverMock).toHaveBeenCalledTimes(1);
+    expect(generateShortFictionCoverMock.mock.calls[0]![0]).toMatchObject({ language: "en" });
+  });
+
   it("persists English short language and word length in the confirmation payload", async () => {
     const result = await createProposeActionTool("en").execute("propose-short-en", {
       action: "short_run",
@@ -178,7 +203,7 @@ describe("agent tools language wiring (en parity)", () => {
         direction: "an office suspense story about forged expense records",
         language: "en",
         chapters: 12,
-        charsPerChapter: 650,
+        charsPerChapter: 1200,
         cover: false,
       },
     } as any);
@@ -188,7 +213,7 @@ describe("agent tools language wiring (en parity)", () => {
       actionPayload: {
         shortRun: {
           language: "en",
-          charsPerChapter: 650,
+          charsPerChapter: 1200,
         },
       },
     });
@@ -202,7 +227,7 @@ describe("agent tools language wiring (en parity)", () => {
         title: "The Missing Ledger",
         direction: "an office suspense story about forged expense records",
         chapters: 12,
-        charsPerChapter: 650,
+        charsPerChapter: 1200,
         cover: false,
       },
     } as any);
@@ -221,7 +246,7 @@ describe("agent tools language wiring (en parity)", () => {
         direction: "an English office suspense story about forged expense records",
         language: "en",
         chapters: 12,
-        charsPerChapter: 650,
+        charsPerChapter: 1200,
         cover: false,
       },
     } as any);
@@ -231,7 +256,7 @@ describe("agent tools language wiring (en parity)", () => {
       actionPayload: {
         shortRun: {
           language: "en",
-          charsPerChapter: 650,
+          charsPerChapter: 1200,
         },
       },
     });
@@ -281,7 +306,7 @@ describe("agent tools language wiring (en parity)", () => {
           direction: "an English office thriller",
           language: "en",
           chapters: 12,
-          charsPerChapter: 650,
+          charsPerChapter: 1200,
           cover: false,
         },
       } as any,
@@ -291,11 +316,11 @@ describe("agent tools language wiring (en parity)", () => {
 
     expect(runShortFictionProductionMock.mock.calls[0]![0]).toMatchObject({
       language: "en",
-      charsPerChapter: 650,
+      charsPerChapter: 1200,
     });
   });
 
-  it("keeps short_fiction_run language undefined by default so the runner falls back to zh", async () => {
+  it("keeps short_fiction_run language undefined by default so the runner falls back to en", async () => {
     const pipeline = contextPipeline({ createAgentContext: vi.fn(() => ({})) });
     const tool = createShortFictionRunTool(pipeline as never, root);
 

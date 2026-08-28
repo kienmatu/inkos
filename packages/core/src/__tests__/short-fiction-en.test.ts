@@ -101,11 +101,18 @@ describe("short-fiction English prompt branch", () => {
     expect(prompt).toContain("650 words per chapter");
   });
 
-  it("keeps the zh default identical to the explicit zh branch", () => {
-    expect(buildShortFictionWriterSystemPrompt()).toBe(buildShortFictionWriterSystemPrompt("zh"));
-    expect(buildShortFictionOutlineSystemPrompt()).toBe(buildShortFictionOutlineSystemPrompt("zh"));
-    expect(buildShortFictionWriterSystemPrompt()).toContain("中文短篇 BatchWriter");
-    const zhWriterUser = buildShortFictionWriterUserPrompt({ ...DRAFT_INPUT, charsPerChapter: 1000 });
+  // AGENTS.md "Language defaults in code": a function that takes a language
+  // and can be called without one must default to "en", so this used to be
+  // "keeps the zh default identical to the explicit zh branch" — that was the
+  // exact bug the rule exists to catch (a forgotten argument silently emitted
+  // Chinese into an English path). The omitted-argument-defaults-to-English
+  // behavior for the short-fiction builders is now covered centrally in
+  // en-prompt-parity.test.ts alongside every other prompt-builder family, per
+  // AGENTS.md's own precedent; this test instead pins that the explicit "zh"
+  // branch is unaffected by the default flip.
+  it("keeps the explicit zh branch unchanged by the default flip", () => {
+    expect(buildShortFictionWriterSystemPrompt("zh")).toContain("中文短篇 BatchWriter");
+    const zhWriterUser = buildShortFictionWriterUserPrompt({ ...DRAFT_INPUT, charsPerChapter: 1000 }, "zh");
     expect(zhWriterUser).toContain("高潮即场景");
     expect(zhWriterUser).toContain("每章约 1000 字");
   });
@@ -135,7 +142,7 @@ describe("short-fiction English parsing and rendering", () => {
     expect(draft.chapters[1]?.charCount).toBe(12);
   });
 
-  it("keeps zh default counting by characters", () => {
+  it("counts zh chapters by characters when language is explicitly zh", () => {
     const draft = parseShortFictionBatchDraft([
       "=== SHORT_FICTION_TITLE ===",
       "电梯多一层",
@@ -143,7 +150,7 @@ describe("short-fiction English parsing and rendering", () => {
       "第十三个按钮",
       "=== CHAPTER 1 CONTENT ===",
       "深夜电梯 停在十三层",
-    ].join("\n"), { expectedChapters: 1 });
+    ].join("\n"), { expectedChapters: 1, language: "zh" });
     expect(draft.chapters[0]?.charCount).toBe(9); // whitespace excluded, characters counted
   });
 
@@ -176,15 +183,15 @@ describe("short-fiction runner English branch", () => {
     return { planner: context, outlineReview: context, writer: context, draftReview: context, revise: context, package: context };
   }
 
-  it("bounds en charsPerChapter in words (600-800), rejecting the zh char range", async () => {
+  it("bounds en charsPerChapter in words (900-1500), rejecting values outside the range", async () => {
     await expect(runShortFictionProduction({
       projectRoot: root,
       direction: "haunted elevator",
       language: "en",
-      charsPerChapter: 1000,
+      charsPerChapter: 1600,
       cover: false,
       runtimes: runtimes(root),
-    })).rejects.toThrow(/charsPerChapter must be an integer between 600 and 800/);
+    })).rejects.toThrow(/charsPerChapter must be an integer between 900 and 1500/);
   });
 
   it("threads language and the en word default through the pipeline and artifacts", async () => {
@@ -221,7 +228,7 @@ describe("short-fiction runner English branch", () => {
       runtimes: runtimes(root),
     });
 
-    expect(writeDraft).toHaveBeenCalledWith(expect.objectContaining({ language: "en", charsPerChapter: 650 }));
+    expect(writeDraft).toHaveBeenCalledWith(expect.objectContaining({ language: "en", charsPerChapter: 1200 }));
     const final = await readFile(join(root, "shorts", "extra-floor", "final", "full.md"), "utf-8");
     expect(final).toContain("## Chapter 12: Room 12");
     expect(CJK.test(final)).toBe(false);

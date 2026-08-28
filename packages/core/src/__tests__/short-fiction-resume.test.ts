@@ -60,7 +60,7 @@ describe("short fiction resume + failure marker (C2)", () => {
   afterEach(async () => { vi.restoreAllMocks(); await rm(root, { recursive: true, force: true }); });
 
   function stubDownstream() {
-    const draft = parseShortFictionBatchDraft(DRAFT_MD, { expectedChapters: CH });
+    const draft = parseShortFictionBatchDraft(DRAFT_MD, { expectedChapters: CH, language: "zh" });
     vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft").mockResolvedValue(draft);
     vi.spyOn(ShortFictionDraftReviewerAgent.prototype, "reviewDraft").mockResolvedValue("looks fine");
     vi.spyOn(ShortFictionDraftReviserAgent.prototype, "reviseDraft").mockResolvedValue(draft);
@@ -71,7 +71,7 @@ describe("short fiction resume + failure marker (C2)", () => {
 
   it("uses a later non-empty duplicate chapter content block when filling a previously empty chapter", () => {
     const merged = `${MIDDLE_GAP_DRAFT_MD}\n\n${CHAPTER_5_ONLY_CONTINUATION_MD}`;
-    const draft = parseShortFictionBatchDraft(merged, { expectedChapters: CH });
+    const draft = parseShortFictionBatchDraft(merged, { expectedChapters: CH, language: "zh" });
 
     expect(draft.chapters[4]?.content).toContain("第五章补写完成");
     expect(findEmptyChapterNumbers(draft)).toEqual([8]);
@@ -86,7 +86,7 @@ describe("short fiction resume + failure marker (C2)", () => {
     stubDownstream();
 
     const result = await runShortFictionProduction({
-      projectRoot: root, direction: "恐怖短篇", storyId: "elevator",
+      projectRoot: root, direction: "恐怖短篇", storyId: "elevator", language: "zh",
       chapterCount: CH, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
     });
 
@@ -103,7 +103,7 @@ describe("short fiction resume + failure marker (C2)", () => {
     vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft").mockRejectedValue(new Error("503 temporarily unavailable"));
 
     await expect(runShortFictionProduction({
-      projectRoot: root, direction: "恐怖短篇", storyId: "elevator",
+      projectRoot: root, direction: "恐怖短篇", storyId: "elevator", language: "zh",
       chapterCount: CH, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
     })).rejects.toThrow(/503/);
 
@@ -118,7 +118,7 @@ describe("short fiction resume + failure marker (C2)", () => {
     vi.spyOn(ShortFictionOutlineReviewerAgent.prototype, "reviewOutline").mockResolvedValue("第六章需要加强反扑");
     vi.spyOn(ShortFictionOutlineReviserAgent.prototype, "reviseOutline")
       .mockRejectedValue(new Error("model reached the output limit (length)"));
-    const complete = parseShortFictionBatchDraft(DRAFT_MD, { expectedChapters: CH });
+    const complete = parseShortFictionBatchDraft(DRAFT_MD, { expectedChapters: CH, language: "zh" });
     const writeDraft = vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft").mockResolvedValue(complete);
     vi.spyOn(ShortFictionDraftReviewerAgent.prototype, "reviewDraft").mockResolvedValue("looks fine");
     vi.spyOn(ShortFictionDraftReviserAgent.prototype, "reviseDraft").mockResolvedValue(complete);
@@ -127,7 +127,7 @@ describe("short fiction resume + failure marker (C2)", () => {
     });
 
     const result = await runShortFictionProduction({
-      projectRoot: root, direction: "恐怖短篇", chapterCount: CH,
+      projectRoot: root, direction: "恐怖短篇", chapterCount: CH, language: "zh",
       charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
     });
 
@@ -160,6 +160,7 @@ describe("short fiction resume + failure marker (C2)", () => {
       projectRoot: root,
       title: "《没有录音的承认》",
       direction: "现实婚姻悬疑",
+      language: "zh",
       chapterCount: CH,
       charsPerChapter: 1000,
       cover: false,
@@ -174,8 +175,8 @@ describe("short fiction resume + failure marker (C2)", () => {
   it("continues a truncated first draft before review instead of reviewing empty chapters", async () => {
     await mkdir(join(root, "shorts", "elevator", "outline"), { recursive: true });
     await writeFile(join(root, "shorts", "elevator", "outline", "v002.md"), "## 既有大纲", "utf-8");
-    const partial = parseShortFictionBatchDraft(PARTIAL_DRAFT_MD, { expectedChapters: CH });
-    const complete = parseShortFictionBatchDraft(DRAFT_MD, { expectedChapters: CH });
+    const partial = parseShortFictionBatchDraft(PARTIAL_DRAFT_MD, { expectedChapters: CH, language: "zh" });
+    const complete = parseShortFictionBatchDraft(DRAFT_MD, { expectedChapters: CH, language: "zh" });
     const continueDraft = vi.spyOn(ShortFictionWriterAgent.prototype, "continueDraft").mockResolvedValue(complete);
     vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft").mockResolvedValue(partial);
     vi.spyOn(ShortFictionDraftReviewerAgent.prototype, "reviewDraft").mockResolvedValue("looks fine");
@@ -185,7 +186,7 @@ describe("short fiction resume + failure marker (C2)", () => {
     });
 
     await runShortFictionProduction({
-      projectRoot: root, direction: "恐怖短篇", storyId: "elevator",
+      projectRoot: root, direction: "恐怖短篇", storyId: "elevator", language: "zh",
       chapterCount: CH, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
     });
 
@@ -198,9 +199,9 @@ describe("short fiction resume + failure marker (C2)", () => {
   it("keeps completing a draft when the first continuation fills only some missing middle chapters", async () => {
     await mkdir(join(root, "shorts", "elevator", "outline"), { recursive: true });
     await writeFile(join(root, "shorts", "elevator", "outline", "v002.md"), "## 既有大纲", "utf-8");
-    const initial = parseShortFictionBatchDraft(MIDDLE_GAP_DRAFT_MD, { expectedChapters: CH });
-    const chapter5Only = parseShortFictionBatchDraft(`${MIDDLE_GAP_DRAFT_MD}\n\n${CHAPTER_5_ONLY_CONTINUATION_MD}`, { expectedChapters: CH });
-    const complete = parseShortFictionBatchDraft(DRAFT_MD, { expectedChapters: CH });
+    const initial = parseShortFictionBatchDraft(MIDDLE_GAP_DRAFT_MD, { expectedChapters: CH, language: "zh" });
+    const chapter5Only = parseShortFictionBatchDraft(`${MIDDLE_GAP_DRAFT_MD}\n\n${CHAPTER_5_ONLY_CONTINUATION_MD}`, { expectedChapters: CH, language: "zh" });
+    const complete = parseShortFictionBatchDraft(DRAFT_MD, { expectedChapters: CH, language: "zh" });
     const continueDraft = vi.spyOn(ShortFictionWriterAgent.prototype, "continueDraft")
       .mockResolvedValueOnce(chapter5Only)
       .mockResolvedValueOnce(complete);
@@ -212,7 +213,7 @@ describe("short fiction resume + failure marker (C2)", () => {
     });
 
     await runShortFictionProduction({
-      projectRoot: root, direction: "恐怖短篇", storyId: "elevator",
+      projectRoot: root, direction: "恐怖短篇", storyId: "elevator", language: "zh",
       chapterCount: CH, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
     });
 
@@ -224,8 +225,8 @@ describe("short fiction resume + failure marker (C2)", () => {
   it("keeps the complete first draft when the single revision output is invalid", async () => {
     await mkdir(join(root, "shorts", "elevator", "outline"), { recursive: true });
     await writeFile(join(root, "shorts", "elevator", "outline", "v002.md"), "## 既有大纲", "utf-8");
-    const complete = parseShortFictionBatchDraft(DRAFT_MD, { expectedChapters: CH });
-    const invalidRevision = parseShortFictionBatchDraft("=== SHORT_FICTION_TITLE ===\n空改稿", { expectedChapters: CH });
+    const complete = parseShortFictionBatchDraft(DRAFT_MD, { expectedChapters: CH, language: "zh" });
+    const invalidRevision = parseShortFictionBatchDraft("=== SHORT_FICTION_TITLE ===\n空改稿", { expectedChapters: CH, language: "zh" });
     vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft").mockResolvedValue(complete);
     vi.spyOn(ShortFictionDraftReviewerAgent.prototype, "reviewDraft").mockResolvedValue("looks fine");
     vi.spyOn(ShortFictionDraftReviserAgent.prototype, "reviseDraft").mockResolvedValue(invalidRevision);
@@ -234,7 +235,7 @@ describe("short fiction resume + failure marker (C2)", () => {
     });
 
     await runShortFictionProduction({
-      projectRoot: root, direction: "恐怖短篇", storyId: "elevator",
+      projectRoot: root, direction: "恐怖短篇", storyId: "elevator", language: "zh",
       chapterCount: CH, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
     });
 
@@ -250,7 +251,7 @@ describe("short fiction resume + failure marker (C2)", () => {
     const writeDraft = vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft");
 
     const result = await runShortFictionProduction({
-      projectRoot: root, direction: "恐怖短篇", storyId: "elevator",
+      projectRoot: root, direction: "恐怖短篇", storyId: "elevator", language: "zh",
       chapterCount: CH, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
     });
 
@@ -268,7 +269,7 @@ describe("short fiction resume + failure marker (C2)", () => {
     const packageSpy = vi.spyOn(ShortFictionPackagingAgent.prototype, "generatePackage");
 
     const result = await runShortFictionProduction({
-      projectRoot: root, direction: "恐怖短篇", storyId: "elevator",
+      projectRoot: root, direction: "恐怖短篇", storyId: "elevator", language: "zh",
       chapterCount: CH, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
     });
 

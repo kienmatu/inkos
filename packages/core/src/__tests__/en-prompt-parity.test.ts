@@ -17,6 +17,27 @@ import {
   buildCharacterVoiceProfiles,
   buildFanficModeInstructions,
 } from "../agents/fanfic-prompt-sections.js";
+import {
+  buildShortFictionOutlineSystemPrompt,
+  buildShortFictionOutlineUserPrompt,
+  buildShortFictionOutlineReviewSystemPrompt,
+  buildShortFictionOutlineReviewUserPrompt,
+  buildShortFictionOutlineRevisionFollowup,
+  buildShortFictionWriterSystemPrompt,
+  buildShortFictionWriterUserPrompt,
+  buildShortFictionDraftContinuationUserPrompt,
+  buildShortFictionDraftReviewSystemPrompt,
+  buildShortFictionDraftReviewUserPrompt,
+  buildShortFictionDraftRevisionFollowup,
+  buildShortFictionPackageSystemPrompt,
+  buildShortFictionPackageUserPrompt,
+} from "../prompts/short-fiction.js";
+import {
+  parseShortFictionOutline,
+  renderShortFictionDraftMarkdown,
+  formatShortFictionChapterHeading,
+  type ShortFictionBatchDraft,
+} from "../agents/short-fiction.js";
 import type { BookConfig, FanficMode } from "../models/book.js";
 import type { GenreProfile } from "../models/genre-profile.js";
 import type { BookRules } from "../models/book-rules.js";
@@ -452,5 +473,130 @@ describe("prompt builders default their omitted language argument to English", (
     const prompt = buildFanficModeInstructions("canon", ["Protagonist may have an original sibling not in canon"]);
     expect(prompt).toContain("## Fanfic Self-Check");
     expect(stripAllowlisted(prompt).split("\n").some(hasDisallowedNonAscii)).toBe(false);
+  });
+});
+
+// packages/core/src/prompts/short-fiction.ts (2026-08-28 cleanup): the 14
+// short-fiction prompt builders, plus renderShortFictionDraftMarkdown,
+// parseShortFictionOutline and formatShortFictionChapterHeading in
+// agents/short-fiction.ts, used to default their `language` parameter to
+// "zh" — the exact pattern this file's rule targets. The short-fiction
+// pipeline's real user runs it English-only, so a forgotten `language`
+// argument at any call site (e.g. agents/short-fiction.ts's own agent
+// classes, which always forward `input.language` — undefined unless the
+// caller set it) used to silently emit Chinese into an English run.
+//
+// resolveChaptersPerBatch's `language` default and parseShortFictionBatchDraft's
+// options.language default were deliberately left at "zh" — see the comments
+// at their definitions in agents/short-fiction.ts for why (batching math, and
+// a parser respectively, neither of which chooses the language of newly
+// generated text).
+const SHORT_FICTION_OUTLINE_INPUT = {
+  direction: "a courier discovers the parcels are evidence",
+  chapterCount: 10,
+  charsPerChapter: 1200,
+};
+
+const SHORT_FICTION_DRAFT_INPUT = {
+  direction: "a courier discovers the parcels are evidence",
+  outlineMarkdown: "## Plan\nChapter 1: the setup scene",
+  chapterCount: 10,
+  charsPerChapter: 1200,
+};
+
+const SHORT_FICTION_ENGLISH_PROMPTS: ReadonlyArray<{ readonly name: string; readonly build: () => string }> = [
+  { name: "short-fiction outline system prompt", build: () => buildShortFictionOutlineSystemPrompt() },
+  { name: "short-fiction outline user prompt", build: () => buildShortFictionOutlineUserPrompt(SHORT_FICTION_OUTLINE_INPUT) },
+  { name: "short-fiction outline review system prompt", build: () => buildShortFictionOutlineReviewSystemPrompt() },
+  {
+    name: "short-fiction outline review user prompt",
+    build: () => buildShortFictionOutlineReviewUserPrompt({
+      direction: SHORT_FICTION_OUTLINE_INPUT.direction,
+      outline: { rawContent: "the plan body" },
+    }),
+  },
+  {
+    name: "short-fiction outline revision followup",
+    build: () => buildShortFictionOutlineRevisionFollowup({
+      direction: SHORT_FICTION_OUTLINE_INPUT.direction,
+      outline: { rawContent: "the plan body" },
+      review: "the back half sags",
+      chapterCount: 10,
+      charsPerChapter: 1200,
+    }),
+  },
+  { name: "short-fiction writer system prompt", build: () => buildShortFictionWriterSystemPrompt() },
+  { name: "short-fiction writer user prompt", build: () => buildShortFictionWriterUserPrompt(SHORT_FICTION_DRAFT_INPUT) },
+  {
+    name: "short-fiction draft continuation user prompt",
+    build: () => buildShortFictionDraftContinuationUserPrompt({
+      ...SHORT_FICTION_DRAFT_INPUT,
+      existingDraftMarkdown: "# Existing Draft",
+      missingChapters: [3, 4],
+    }),
+  },
+  { name: "short-fiction draft review system prompt", build: () => buildShortFictionDraftReviewSystemPrompt() },
+  {
+    name: "short-fiction draft review user prompt",
+    build: () => buildShortFictionDraftReviewUserPrompt({
+      ...SHORT_FICTION_DRAFT_INPUT,
+      draftMarkdown: "# The Draft Body",
+    }),
+  },
+  {
+    name: "short-fiction draft revision followup",
+    build: () => buildShortFictionDraftRevisionFollowup({
+      ...SHORT_FICTION_DRAFT_INPUT,
+      review: "fix the timeline in chapter 4",
+    }),
+  },
+  { name: "short-fiction package system prompt", build: () => buildShortFictionPackageSystemPrompt() },
+  {
+    name: "short-fiction package user prompt",
+    build: () => buildShortFictionPackageUserPrompt({
+      direction: SHORT_FICTION_OUTLINE_INPUT.direction,
+      outlineMarkdown: "the plan",
+      draftMarkdown: "the draft",
+      draftTitle: "The Extra Floor",
+    }),
+  },
+];
+
+describe("short-fiction prompt builders default their omitted language argument to English", () => {
+  for (const { name, build } of SHORT_FICTION_ENGLISH_PROMPTS) {
+    it(`${name} contains no non-ASCII leaks when language is omitted`, () => {
+      const offending = build()
+        .split("\n")
+        .filter((line) => hasDisallowedNonAscii(line));
+      expect(offending, `untranslated / stray non-ASCII lines in ${name}`).toEqual([]);
+    });
+
+    it(`${name} does not size English text in characters when language is omitted`, () => {
+      const offending = build()
+        .split("\n")
+        .filter((line) => /\d\s*(chars|characters)\b/i.test(line));
+      expect(offending, `character-counted lengths in ${name}`).toEqual([]);
+    });
+  }
+
+  it("parseShortFictionOutline(rawContent) falls back to an English title when language is omitted", () => {
+    expect(parseShortFictionOutline("no tags here").storyTitle).toBe("Untitled Short Story");
+  });
+
+  it("formatShortFictionChapterHeading(number, title) uses the English 'Chapter N:' form when language is omitted", () => {
+    expect(formatShortFictionChapterHeading(1, "The Setup")).toBe("Chapter 1: The Setup");
+  });
+
+  it("renderShortFictionDraftMarkdown(draft) renders the English 'Opening Hook' heading when language is omitted", () => {
+    const draft: ShortFictionBatchDraft = {
+      storyTitle: "The Extra Floor",
+      openingHook: "The elevator stopped on a floor that does not exist.",
+      chapters: [{ number: 1, title: "The Thirteenth Button", content: "prose", charCount: 1 }],
+      rawContent: "",
+    };
+    const markdown = renderShortFictionDraftMarkdown(draft);
+    expect(markdown).toContain("## Opening Hook");
+    expect(markdown).toContain("## Chapter 1: The Thirteenth Button");
+    expect(markdown).not.toMatch(/[一-鿿]/);
   });
 });
