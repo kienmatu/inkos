@@ -1,5 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { buildApiUrl, deriveInvalidationPaths, fetchJson } from "./use-api";
+import { setAppLanguage } from "../lib/app-language";
+
+// This file asserts the Chinese-localized runtime message; reset the
+// module-level default (now "vi") to "zh" before each test.
+beforeEach(() => {
+  setAppLanguage("zh");
+});
 
 describe("buildApiUrl", () => {
   it("returns null for blank paths so callers can skip requests", () => {

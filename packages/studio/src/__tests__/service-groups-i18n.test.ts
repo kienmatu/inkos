@@ -9,7 +9,8 @@ afterEach(() => {
 });
 
 describe("service-groups i18n", () => {
-  it("默认（zh）返回中文标签", () => {
+  it("zh 模式返回中文标签", () => {
+    setAppLanguage("zh");
     expect(getGroupLabel("overseas")).toBe("海外原厂");
     expect(getGroupShortLabel("aggregator")).toBe("聚合");
     expect(getGroupDescription("aggregator")).toContain("聚合国内外主流模型");
@@ -21,6 +22,12 @@ describe("service-groups i18n", () => {
     expect(getGroupLabel("overseas")).toBe("International providers");
     expect(getGroupShortLabel("aggregator")).toBe("Aggregator");
     expect(getGroupDescription("aggregator")).toContain("one API key");
+  });
+
+  it("vi 模式回退到英文（服务分组暂无越南语文案）", () => {
+    setAppLanguage("vi");
+    expect(getGroupLabel("overseas")).toBe("International providers");
+    expect(getGroupShortLabel("aggregator")).toBe("Aggregator");
   });
 });
 

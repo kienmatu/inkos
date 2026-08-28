@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeEach } from "vitest";
 import type { Message, ToolExecution } from "../../types";
 import { createSessionRuntime, deriveResolvedProposals, deserializeMessages, extractErrorMessage, extractToolError, hasInFlightExecution, markRunningToolsFailed, mergeTaskExecution, withToolExecutions } from "./runtime";
+import { setAppLanguage } from "../../../../lib/app-language";
+
+// This file's assertions are written against Chinese-localized error copy;
+// reset the module-level default (now "vi") to "zh" before each test.
+beforeEach(() => {
+  setAppLanguage("zh");
+});
 
 function exec(overrides: Partial<ToolExecution> & { id: string; tool: string }): ToolExecution {
   const { id, tool, ...rest } = overrides;

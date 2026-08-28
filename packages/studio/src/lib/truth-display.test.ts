@@ -1,5 +1,12 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setAppLanguage } from "./app-language";
+
+// This file's default-mode assertions are written against Chinese labels;
+// reset the module-level default (now "vi") to "zh" before each test so
+// tests that don't switch languages themselves keep exercising the zh path.
+beforeEach(() => {
+  setAppLanguage("zh");
+});
 import {
   FOUNDATION_FILE_LABELS,
   firstParagraph,

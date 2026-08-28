@@ -4,6 +4,13 @@ import type { ChatStore } from "../../types";
 import { initialChatState } from "../../initialState";
 import { createCreateSlice } from "../create/action";
 import { createMessageSlice } from "./action";
+import { setAppLanguage } from "../../../../lib/app-language";
+
+// This file's assertions are written against Chinese labels; reset the
+// module-level default (now "vi") to "zh" before each test.
+beforeEach(() => {
+  setAppLanguage("zh");
+});
 
 const { fetchJson } = vi.hoisted(() => ({
   fetchJson: vi.fn(),
