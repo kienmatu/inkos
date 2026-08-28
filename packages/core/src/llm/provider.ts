@@ -596,11 +596,21 @@ export function assertWithinContextWindow(params: {
 
 // === Error Wrapping ===
 
-function wrapLLMError(error: unknown, context?: { readonly baseUrl?: string; readonly model?: string; readonly service?: string }): Error {
+// Exported for direct unit testing: reaching this function through
+// chatCompletion() requires mocking the underlying pi-ai transport (the
+// "openai" SDK's own HTTP client), which does not honor a mocked
+// globalThis.fetch. Testing wrapLLMError directly exercises the exact
+// classification logic without fighting that transport layer.
+export function wrapLLMError(error: unknown, context?: { readonly baseUrl?: string; readonly model?: string; readonly service?: string }): Error {
   const msg = String(error);
   const ctxLine = context
     ? `\n  (baseUrl: ${context.baseUrl}, model: ${context.model})`
     : "";
+
+  // A PartialResponseError already carries a precise reason. Its message embeds
+  // the partial length ("...after 4001 chars..."), which can contain 400/401/
+  // 403/429 and get misread as an HTTP status by the substring checks below.
+  if (error instanceof PartialResponseError) return error;
 
   if (msg.includes("400")) {
     // 抽上游 error body 的 message / reason / code（和下方 5xx 一致），让真实错因浮到用户面前
