@@ -162,8 +162,11 @@ What the script guarantees, and why each step exists:
 
 1. **Preflight** — refuses a dirty working tree, so unrelated work cannot ride along in the
    version commit, and refuses a tag that already exists.
-2. **Bump** — delegates to `scripts/set-package-versions.mjs`, which rewrites the root
-   manifest, every package manifest, and internal dependency ranges to the same version.
+2. **Bump** — delegates to `scripts/set-package-versions.mjs --keep-workspace-protocol`,
+   which rewrites the root manifest and every package manifest to the same version.
+   Internal dependencies stay on `workspace:*`, because this tree gets committed and
+   `prepack` resolves the specifier at publish time. (CI publishes from a throwaway tree,
+   so it drops the flag and pins internal deps outright.)
 3. **Verify** — `pnpm build`, `pnpm test`, and the publish-manifest check run *after* the
    bump, since that is the tree that ships. A failure reverts the bump.
 4. **Commit and tag** — `chore: bump version to X.Y.Z` plus tag `vX.Y.Z`, before anything

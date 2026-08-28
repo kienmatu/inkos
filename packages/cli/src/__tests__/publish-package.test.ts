@@ -117,6 +117,93 @@ describe.sequential("publish packaging", () => {
     }
   });
 
+  it("preserves the workspace protocol when bumping for a local release", async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), "inkos-version-script-keep-"));
+    const tempPackagesDir = join(tempRoot, "packages");
+    const tempCoreDir = join(tempPackagesDir, "core");
+    const tempCliDir = join(tempPackagesDir, "cli");
+    const tempStudioDir = join(tempPackagesDir, "studio");
+
+    try {
+      await mkdir(tempCoreDir, { recursive: true });
+      await mkdir(tempCliDir, { recursive: true });
+      await mkdir(tempStudioDir, { recursive: true });
+      await writeFile(
+        join(tempStudioDir, "package.json"),
+        `${JSON.stringify({ name: "@kienmatu/inkos-studio", version: "0.4.6" }, null, 2)}\n`,
+      );
+
+      await writeFile(
+        join(tempRoot, "package.json"),
+        `${JSON.stringify({ name: "inkos", version: "0.4.6" }, null, 2)}\n`,
+      );
+      await writeFile(
+        join(tempCoreDir, "package.json"),
+        `${JSON.stringify({ name: "@kienmatu/inkos-core", version: "0.4.6" }, null, 2)}\n`,
+      );
+      await writeFile(
+        join(tempCliDir, "package.json"),
+        `${JSON.stringify(
+          {
+            name: "@kienmatu/inkos",
+            version: "0.4.6",
+            dependencies: {
+              "@kienmatu/inkos-core": "workspace:*",
+              "@kienmatu/inkos-studio": "0.4.6",
+              commander: "^13.0.0",
+            },
+          },
+          null,
+          2,
+        )}\n`,
+      );
+
+      execFileSync(
+        "node",
+        [
+          resolve(workspaceRoot, "scripts/set-package-versions.mjs"),
+          "0.4.7",
+          "--root",
+          tempRoot,
+          "--keep-workspace-protocol",
+        ],
+        {
+          cwd: workspaceRoot,
+          env: process.env,
+          encoding: "utf-8",
+        },
+      );
+
+      const cliPackageJson = JSON.parse(await readFile(join(tempCliDir, "package.json"), "utf-8"));
+
+      expect(cliPackageJson.version).toBe("0.4.7");
+      expect(cliPackageJson.dependencies["@kienmatu/inkos-core"]).toBe("workspace:*");
+      // A pinned internal range is still a stale version once the bump lands, so it moves.
+      expect(cliPackageJson.dependencies["@kienmatu/inkos-studio"]).toBe("0.4.7");
+      expect(cliPackageJson.dependencies.commander).toBe("^13.0.0");
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("bumps the release without rewriting source manifests to concrete versions", async () => {
+    const releaseScript = await readFile(resolve(workspaceRoot, "scripts/release.mjs"), "utf-8");
+
+    expect(releaseScript).toContain('"--keep-workspace-protocol"');
+  });
+
+  it("refuses a version argument that is not a version", async () => {
+    // Unknown argv positions are read as the version, so a typo'd flag must not be
+    // stamped into every manifest.
+    expect(() =>
+      execFileSync("node", [resolve(workspaceRoot, "scripts/set-package-versions.mjs"), "--help"], {
+        cwd: workspaceRoot,
+        env: process.env,
+        encoding: "utf-8",
+        stdio: "pipe",
+      })).toThrow();
+  });
+
   it("links internal source dependencies through the workspace", async () => {
     const cliPackageJson = await sourceCliPackageJsonPromise;
     const studioPackageJson = await sourceStudioPackageJsonPromise;
