@@ -1,3 +1,14 @@
+import {
+  SHORT_FICTION_MIN_CHAPTERS,
+  SHORT_FICTION_MAX_CHAPTERS,
+  SHORT_FICTION_DEFAULT_CHARS_PER_CHAPTER,
+  SHORT_FICTION_MIN_CHARS_PER_CHAPTER,
+  SHORT_FICTION_MAX_CHARS_PER_CHAPTER,
+  SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER,
+  SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER,
+  SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER,
+} from "../models/short-fiction-format.js";
+
 export type ShortFictionLanguage = "zh" | "en";
 
 export interface ShortFictionReferencePromptInput {
@@ -85,7 +96,7 @@ export function buildShortFictionOutlineSystemPrompt(language: ShortFictionLangu
       "Work only from this direction and any reference text the user supplied; never claim to have read, quoted, or inherited material that was not provided.",
       "Content comes first: the title, the opening, the pressure on the protagonist, the evidence/relationship/identity leverage, the escalation chain, the reversal chain, and the payoff landing must be strong enough to carry a single-pass full draft.",
       "Do not over-structure and do not output JSON/YAML. Write human-readable Markdown, but the chapter plan must be dense enough that a writer can draft the whole story in one pass.",
-      "A short defaults to 12-18 chapters at roughly 600-800 words per chapter. The story must be complete — not the first five chapters of a novel starter kit.",
+      `A short defaults to ${SHORT_FICTION_MIN_CHAPTERS}-${SHORT_FICTION_MAX_CHAPTERS} chapters at roughly ${SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER} words per chapter (accepted range ${SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER}-${SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER} words). The story must be complete — not the first five chapters of a novel starter kit.`,
       "A platform-ready English title is concrete and promises a specific reversal — for example \"The Ledger She Kept\", \"Nine Days to Prove It\", \"What the Night Shift Saw\". Avoid abstract one-word titles and avoid literary summaries of the theme.",
       "Return only the final story plan for the writer; do not place task restatement, analysis, or internal reasoning in the deliverable.",
     ].join("\n");
@@ -95,7 +106,7 @@ export function buildShortFictionOutlineSystemPrompt(language: ShortFictionLangu
     "只基于本次创作方向和用户提供的参考文本创作；没有提供的资料，不要声称读过、引用过或继承过。",
     "目标是内容优先：标题、开篇、人物压力、证据/关系/身份杠杆、升级链、反转链和回报落点必须能支撑一次写完整篇。",
     "不要过度结构化，不要输出 JSON/YAML。用人能读的 Markdown，但章节方案必须足够密，写手拿到后能直接一次写完。",
-    "短篇默认 12-18 章，每章约 900-1200 字。故事要完整，不是长篇前 5 章启动包。",
+    `短篇默认 ${SHORT_FICTION_MIN_CHAPTERS}-${SHORT_FICTION_MAX_CHAPTERS} 章，每章约 ${SHORT_FICTION_DEFAULT_CHARS_PER_CHAPTER} 字（可接受范围 ${SHORT_FICTION_MIN_CHARS_PER_CHAPTER}-${SHORT_FICTION_MAX_CHARS_PER_CHAPTER} 字）。故事要完整，不是长篇前 5 章启动包。`,
     "回复只包含交付给写手的最终故事方案；不要把分析过程、任务复述或内部推理写进交付物。",
   ].join("\n");
 }

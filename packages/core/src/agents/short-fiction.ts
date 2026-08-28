@@ -18,39 +18,65 @@ import {
   buildShortFictionWriterSystemPrompt,
   buildShortFictionWriterUserPrompt,
 } from "../prompts/short-fiction.js";
+import {
+  SHORT_FICTION_DEFAULT_CHAPTERS,
+  SHORT_FICTION_MIN_CHAPTERS,
+  SHORT_FICTION_MAX_CHAPTERS,
+  SHORT_FICTION_DEFAULT_CHARS_PER_CHAPTER,
+  SHORT_FICTION_MIN_CHARS_PER_CHAPTER,
+  SHORT_FICTION_MAX_CHARS_PER_CHAPTER,
+  SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER,
+  SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER,
+  SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER,
+} from "../models/short-fiction-format.js";
 
-// 10 x 1200 words = ~12,000 words, which is the Kindle Short Reads / novelette
-// shape this pipeline actually produces — not a serial, which is what the old
-// 12-18 x 650 implied. The 18 ceiling stays for users who want a longer piece.
-export const SHORT_FICTION_DEFAULT_CHAPTERS = 10;
-export const SHORT_FICTION_MIN_CHAPTERS = 8;
-export const SHORT_FICTION_MAX_CHAPTERS = 18;
-export const SHORT_FICTION_DEFAULT_CHARS_PER_CHAPTER = 1000;
-export const SHORT_FICTION_MIN_CHARS_PER_CHAPTER = 900;
-export const SHORT_FICTION_MAX_CHARS_PER_CHAPTER = 1200;
-
-// English shorts are calibrated to the English market, NOT unit-converted from
-// the Chinese numbers above. The old 600/650/800 range came from a 2/3 word
-// conversion of the zh format, which is linguistically reasonable and
-// commercially meaningless: it landed at or below the floor of every English
-// platform. Royal Road runs 1,500-3,500 words per chapter, Wattpad 1,000-3,000,
-// Dreame/GoodNovel 1,500-2,500; Kindle Vella allowed 600 as a hard minimum and
-// shut down in 2025. A 650-word chapter is also too small to hold the staged
-// scene the craft prompt demands, which forced the model into the synopsis voice
-// that same prompt forbids.
-// See docs/superpowers/specs/2026-08-28-short-fiction-editorial-review.md.
-export const SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER = 1200;
-export const SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER = 900;
-export const SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER = 1500;
+// Re-exported so existing importers of this module (agent-tools.ts,
+// interaction/action-envelope.ts, the pipeline runner, tests) keep working
+// unchanged. The canonical definitions and their comments live in
+// models/short-fiction-format.ts, which both this file and
+// prompts/short-fiction.ts import from — this file cannot re-export the
+// constants FROM there and also have prompts/short-fiction.ts import them
+// from here, because this file already imports prompt builders from
+// prompts/short-fiction.ts, which would make that an import cycle.
+export {
+  SHORT_FICTION_DEFAULT_CHAPTERS,
+  SHORT_FICTION_MIN_CHAPTERS,
+  SHORT_FICTION_MAX_CHAPTERS,
+  SHORT_FICTION_DEFAULT_CHARS_PER_CHAPTER,
+  SHORT_FICTION_MIN_CHARS_PER_CHAPTER,
+  SHORT_FICTION_MAX_CHARS_PER_CHAPTER,
+  SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER,
+  SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER,
+  SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER,
+};
 
 // Conservative per-call output budget. Endpoints that ignore max_tokens and
 // enforce their own have been observed cutting at roughly 1,300-2,000 tokens.
 // Sizing below that keeps the common case single-shot; adaptive halving in
 // runChapterBatches covers any endpoint stricter than this.
+//
+// Accepted trade-off (2026-08-28 editorial re-cut): a default English chapter
+// is now SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER (1,200) words, which is
+// ~1,560 estimated output tokens at ~1.3 tokens/word — ABOVE this 1,400
+// budget and inside the 1,300-2,000 window cited above as where strict
+// endpoints cut. resolveChaptersPerBatch cannot return less than 1 chapter,
+// and runChapterBatches (below) rethrows rather than splitting further once a
+// group is already down to one chapter, so on the strictest endpoints English
+// generation has no fallback left below that point. This was considered and
+// the decision was to keep 1,200 words rather than add further error-handling
+// or splitting machinery. On an endpoint that caps output under roughly 1,600
+// tokens, the operator's lever is a lower `--chars` value, not a code change.
+// See "Accepted trade-offs" in
+// docs/superpowers/specs/2026-08-28-short-fiction-editorial-review.md.
 const SHORT_FICTION_BATCH_OUTPUT_TOKEN_BUDGET = 1_400;
 
 // Upper clamp. Never batch more than this many chapters even when they are
 // short enough to fit, so one failed batch never costs too much rework.
+// Currently unreachable: with the re-cut constants the largest value
+// resolveChaptersPerBatch can return is 2 (zh at its 900-character minimum),
+// so this clamp of 3 never actually triggers. It stays as a backstop in case
+// the length constants move again and chapters get short enough to fit 3+
+// per batch.
 export const SHORT_FICTION_MAX_CHAPTERS_PER_BATCH = 3;
 
 // zh chapters are measured in characters (~1.44 chars/token), en chapters in
@@ -364,6 +390,14 @@ export class ShortFictionDraftReviserAgent extends BaseAgent {
     return "short-fiction-draft-reviser";
   }
 
+  // The batch chapter-shaping instructions (hook variety, no-recap-opening,
+  // "find this chapter's entry in the plan") deliberately do not reach this
+  // pass — see buildShortFictionDraftRevisionFollowup, which this method
+  // calls instead of buildShortFictionDraftContinuationUserPrompt. This
+  // rewrites against the v1 draft, which already carries the batch shape, and
+  // the followup prompt already carries the writer system prompt, v1, the
+  // revised-so-far prose, and the review notes — adding the shaping block on
+  // top would be redundant instruction, not new information.
   async reviseDraft(input: ShortFictionDraftRevisionInput): Promise<ShortFictionBatchDraft> {
     const allChapters = Array.from({ length: input.chapterCount }, (_, index) => index + 1);
     const groups = chunkChapters(allChapters, resolveChaptersPerBatch(input.charsPerChapter, input.language));
@@ -669,6 +703,10 @@ function fallbackChapterTitle(number: number, language: ShortFictionLanguage): s
 // charsPerChapter is the language's native unit (zh chars / en words). The 2.2
 // multiplier is calibrated for zh chars (~1-1.5 tokens each); for en words
 // (~1.3-1.5 tokens each) it simply leaves extra headroom, which is safe for a cap.
+// The `4096` floor is currently unreachable: the smallest input this function
+// receives is 1 chapter at SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER (900),
+// giving ceil(900 * 2.2) + 4096 = 6,076, already above the floor. It stays as
+// a backstop in case the length constants shrink again.
 function estimateShortFictionMaxTokens(chapterCount: number, charsPerChapter: number): number {
   return Math.max(4096, Math.ceil(chapterCount * charsPerChapter * 2.2) + 4096);
 }
