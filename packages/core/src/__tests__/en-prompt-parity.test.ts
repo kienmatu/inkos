@@ -345,7 +345,7 @@ describe("parity fixtures actually render the branches they claim", () => {
     canon: ["canon-compliant fanfic", "Canon compliance check"],
     au: ["AU (alternate-universe) fanfic", "AU deviation list"],
     ooc: ["OOC fanfic", "OOC deviation log"],
-    cp: ["CP (pairing) fanfic", "CP interaction check"],
+    cp: ["ship-centric fanfic", "Ship interaction check"],
   };
 
   for (const mode of FANFIC_MODES) {

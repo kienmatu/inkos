@@ -40,7 +40,7 @@ const MODE_PREAMBLES_EN: Record<FanficMode, string> = {
 - But the deviation must be driven by the situation, not change personality for no reason
 - Preserve characters' verbal tics and speech traits — even if personality shifts, their way of speaking should stay recognizable`,
 
-  cp: `You are writing **CP (pairing) fanfic**, centered on character interaction and relationship development:
+  cp: `You are writing **ship-centric fanfic**, centered on the pairing's interaction and relationship development:
 - The pair must have a meaningful interaction every chapter
 - The interaction style must have chemistry — not two people each doing their own thing in the same scene
 - Relationship development should have rhythm: advance, probe, obstacle, breakthrough`,
@@ -176,7 +176,7 @@ const MODE_CHECKS_EN: Record<FanficMode, string> = {
   ooc: `- OOC deviation log: in what ways did the character deviate from their baseline personality? What drove the deviation?
 - Verbal-tic retention check: even OOC, does their way of speaking still carry source-material traits?`,
 
-  cp: `- CP interaction check: did the pair have a meaningful interaction this chapter? Did the relationship progress?
+  cp: `- Ship interaction check: did the pair share a meaningful interaction this chapter? Did the relationship move?
 - Interaction quality check: does the interaction have chemistry (not each character doing their own thing)?`,
 };
 

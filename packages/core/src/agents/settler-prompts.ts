@@ -112,6 +112,7 @@ In this document, a "hook" is a planted open question the story has promised to 
 - Judging whether a new phrasing in the prose is still the same narrative promise is your job, not the host's. Even when the characters, numbers, form of evidence, or wording change, if it carries the same suspense or payoff promise, update the existing hookId rather than opening a candidate.
 - newHookCandidates is only for a genuinely new narrative promise that nothing in the current hook pool represents. The host validates structure only; it will not guess semantic ownership for you.
 - payoffTiming uses semantic pacing, never a hard chapter number: only immediate / near-term / mid-arc / slow-burn / endgame.
+- The \`status\` field in RUNTIME_STATE_DELTA is a closed set, exactly like payoffTiming: only open / progressing / deferred / resolved. Any other word (including the planner's narrative phase names such as planted, pressured, or near_payoff) is rejected by the schema and the whole settlement is lost. Put narrative nuance in \`notes\`, not in \`status\`.
 - **Hard rule**: a hook being mentioned again, restated in different words, or recapped in the abstract is NOT an advance. Update lastAdvancedChapter only when the hook's state actually changed. A hook that merely appeared goes in the \`mention\` array.`;
 
   const fullCastBlock = bookRules?.enableFullCastTracking
@@ -132,7 +133,7 @@ All output — state card, hooks, chapter summaries, subplots, emotional arcs, c
 ## Analysis dimensions
 
 Extract the following from the prose:
-- Characters entering, leaving, or changing state (injured / broken through / dead, and so on)
+- Characters entering, leaving, or changing state (injured / advanced a rank or broke through a threshold / dead, and so on)
 - Movement between locations, scene transitions
 - Items and resources gained or spent
 - Hooks planted, advanced, or paid off
