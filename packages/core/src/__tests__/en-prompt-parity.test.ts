@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildWriterSystemPrompt, buildGoldenOpeningDiscipline, type FanficContext } from "../agents/writer-prompts.js";
 import { buildGoldenOpeningGuidance, getPlannerMemoSystemPrompt, getPlannerMemoUserTemplate } from "../agents/planner-prompts.js";
 import { buildSettlerSystemPrompt, buildSettlerUserPrompt } from "../agents/settler-prompts.js";
-import type { BookConfig } from "../models/book.js";
+import type { BookConfig, FanficMode } from "../models/book.js";
 import type { GenreProfile } from "../models/genre-profile.js";
 import type { BookRules } from "../models/book-rules.js";
 
@@ -112,11 +112,18 @@ Magic draws from the Ninth Star.
 | Lian Feng | protagonist | stubborn | "I don't quit." | clipped, direct | acts before thinking | Mentor: complicated | knows only what he witnessed |
 `;
 
-const FANFIC_CONTEXT_EN: FanficContext = {
-  fanficCanon: FANFIC_CANON_EN_BOOK,
-  fanficMode: "canon",
-  allowedDeviations: ["Protagonist may have an original sibling not in canon"],
-};
+// Every fanfic mode, not just "canon": MODE_PREAMBLES_EN (fanfic-prompt-sections.ts
+// ~26) and MODE_CHECKS_EN (~169) are keyed by mode, so a single-mode fixture leaves
+// three of the four bodies of each record unrendered and therefore unguarded.
+const FANFIC_MODES = ["canon", "au", "ooc", "cp"] as const satisfies ReadonlyArray<FanficMode>;
+
+function buildFanficContextEn(mode: FanficMode): FanficContext {
+  return {
+    fanficCanon: FANFIC_CANON_EN_BOOK,
+    fanficMode: mode,
+    allowedDeviations: ["Protagonist may have an original sibling not in canon"],
+  };
+}
 
 /**
  * Substrings that legitimately contain CJK inside an English prompt. Each entry
@@ -179,6 +186,25 @@ function stripAllowlisted(text: string): string {
   return CJK_ALLOWLIST.reduce((acc, entry) => acc.split(entry.text).join(""), text);
 }
 
+/**
+ * The English prompt surfaces this guard actually covers: the writer, planner and
+ * settler builders, plus the fanfic sections the writer prompt pulls in.
+ *
+ * KNOWN-UNGUARDED — English builders that are deliberately NOT in this list, and
+ * whose English branches are therefore not checked for untranslated content by
+ * anything in this file. They are tracked as follow-up work, not oversights:
+ *   - agents/observer-prompts.ts
+ *   - agents/continuity.ts (dimension notes)
+ *   - agents/chapter-analyzer.ts
+ *   - agents/reviser.ts
+ *   - agents/composer.ts
+ *   - agents/polisher.ts
+ *   - agents/state-validator.ts
+ *   - agents/foundation-reviewer.ts
+ *   - agents/architect.ts
+ * Adding one here is the right way to close a gap; do not read this list's
+ * absence of a builder as evidence that builder is clean.
+ */
 const ENGLISH_PROMPTS: ReadonlyArray<{ readonly name: string; readonly build: () => string }> = [
   {
     name: "writer system prompt (governed)",
@@ -209,8 +235,8 @@ const ENGLISH_PROMPTS: ReadonlyArray<{ readonly name: string; readonly build: ()
       "governed",
     ),
   },
-  {
-    name: "writer system prompt (fanfic context: canon section, mode instructions, character voice profiles)",
+  ...FANFIC_MODES.map((mode) => ({
+    name: `writer system prompt (fanfic context, mode "${mode}": canon section, mode instructions, character voice profiles)`,
     build: () => buildWriterSystemPrompt(
       BOOK,
       GENRE,
@@ -221,9 +247,26 @@ const ENGLISH_PROMPTS: ReadonlyArray<{ readonly name: string; readonly build: ()
       undefined,
       4,
       "full",
-      FANFIC_CONTEXT_EN,
+      buildFanficContextEn(mode),
       "en",
       "governed",
+    ),
+  })),
+  // mode "creative" — every other writer fixture here passes "full", so
+  // buildEnglishCreativeOutputFormat (writer-prompts.ts ~574) was never rendered.
+  {
+    name: "writer system prompt (creative mode output format)",
+    build: () => buildWriterSystemPrompt(
+      BOOK, GENRE, null, "", "", "", undefined, 4, "creative", undefined, "en", "governed",
+    ),
+  },
+  // numericalSystem: true — every other writer fixture here uses GENRE, whose
+  // numericalSystem is false, so buildEnglishOutputFormat's numeric branch
+  // (POST_SETTLEMENT resource-ledger rows + UPDATED_LEDGER) was never rendered.
+  {
+    name: "writer system prompt (numeric genre output format)",
+    build: () => buildWriterSystemPrompt(
+      BOOK, GENRE_NUMERIC, null, "", "", "", undefined, 4, "full", undefined, "en", "governed",
     ),
   },
   { name: "golden opening discipline", build: () => buildGoldenOpeningDiscipline(1, "en") },
@@ -269,7 +312,7 @@ const ENGLISH_PROMPTS: ReadonlyArray<{ readonly name: string; readonly build: ()
   },
 ];
 
-describe("English prompts carry no untranslated content", () => {
+describe("English writer / planner / settler prompts carry no untranslated content", () => {
   for (const { name, build } of ENGLISH_PROMPTS) {
     it(`${name} contains no non-ASCII leaks`, () => {
       const offending = stripAllowlisted(build())
@@ -285,4 +328,50 @@ describe("English prompts carry no untranslated content", () => {
       expect(offending, `character-counted lengths in ${name}`).toEqual([]);
     });
   }
+});
+
+// A fixture that silently makes its builder return "" passes every check above
+// while guarding nothing — that is exactly how eight defects survived on this
+// branch. These assertions pin the marker text of each conditional branch the
+// fixtures above exist to reach, so a fixture that stops reaching it fails here.
+describe("parity fixtures actually render the branches they claim", () => {
+  const byName = (name: string): string => {
+    const entry = ENGLISH_PROMPTS.find((p) => p.name === name);
+    if (!entry) throw new Error(`no ENGLISH_PROMPTS entry named "${name}"`);
+    return entry.build();
+  };
+
+  const MODE_MARKERS: Record<FanficMode, ReadonlyArray<string>> = {
+    canon: ["canon-compliant fanfic", "Canon compliance check"],
+    au: ["AU (alternate-universe) fanfic", "AU deviation list"],
+    ooc: ["OOC fanfic", "OOC deviation log"],
+    cp: ["CP (pairing) fanfic", "CP interaction check"],
+  };
+
+  for (const mode of FANFIC_MODES) {
+    it(`fanfic mode "${mode}" renders its preamble and its self-check`, () => {
+      const prompt = byName(
+        `writer system prompt (fanfic context, mode "${mode}": canon section, mode instructions, character voice profiles)`,
+      );
+      for (const marker of MODE_MARKERS[mode]) {
+        expect(prompt, `mode "${mode}" marker missing`).toContain(marker);
+      }
+    });
+  }
+
+  it("creative mode renders buildEnglishCreativeOutputFormat", () => {
+    const prompt = byName("writer system prompt (creative mode output format)");
+    expect(prompt).toContain("=== PRE_WRITE_CHECK ===");
+    expect(prompt).toContain(
+      "Output only the three blocks above (PRE_WRITE_CHECK, CHAPTER_TITLE, CHAPTER_CONTENT)",
+    );
+    // The full-mode blocks must be absent, otherwise the fixture took the wrong branch.
+    expect(prompt).not.toContain("=== UPDATED_STATE ===");
+  });
+
+  it("numeric genre renders the numeric branch of buildEnglishOutputFormat", () => {
+    const prompt = byName("writer system prompt (numeric genre output format)");
+    expect(prompt).toContain("=== UPDATED_LEDGER ===");
+    expect(prompt).toContain("| Resource ledger |");
+  });
 });

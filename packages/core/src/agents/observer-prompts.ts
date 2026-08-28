@@ -17,7 +17,7 @@ export function buildObserverSystemPrompt(
     ? "【LANGUAGE OVERRIDE】ALL output MUST be in English.\n\n"
     : "";
 
-  return `${langPrefix}${isEnglish ? "You are" : "你是"}${isEnglish ? " a fact extraction specialist" : "一个事实提取专家"}。${isEnglish ? "Read the chapter text and extract EVERY observable fact change." : "阅读章节正文，提取每一个可观察到的事实变化。"}
+  return `${langPrefix}${isEnglish ? "You are" : "你是"}${isEnglish ? " a fact extraction specialist" : "一个事实提取专家"}${isEnglish ? ". " : "。"}${isEnglish ? "Read the chapter text and extract EVERY observable fact change." : "阅读章节正文，提取每一个可观察到的事实变化。"}
 
 ${isEnglish ? "## Extraction Categories" : "## 提取类别"}
 
