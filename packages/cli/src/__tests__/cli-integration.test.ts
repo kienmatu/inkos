@@ -105,6 +105,12 @@ describe("CLI integration", () => {
       expect(config.notify).toEqual([]);
     });
 
+    it("defaults a bare `inkos init` (no --lang) to the Vietnamese UI language", async () => {
+      const raw = await readFile(join(projectDir, "inkos.json"), "utf-8");
+      const config = JSON.parse(raw);
+      expect(config.language).toBe("vi");
+    });
+
     it("creates .env file", async () => {
       const envContent = await readFile(join(projectDir, ".env"), "utf-8");
       expect(envContent).toContain("INKOS_LLM_API_KEY");
