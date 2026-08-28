@@ -86,6 +86,7 @@ export function buildShortFictionOutlineSystemPrompt(language: ShortFictionLangu
       "Content comes first: the title, the opening, the pressure on the protagonist, the evidence/relationship/identity leverage, the escalation chain, the reversal chain, and the payoff landing must be strong enough to carry a single-pass full draft.",
       "Do not over-structure and do not output JSON/YAML. Write human-readable Markdown, but the chapter plan must be dense enough that a writer can draft the whole story in one pass.",
       "A short defaults to 12-18 chapters at roughly 600-800 words per chapter. The story must be complete — not the first five chapters of a novel starter kit.",
+      "A platform-ready English title is concrete and promises a specific reversal — for example \"The Ledger She Kept\", \"Nine Days to Prove It\", \"What the Night Shift Saw\". Avoid abstract one-word titles and avoid literary summaries of the theme.",
       "Return only the final story plan for the writer; do not place task restatement, analysis, or internal reasoning in the deliverable.",
     ].join("\n");
   }
@@ -242,16 +243,19 @@ export function buildShortFictionWriterSystemPrompt(language: ShortFictionLangua
   if (language === "en") {
     return [
       "You are an English short-fiction BatchWriter. You write short-story prose following the story plan.",
+      "This pipeline writes one specific engine: a vindication arc — the protagonist is pinned down, accumulates leverage, turns the tables, absorbs a counterattack, and lands a comeuppance the reader has been waiting for. Write that engine deliberately rather than treating it as generic storytelling.",
       "Write natural, native English prose. Vary sentence length; mix short punchy sentences with longer flowing ones, and keep the narrative voice consistent throughout.",
       "This is not serialized-novel continuation and not chapter synopsis. Every chapter needs drama happening on the page: character action, dialogue or reaction, a shift in the situation, and a reason to keep reading at the chapter break — that reason need not be a cliffhanger; a decision, an opened question, a discovery or dread all qualify.",
       "Keep the drama dialed up, web-fiction style: real-world pressure may be amplified as far as readers will still believe, but never so absurd that immersion breaks.",
       "The story title and chapter titles must read like platform content, not literary summaries. Keep the prose paced for mobile reading — short paragraphs, but never telegram-style fragments.",
+      "A platform-ready English title is concrete and promises a specific reversal — for example \"The Ledger She Kept\", \"Nine Days to Prove It\", \"What the Night Shift Saw\". Avoid abstract one-word titles and avoid literary summaries of the theme.",
       "The word count is a calibration, not an averaging exercise. Big scenes may run long and transitions short; a clearly short chapter usually means you wrote a synopsis and must add real scenes.",
       "Output must strictly use the specified blocks. No author notes, no word-count remarks, no review comments, no format explanations.",
     ].join("\n");
   }
   return [
     "你是中文短篇 BatchWriter。你要根据故事方案写短篇正文。",
+    "这条流水线写的是一种特定引擎：翻盘弧线——主角被压制、积累筹码、扭转局面、承受反扑，最后落下读者一直在等的那个报应。要有意识地写这个引擎，不要当成泛泛的讲故事。",
     "这不是长篇连载续写，也不是章节梗概。每章都要有当场发生的戏：人物行动、对话或反应、局面变化、章尾继续读的理由——这个理由不一定是悬崖式断章，一个决定、一个被打开的疑问、一处发现或一股不安都算。",
     "网文戏剧性要足：现实压力可以放大到读者愿意信的程度，但不能荒诞到失去代入。",
     "标题和章节标题要像平台内容，不要文艺化总结。正文保持移动端节奏，段落短但不要写成电报体。",
@@ -540,7 +544,7 @@ export function buildShortFictionDraftRevisionFollowup(
 export function buildShortFictionPackageSystemPrompt(language: ShortFictionLanguage = "zh"): string {
   if (language === "en") {
     return [
-      "You are a short-fiction packaging editor. From the final draft you produce the synopsis, the selling points, and the cover-image prompt.",
+      "You are a short-fiction packaging editor. From the final draft you produce the synopsis, the store-listing description bullets, and the cover-image prompt.",
       "Never invent a main title different from the draft's. All packaging must revolve around the draft's actual title and plot.",
       "Think of the cover prompt as a mobile portrait book cover: 3:4 vertical, a large title zone, strong character emotion, one or two instantly recognizable props, high-contrast colors — not a movie poster.",
     ].join("\n");
@@ -573,7 +577,7 @@ export function buildShortFictionPackageUserPrompt(
       "=== SHORT_FICTION_INTRO ===",
       "A 70-120 word platform synopsis that grabs the conflict, the pressure, and the payoff — never a spoiler-filled play-by-play.",
       "=== SHORT_FICTION_SELLING_POINTS ===",
-      "- 3 to 6 selling points, one per line",
+      "- 3 to 6 one-line hooks for the product description's bullet list, one per line — each names a concrete promise (a reversal, a stake, a question), not a genre label",
       "=== SHORT_FICTION_COVER_PROMPT ===",
       "An English cover-generation prompt: 3:4 portrait, main title zone, character emotion, props, color palette, typography style, and what to avoid.",
     ].join("\n");

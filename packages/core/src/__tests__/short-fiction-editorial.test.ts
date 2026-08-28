@@ -15,6 +15,8 @@ import { ShortRunActionPayloadSchema } from "../interaction/action-envelope.js";
 import {
   buildShortFictionDraftContinuationUserPrompt,
   buildShortFictionWriterSystemPrompt,
+  buildShortFictionOutlineSystemPrompt,
+  buildShortFictionPackageUserPrompt,
 } from "../prompts/short-fiction.js";
 
 describe("English format re-cut", () => {
@@ -188,5 +190,39 @@ describe("batch-mode chapter shaping", () => {
     expect(repairDefault).not.toMatch(/not every (chapter )?break is a bang/i);
     expect(repairDefault).not.toMatch(/do not (re)?open .* by summari[sz]ing/i);
     expect(batch).not.toBe(repairDefault);
+  });
+});
+
+describe("genre engine is named, not implied", () => {
+  it("tells the writer which engine it is running", () => {
+    const en = buildShortFictionWriterSystemPrompt("en");
+    const zh = buildShortFictionWriterSystemPrompt("zh");
+
+    expect(en).toMatch(/vindication|comeuppance/i);
+    expect(en).toMatch(/pinned down|suppressed/i);
+    expect(zh).toContain("翻盘");
+  });
+
+  it("gives concrete English title examples instead of asserting platform-ready", () => {
+    const writer = buildShortFictionWriterSystemPrompt("en");
+    const outline = buildShortFictionOutlineSystemPrompt("en");
+    const examples = /".+?"/g;
+
+    expect(outline.match(examples)?.length ?? 0).toBeGreaterThanOrEqual(3);
+    expect(`${writer}${outline}`).toMatch(/for example|such as|e\.g\./i);
+  });
+});
+
+describe("selling points are aimed at an English listing", () => {
+  it("asks for description bullets, not distribution-editor selling points", () => {
+    const en = buildShortFictionPackageUserPrompt({
+      direction: "A courier discovers the parcels are evidence",
+      outlineMarkdown: "## Plan",
+      draftMarkdown: "# Parcel\n\n## Chapter 1\nprose",
+      draftTitle: "Parcel",
+    }, "en");
+
+    expect(en).toMatch(/product description|listing|store page/i);
+    expect(en).toContain("=== SHORT_FICTION_SELLING_POINTS ===");
   });
 });
