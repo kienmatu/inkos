@@ -51,7 +51,7 @@ export function buildWriterSystemPrompt(
         buildChapterMemoContract("en", governed),
         buildLengthGuidance(resolvedLengthSpec, "en"),
         buildGoldenOpeningDiscipline(chapterNumber, "en"),
-        buildGenreRules(genreProfile, genreBody),
+        buildGenreRules(genreProfile, genreBody, "en"),
         buildProtagonistRules(bookRules),
         buildNarrativePersonRule(bookRules, isEnglish ? "en" : "zh"),
         buildBookRulesBody(bookRulesBody),
@@ -225,7 +225,29 @@ function buildFullCastTracking(): string {
 // Genre-specific rules
 // ---------------------------------------------------------------------------
 
-function buildGenreRules(gp: GenreProfile, genreBody: string): string {
+function buildGenreRules(gp: GenreProfile, genreBody: string, language: "zh" | "en" = "zh"): string {
+  if (language === "en") {
+    const fatigueLineEn = gp.fatigueWords.length > 0
+      ? `- High-fatigue words (${gp.fatigueWords.join(", ")}): at most 1 occurrence per chapter`
+      : "";
+
+    const chapterTypesLineEn = gp.chapterTypes.length > 0
+      ? `Decide this chapter's type before you start writing:\n${gp.chapterTypes.map(t => `- ${t}`).join("\n")}`
+      : "";
+
+    const pacingLineEn = gp.pacingRule
+      ? `- Pacing rule: ${gp.pacingRule}`
+      : "";
+
+    return [
+      `## Genre conventions (${gp.name})`,
+      fatigueLineEn,
+      pacingLineEn,
+      chapterTypesLineEn,
+      genreBody,
+    ].filter(Boolean).join("\n\n");
+  }
+
   const fatigueLine = gp.fatigueWords.length > 0
     ? `- 高疲劳词（${gp.fatigueWords.join("、")}）单章最多出现1次`
     : "";
