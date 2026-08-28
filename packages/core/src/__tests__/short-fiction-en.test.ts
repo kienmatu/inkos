@@ -176,15 +176,15 @@ describe("short-fiction runner English branch", () => {
     return { planner: context, outlineReview: context, writer: context, draftReview: context, revise: context, package: context };
   }
 
-  it("bounds en charsPerChapter in words (600-800), rejecting the zh char range", async () => {
+  it("bounds en charsPerChapter in words (900-1500), rejecting values outside the range", async () => {
     await expect(runShortFictionProduction({
       projectRoot: root,
       direction: "haunted elevator",
       language: "en",
-      charsPerChapter: 1000,
+      charsPerChapter: 1600,
       cover: false,
       runtimes: runtimes(root),
-    })).rejects.toThrow(/charsPerChapter must be an integer between 600 and 800/);
+    })).rejects.toThrow(/charsPerChapter must be an integer between 900 and 1500/);
   });
 
   it("threads language and the en word default through the pipeline and artifacts", async () => {
@@ -221,7 +221,7 @@ describe("short-fiction runner English branch", () => {
       runtimes: runtimes(root),
     });
 
-    expect(writeDraft).toHaveBeenCalledWith(expect.objectContaining({ language: "en", charsPerChapter: 650 }));
+    expect(writeDraft).toHaveBeenCalledWith(expect.objectContaining({ language: "en", charsPerChapter: 1200 }));
     const final = await readFile(join(root, "shorts", "extra-floor", "final", "full.md"), "utf-8");
     expect(final).toContain("## Chapter 12: Room 12");
     expect(CJK.test(final)).toBe(false);

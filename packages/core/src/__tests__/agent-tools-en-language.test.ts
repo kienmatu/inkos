@@ -178,7 +178,7 @@ describe("agent tools language wiring (en parity)", () => {
         direction: "an office suspense story about forged expense records",
         language: "en",
         chapters: 12,
-        charsPerChapter: 650,
+        charsPerChapter: 1200,
         cover: false,
       },
     } as any);
@@ -188,7 +188,7 @@ describe("agent tools language wiring (en parity)", () => {
       actionPayload: {
         shortRun: {
           language: "en",
-          charsPerChapter: 650,
+          charsPerChapter: 1200,
         },
       },
     });
@@ -202,7 +202,7 @@ describe("agent tools language wiring (en parity)", () => {
         title: "The Missing Ledger",
         direction: "an office suspense story about forged expense records",
         chapters: 12,
-        charsPerChapter: 650,
+        charsPerChapter: 1200,
         cover: false,
       },
     } as any);
@@ -221,7 +221,7 @@ describe("agent tools language wiring (en parity)", () => {
         direction: "an English office suspense story about forged expense records",
         language: "en",
         chapters: 12,
-        charsPerChapter: 650,
+        charsPerChapter: 1200,
         cover: false,
       },
     } as any);
@@ -231,7 +231,7 @@ describe("agent tools language wiring (en parity)", () => {
       actionPayload: {
         shortRun: {
           language: "en",
-          charsPerChapter: 650,
+          charsPerChapter: 1200,
         },
       },
     });
@@ -281,7 +281,7 @@ describe("agent tools language wiring (en parity)", () => {
           direction: "an English office thriller",
           language: "en",
           chapters: 12,
-          charsPerChapter: 650,
+          charsPerChapter: 1200,
           cover: false,
         },
       } as any,
@@ -291,7 +291,7 @@ describe("agent tools language wiring (en parity)", () => {
 
     expect(runShortFictionProductionMock.mock.calls[0]![0]).toMatchObject({
       language: "en",
-      charsPerChapter: 650,
+      charsPerChapter: 1200,
     });
   });
 

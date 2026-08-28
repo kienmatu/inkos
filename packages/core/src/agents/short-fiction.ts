@@ -19,20 +19,29 @@ import {
   buildShortFictionWriterUserPrompt,
 } from "../prompts/short-fiction.js";
 
-export const SHORT_FICTION_DEFAULT_CHAPTERS = 12;
-export const SHORT_FICTION_MIN_CHAPTERS = 12;
+// 10 x 1200 words = ~12,000 words, which is the Kindle Short Reads / novelette
+// shape this pipeline actually produces — not a serial, which is what the old
+// 12-18 x 650 implied. The 18 ceiling stays for users who want a longer piece.
+export const SHORT_FICTION_DEFAULT_CHAPTERS = 10;
+export const SHORT_FICTION_MIN_CHAPTERS = 8;
 export const SHORT_FICTION_MAX_CHAPTERS = 18;
 export const SHORT_FICTION_DEFAULT_CHARS_PER_CHAPTER = 1000;
 export const SHORT_FICTION_MIN_CHARS_PER_CHAPTER = 900;
 export const SHORT_FICTION_MAX_CHARS_PER_CHAPTER = 1200;
 
-// English shorts are calibrated in words, not characters. length-metrics.ts pins
-// the full-length chapter defaults at zh 3000 chars ≈ en 2000 words (a 2/3 ratio),
-// so the zh short range of 900/1000/1200 chars per chapter converts to
-// 600/650/800 words per chapter (1000 × 2/3 ≈ 667, rounded down to 650).
-export const SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER = 650;
-export const SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER = 600;
-export const SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER = 800;
+// English shorts are calibrated to the English market, NOT unit-converted from
+// the Chinese numbers above. The old 600/650/800 range came from a 2/3 word
+// conversion of the zh format, which is linguistically reasonable and
+// commercially meaningless: it landed at or below the floor of every English
+// platform. Royal Road runs 1,500-3,500 words per chapter, Wattpad 1,000-3,000,
+// Dreame/GoodNovel 1,500-2,500; Kindle Vella allowed 600 as a hard minimum and
+// shut down in 2025. A 650-word chapter is also too small to hold the staged
+// scene the craft prompt demands, which forced the model into the synopsis voice
+// that same prompt forbids.
+// See docs/superpowers/specs/2026-08-28-short-fiction-editorial-review.md.
+export const SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER = 1200;
+export const SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER = 900;
+export const SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER = 1500;
 
 // Conservative per-call output budget. Endpoints that ignore max_tokens and
 // enforce their own have been observed cutting at roughly 1,300-2,000 tokens.
