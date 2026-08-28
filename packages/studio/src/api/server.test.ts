@@ -1273,6 +1273,43 @@ describe("createStudioServer daemon lifecycle", () => {
     );
   });
 
+  it("falls back to configured model ids when the custom probe comes back empty", async () => {
+    await writeFile(join(root, "inkos.json"), JSON.stringify({
+      ...projectConfig,
+      llm: {
+        services: [
+          {
+            service: "custom",
+            name: "9router",
+            baseUrl: "https://9router.example/v1",
+            models: ["cc/claude-opus-5"],
+          },
+        ],
+      },
+    }, null, 2), "utf-8");
+    loadSecretsMock.mockResolvedValue({
+      services: {
+        "custom:9router": { apiKey: "sk-9router" },
+      },
+    });
+    probeModelsFromUpstreamMock.mockResolvedValueOnce([]);
+
+    const { createStudioServer } = await import("./server.js");
+    const app = createStudioServer(cloneProjectConfig() as never, root);
+
+    const response = await app.request("http://localhost/api/v1/services/models/custom");
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      groups: [
+        {
+          service: "custom:9router",
+          label: "9router",
+          models: [{ id: "cc/claude-opus-5", name: "cc/claude-opus-5" }],
+        },
+      ],
+    });
+  });
+
   it("filters non-text models out of live service model lists", async () => {
     loadSecretsMock.mockResolvedValue({ services: { google: { apiKey: "sk-google" } } });
     listModelsForServiceMock.mockResolvedValueOnce([

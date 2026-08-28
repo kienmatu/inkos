@@ -3955,16 +3955,30 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
         id: `custom:${s.name ?? "Custom"}`,
         baseUrl: s.baseUrl ?? "",
         label: s.name ?? "Custom",
+        configuredModels: s.models ?? [],
       }))
-      .filter((s) => s.baseUrl && Boolean(secrets.services[s.id]?.apiKey));
+      .filter((s) => {
+        if (!s.baseUrl) return false;
+        if (secrets.services[s.id]?.apiKey) return true;
+        // Local/self-hosted endpoints are usable without a key.
+        return isApiKeyOptionalForEndpoint({
+          provider: resolveServiceProviderFamily("custom") ?? "openai",
+          baseUrl: s.baseUrl,
+        });
+      });
 
-    const groups = await Promise.all(customs.map(async (s) => ({
-      service: s.id,
-      label: s.label,
-      models: filterTextChatModels(
-        await probeModelsFromUpstream(s.baseUrl, secrets.services[s.id].apiKey, 10_000),
-      ),
-    })));
+    const groups = await Promise.all(customs.map(async (s) => {
+      const probed = filterTextChatModels(
+        await probeModelsFromUpstream(s.baseUrl, secrets.services[s.id]?.apiKey ?? "", 10_000),
+      );
+      // The probe swallows every failure (timeout, offline upstream, bad
+      // gateway) and returns []. Without the configured ids as a fallback a
+      // single slow reload empties the model picker, so the UI drops back to
+      // "set up models" even though the service is configured.
+      const models = mergeServiceModelIds(probed.map((model) => model.id), s.configuredModels)
+        .map((id) => probed.find((model) => model.id.toLowerCase() === id.toLowerCase()) ?? { id, name: id });
+      return { service: s.id, label: s.label, models };
+    }));
 
     return c.json({ groups });
   });
