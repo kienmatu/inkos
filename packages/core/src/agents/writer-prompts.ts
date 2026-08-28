@@ -70,16 +70,16 @@ export function buildWriterSystemPrompt(
         buildChapterMemoContract("zh", governed),
         buildLengthGuidance(resolvedLengthSpec, "zh"),
         buildGoldenOpeningDiscipline(chapterNumber, "zh"),
-        bookRules?.enableFullCastTracking ? buildFullCastTracking() : "",
-        buildGenreRules(genreProfile, genreBody),
-        buildProtagonistRules(bookRules),
+        bookRules?.enableFullCastTracking ? buildFullCastTracking("zh") : "",
+        buildGenreRules(genreProfile, genreBody, "zh"),
+        buildProtagonistRules(bookRules, "zh"),
         buildNarrativePersonRule(bookRules, isEnglish ? "en" : "zh"),
-        buildBookRulesBody(bookRulesBody),
-        buildStyleGuide(styleGuide),
-        buildStyleFingerprint(styleFingerprint),
-        fanficContext ? buildFanficCanonSection(fanficContext.fanficCanon, fanficContext.fanficMode) : "",
-        fanficContext ? buildCharacterVoiceProfiles(fanficContext.fanficCanon) : "",
-        fanficContext ? buildFanficModeInstructions(fanficContext.fanficMode, fanficContext.allowedDeviations) : "",
+        buildBookRulesBody(bookRulesBody, "zh"),
+        buildStyleGuide(styleGuide, "zh"),
+        buildStyleFingerprint(styleFingerprint, "zh"),
+        fanficContext ? buildFanficCanonSection(fanficContext.fanficCanon, fanficContext.fanficMode, "zh") : "",
+        fanficContext ? buildCharacterVoiceProfiles(fanficContext.fanficCanon, "zh") : "",
+        fanficContext ? buildFanficModeInstructions(fanficContext.fanficMode, fanficContext.allowedDeviations, "zh") : "",
         // Pre-write checklist moved to style_guide.md (v10)
         outputSection,
       ];
@@ -213,7 +213,7 @@ The discipline that runs across all three opening chapters: paragraphs of three 
 // Full cast tracking (conditional)
 // ---------------------------------------------------------------------------
 
-function buildFullCastTracking(language: "zh" | "en" = "zh"): string {
+export function buildFullCastTracking(language: "zh" | "en" = "en"): string {
   if (language === "en") {
     return `## Full-cast tracking
 
@@ -235,7 +235,7 @@ This book has full-cast tracking mode enabled. At the end of each chapter, POST_
 // Genre-specific rules
 // ---------------------------------------------------------------------------
 
-function buildGenreRules(gp: GenreProfile, genreBody: string, language: "zh" | "en" = "zh"): string {
+export function buildGenreRules(gp: GenreProfile, genreBody: string, language: "zh" | "en" = "en"): string {
   if (language === "en") {
     const fatigueLineEn = gp.fatigueWords.length > 0
       ? `- Overuse-prone words (${gp.fatigueWords.join(", ")}): at most once per chapter`
@@ -300,7 +300,7 @@ function buildNarrativePersonRule(bookRules: BookRules | null, language: "zh" | 
 }
 
 
-function buildProtagonistRules(bookRules: BookRules | null, language: "zh" | "en" = "zh"): string {
+export function buildProtagonistRules(bookRules: BookRules | null, language: "zh" | "en" = "en"): string {
   if (!bookRules?.protagonist) return "";
 
   const p = bookRules.protagonist;
@@ -362,7 +362,7 @@ function buildProtagonistRules(bookRules: BookRules | null, language: "zh" | "en
 // Book rules body (user-written markdown)
 // ---------------------------------------------------------------------------
 
-function buildBookRulesBody(body: string, language: "zh" | "en" = "zh"): string {
+export function buildBookRulesBody(body: string, language: "zh" | "en" = "en"): string {
   if (!body) return "";
   if (language === "en") return `## Book-specific rules\n\n${body}`;
   return `## 本书专属规则\n\n${body}`;
@@ -372,7 +372,7 @@ function buildBookRulesBody(body: string, language: "zh" | "en" = "zh"): string 
 // Style guide
 // ---------------------------------------------------------------------------
 
-function buildStyleGuide(styleGuide: string, language: "zh" | "en" = "zh"): string {
+export function buildStyleGuide(styleGuide: string, language: "zh" | "en" = "en"): string {
   if (!styleGuide || styleGuide === "(文件尚未创建)") return "";
   if (language === "en") return `## Style guide\n\n${styleGuide}`;
   return `## 文风指南\n\n${styleGuide}`;
@@ -382,7 +382,7 @@ function buildStyleGuide(styleGuide: string, language: "zh" | "en" = "zh"): stri
 // Style fingerprint (Phase 9: C3)
 // ---------------------------------------------------------------------------
 
-function buildStyleFingerprint(fingerprint?: string, language: "zh" | "en" = "zh"): string {
+export function buildStyleFingerprint(fingerprint?: string, language: "zh" | "en" = "en"): string {
   if (!fingerprint) return "";
 
   if (language === "en") {

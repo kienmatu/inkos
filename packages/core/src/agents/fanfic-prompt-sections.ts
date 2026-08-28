@@ -49,7 +49,7 @@ const MODE_PREAMBLES_EN: Record<FanficMode, string> = {
 export function buildFanficCanonSection(
   fanficCanon: string,
   mode: FanficMode,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" = "en",
 ): string {
   if (language === "en") {
     return `
@@ -84,7 +84,7 @@ ${fanficCanon}`;
 // needs a language branch before this marker can be translated safely).
 export function buildCharacterVoiceProfiles(
   fanficCanon: string,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" = "en",
 ): string {
   // Extract character table from fanfic_canon.md
   const tableMatch = fanficCanon.match(
@@ -183,7 +183,7 @@ const MODE_CHECKS_EN: Record<FanficMode, string> = {
 export function buildFanficModeInstructions(
   mode: FanficMode,
   allowedDeviations: ReadonlyArray<string>,
-  language: "zh" | "en" = "zh",
+  language: "zh" | "en" = "en",
 ): string {
   if (language === "en") {
     const deviationsBlockEn = allowedDeviations.length > 0

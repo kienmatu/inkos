@@ -1,7 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { buildWriterSystemPrompt, buildGoldenOpeningDiscipline, type FanficContext } from "../agents/writer-prompts.js";
+import {
+  buildWriterSystemPrompt,
+  buildGoldenOpeningDiscipline,
+  buildFullCastTracking,
+  buildGenreRules,
+  buildProtagonistRules,
+  buildBookRulesBody,
+  buildStyleGuide,
+  buildStyleFingerprint,
+  type FanficContext,
+} from "../agents/writer-prompts.js";
 import { buildGoldenOpeningGuidance, getPlannerMemoSystemPrompt, getPlannerMemoUserTemplate } from "../agents/planner-prompts.js";
 import { buildSettlerSystemPrompt, buildSettlerUserPrompt } from "../agents/settler-prompts.js";
+import {
+  buildFanficCanonSection,
+  buildCharacterVoiceProfiles,
+  buildFanficModeInstructions,
+} from "../agents/fanfic-prompt-sections.js";
 import type { BookConfig, FanficMode } from "../models/book.js";
 import type { GenreProfile } from "../models/genre-profile.js";
 import type { BookRules } from "../models/book-rules.js";
@@ -373,5 +388,69 @@ describe("parity fixtures actually render the branches they claim", () => {
     const prompt = byName("writer system prompt (numeric genre output format)");
     expect(prompt).toContain("=== UPDATED_LEDGER ===");
     expect(prompt).toContain("| Resource ledger |");
+  });
+});
+
+// AGENTS.md "Language defaults in code": a function that takes a language and
+// can be called without one must default to "en". These builders in
+// writer-prompts.ts and fanfic-prompt-sections.ts used to default to "zh"; a
+// forgotten argument at any call site would have silently emitted Chinese into
+// an English path. These tests call each affected builder with the language
+// argument omitted and assert the output is actually English (no CJK, or a
+// known English marker) — not a source-grep for "= \"en\"", which would pass
+// even for a builder that ignores its own default.
+describe("prompt builders default their omitted language argument to English", () => {
+  it("buildFullCastTracking() defaults to English", () => {
+    const prompt = buildFullCastTracking();
+    expect(prompt).toContain("## Full-cast tracking");
+    expect(stripAllowlisted(prompt).split("\n").some(hasDisallowedNonAscii)).toBe(false);
+  });
+
+  it("buildGenreRules(gp, genreBody) defaults to English", () => {
+    const prompt = buildGenreRules(GENRE, "Extra genre body text.");
+    expect(prompt).toContain("## Genre conventions");
+    expect(stripAllowlisted(prompt).split("\n").some(hasDisallowedNonAscii)).toBe(false);
+  });
+
+  it("buildProtagonistRules(bookRules) defaults to English", () => {
+    const prompt = buildProtagonistRules(BOOK_RULES_WRITER_FULL);
+    expect(prompt).toContain("## Protagonist hard rules");
+    expect(stripAllowlisted(prompt).split("\n").some(hasDisallowedNonAscii)).toBe(false);
+  });
+
+  it("buildBookRulesBody(body) defaults to English", () => {
+    const prompt = buildBookRulesBody(BOOK_RULES_BODY_EN);
+    expect(prompt).toContain("## Book-specific rules");
+    expect(stripAllowlisted(prompt).split("\n").some(hasDisallowedNonAscii)).toBe(false);
+  });
+
+  it("buildStyleGuide(styleGuide) defaults to English", () => {
+    const prompt = buildStyleGuide(STYLE_GUIDE_EN);
+    expect(prompt).toContain("## Style guide");
+    expect(stripAllowlisted(prompt).split("\n").some(hasDisallowedNonAscii)).toBe(false);
+  });
+
+  it("buildStyleFingerprint(fingerprint) defaults to English", () => {
+    const prompt = buildStyleFingerprint(STYLE_FINGERPRINT_EN);
+    expect(prompt).toContain("## Style fingerprint");
+    expect(stripAllowlisted(prompt).split("\n").some(hasDisallowedNonAscii)).toBe(false);
+  });
+
+  it("buildFanficCanonSection(canon, mode) defaults to English", () => {
+    const prompt = buildFanficCanonSection(FANFIC_CANON_EN_BOOK, "canon");
+    expect(prompt).toContain("## Fanfic Canon Reference");
+    expect(stripAllowlisted(prompt).split("\n").some(hasDisallowedNonAscii)).toBe(false);
+  });
+
+  it("buildCharacterVoiceProfiles(canon) defaults to English", () => {
+    const prompt = buildCharacterVoiceProfiles(FANFIC_CANON_EN_BOOK);
+    expect(prompt).toContain("## Character Voice Reference");
+    expect(stripAllowlisted(prompt).split("\n").some(hasDisallowedNonAscii)).toBe(false);
+  });
+
+  it("buildFanficModeInstructions(mode, allowedDeviations) defaults to English", () => {
+    const prompt = buildFanficModeInstructions("canon", ["Protagonist may have an original sibling not in canon"]);
+    expect(prompt).toContain("## Fanfic Self-Check");
+    expect(stripAllowlisted(prompt).split("\n").some(hasDisallowedNonAscii)).toBe(false);
   });
 });

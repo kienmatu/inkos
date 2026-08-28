@@ -49,11 +49,9 @@ briefs. The distinction is guessing versus narrowing: a function handed a langua
 merely narrow has no license to fall back to Chinese, while a function inferring one from
 ambiguous input does.
 
-**Known deviation:** several prompt builders in `agents/writer-prompts.ts` and
-`agents/fanfic-prompt-sections.ts` currently declare `language: "zh" | "en" = "zh"`. They
-are safe today because every call site passes the argument explicitly, and
-`__tests__/en-prompt-parity.test.ts` renders the English path. They should be flipped to
-`"en"`; until they are, do not copy that shape into new code.
+Every language parameter with a default in `agents/writer-prompts.ts` and
+`agents/fanfic-prompt-sections.ts` now defaults to `"en"`; `inferLanguage()` is the sole
+intentional `"zh"` default, kept for the guessing-versus-narrowing reason above.
 
 ### Prompt parity
 
