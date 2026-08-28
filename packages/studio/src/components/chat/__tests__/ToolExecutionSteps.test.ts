@@ -13,6 +13,13 @@ const makeExec = (overrides: Partial<ToolExecution> & { id: string; tool: string
   ...overrides,
 });
 
+// This file's assertions are written against the Chinese labels; reset the
+// module-level default (now "vi") to "zh" before each test so tests that
+// don't switch languages themselves keep exercising the zh path.
+beforeEach(() => {
+  setAppLanguage("zh");
+});
+
 describe("groupChronologically", () => {
   it("keeps read before pipeline when read happened first", () => {
     const execs: ToolExecution[] = [

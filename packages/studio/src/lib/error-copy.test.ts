@@ -1,5 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeEach } from "vitest";
 import { localizeKnownRuntimeMessage } from "./error-copy";
+import { setAppLanguage } from "./app-language";
+
+// This file asserts the Chinese-localized runtime messages; reset the
+// module-level default (now "vi") to "zh" before each test.
+beforeEach(() => {
+  setAppLanguage("zh");
+});
 
 describe("localizeKnownRuntimeMessage", () => {
   it("localizes the state-degraded continuation blocker", () => {

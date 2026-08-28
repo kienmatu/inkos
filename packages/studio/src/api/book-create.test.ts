@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { defaultChapterLength } from "@actalk/inkos-core";
 import { buildStudioBookConfig, normalizeStudioPlatform, waitForStudioBookReady } from "./book-create";
 
 describe("normalizeStudioPlatform", () => {
@@ -50,6 +51,85 @@ describe("buildStudioBookConfig", () => {
     expect(config.platform).toBe("other");
     expect(config.language).toBe("en");
     expect(config.id).toBe("english-book");
+  });
+
+  it("normalizes a Vietnamese UI language to English, never Chinese (CRITICAL 1)", () => {
+    // "vi" is a UI-only language; no book is ever written in Vietnamese.
+    // toWritingLanguage maps anything that isn't "zh" (including "vi") to "en".
+    const config = buildStudioBookConfig(
+      {
+        title: "Vietnamese UI Book",
+        genre: "other",
+        language: "vi",
+      },
+      "2026-03-30T00:00:00.000Z",
+    );
+
+    expect(config.language).toBe("en");
+    expect(config.language).not.toBe("vi");
+    expect(config.language).not.toBe("zh");
+    // The chapter-length default must also follow English, not fall back to Chinese.
+    expect(config.chapterWordCount).toBe(defaultChapterLength("en"));
+  });
+
+  describe("language/chapterWordCount consistency (regression)", () => {
+    // When body.language is genuinely OMITTED, the language field is deferred
+    // to the genre profile (which defaults to "zh"), so chapterWordCount must
+    // defer to the SAME default -- not silently flip to the English default
+    // just because toWritingLanguage(undefined) resolves to "en".
+    it("omitted language: defers chapterWordCount to the Chinese default and sets no language field", () => {
+      const config = buildStudioBookConfig(
+        { title: "No Language Book", genre: "other" },
+        "2026-03-30T00:00:00.000Z",
+      );
+
+      expect(config.language).toBeUndefined();
+      expect(config.chapterWordCount).toBe(defaultChapterLength("zh"));
+      expect(config.chapterWordCount).toBe(3000);
+    });
+
+    it('language: "vi": normalizes to "en" language and the English chapterWordCount default', () => {
+      const config = buildStudioBookConfig(
+        { title: "Vi Book", genre: "other", language: "vi" },
+        "2026-03-30T00:00:00.000Z",
+      );
+
+      expect(config.language).toBe("en");
+      expect(config.chapterWordCount).toBe(defaultChapterLength("en"));
+      expect(config.chapterWordCount).toBe(2000);
+    });
+
+    it('language: "zh": keeps "zh" language and the Chinese chapterWordCount default', () => {
+      const config = buildStudioBookConfig(
+        { title: "Zh Book", genre: "other", language: "zh" },
+        "2026-03-30T00:00:00.000Z",
+      );
+
+      expect(config.language).toBe("zh");
+      expect(config.chapterWordCount).toBe(defaultChapterLength("zh"));
+      expect(config.chapterWordCount).toBe(3000);
+    });
+
+    it('language: "en": keeps "en" language and the English chapterWordCount default', () => {
+      const config = buildStudioBookConfig(
+        { title: "En Book", genre: "other", language: "en" },
+        "2026-03-30T00:00:00.000Z",
+      );
+
+      expect(config.language).toBe("en");
+      expect(config.chapterWordCount).toBe(defaultChapterLength("en"));
+      expect(config.chapterWordCount).toBe(2000);
+    });
+
+    it("an explicit chapterWordCount always overrides the default, in every language case", () => {
+      for (const language of [undefined, "vi", "zh", "en"] as const) {
+        const config = buildStudioBookConfig(
+          { title: `Override Book ${String(language)}`, genre: "other", language, chapterWordCount: 4242 },
+          "2026-03-30T00:00:00.000Z",
+        );
+        expect(config.chapterWordCount).toBe(4242);
+      }
+    });
   });
 });
 

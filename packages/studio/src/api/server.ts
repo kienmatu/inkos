@@ -66,6 +66,7 @@ import {
   normalizeRequestedIntent as normalizeCoreRequestedIntent,
   normalizeSkillIdList as normalizeCoreSkillIdList,
   inferLanguage,
+  toWritingLanguage,
   ingestMaterial,
   createSkillRegistry,
   loadAvailableAgentSkills,
@@ -148,13 +149,18 @@ import {
 
 // -- Studio server language (read per request from the project config's `language`) --
 
-type StudioLanguage = "zh" | "en";
+// "vi" 只是界面语言；正文语言由 toWritingLanguage 归一到 zh/en。
+export type StudioLanguage = "zh" | "en" | "vi";
 
-function normalizeStudioLanguage(value: unknown): StudioLanguage {
-  return value === "en" ? "en" : "zh";
+export function normalizeStudioLanguage(value: unknown): StudioLanguage {
+  if (value === "zh") return "zh";
+  if (value === "en") return "en";
+  return "vi";
 }
 
-function pick(lang: StudioLanguage, zh: string, en: string): string {
+// 越南语缺失时回退到英文，绝不回退到中文。
+export function pick(lang: StudioLanguage, zh: string, en: string, vi?: string): string {
+  if (lang === "vi") return vi ?? en;
   return lang === "en" ? en : zh;
 }
 
@@ -163,6 +169,7 @@ function pick(lang: StudioLanguage, zh: string, en: string): string {
 interface BilingualLabel {
   readonly zh: string;
   readonly en: string;
+  readonly vi?: string;
 }
 
 const PIPELINE_STAGES: Record<string, ReadonlyArray<BilingualLabel>> = {
@@ -191,8 +198,8 @@ const PIPELINE_STAGES: Record<string, ReadonlyArray<BilingualLabel>> = {
   auditor: [{ zh: "审计章节", en: "Audit chapter" }],
 };
 
-function pipelineStages(agent: string, lang: StudioLanguage = "zh"): string[] | undefined {
-  return PIPELINE_STAGES[agent]?.map((stage) => pick(lang, stage.zh, stage.en));
+function pipelineStages(agent: string, lang: StudioLanguage = "vi"): string[] | undefined {
+  return PIPELINE_STAGES[agent]?.map((stage) => pick(lang, stage.zh, stage.en, stage.vi));
 }
 
 function attachmentDisposition(fileName: string): string {
@@ -232,13 +239,13 @@ const TOOL_LABELS: Record<string, BilingualLabel> = {
   select_narrative_branch: { zh: "采用候选分支", en: "Select candidate branch" },
 };
 
-function resolveToolLabel(tool: string, agent?: string, lang: StudioLanguage = "zh"): string {
+function resolveToolLabel(tool: string, agent?: string, lang: StudioLanguage = "vi"): string {
   if (tool === "sub_agent" && agent) {
     const label = AGENT_LABELS[agent];
-    return label ? pick(lang, label.zh, label.en) : agent;
+    return label ? pick(lang, label.zh, label.en, label.vi) : agent;
   }
   const label = TOOL_LABELS[tool];
-  return label ? pick(lang, label.zh, label.en) : tool;
+  return label ? pick(lang, label.zh, label.en, label.vi) : tool;
 }
 
 function formatTaskElapsed(ms: number, lang: StudioLanguage): string {
@@ -416,7 +423,7 @@ function normalizeApiBookId(value: unknown, fieldName: string): string | null {
   return bookId;
 }
 
-function nonTextModelMessage(modelId: string, lang: StudioLanguage = "zh"): string {
+function nonTextModelMessage(modelId: string, lang: StudioLanguage = "vi"): string {
   return pick(
     lang,
     `模型 ${modelId} 不适合文本聊天/写作。请在模型选择器中改用文本模型，例如 gemini-2.5-flash、gemini-2.5-pro 或对应服务的 chat 模型。`,
@@ -994,7 +1001,7 @@ function validateAgentActionExecution(args: {
   readonly collectedToolExecs: ReadonlyArray<CollectedToolExec>;
   readonly language?: StudioLanguage;
 }): string | undefined {
-  const lang = args.language ?? "zh";
+  const lang = args.language ?? "vi";
   const failedExec = args.collectedToolExecs.find(isLikelyFailedToolResult);
   if (failedExec) {
     const detail = failedExec.error ?? failedExec.result ?? pick(lang, "未知错误", "unknown error");
@@ -1079,7 +1086,7 @@ function classifyAgentFailure(message: string): AgentFailureKind {
 
 function formatAgentFailure(
   message: string,
-  lang: StudioLanguage = "zh",
+  lang: StudioLanguage = "vi",
 ): { readonly code: string; readonly message: string; readonly status: 409 | 500 | 502 } {
   const kind = classifyAgentFailure(message);
   if (kind === "busy") {
@@ -1197,7 +1204,7 @@ function requirePayloadText(value: string | undefined, message: string): string 
   return text;
 }
 
-function toolResultText(result: unknown, lang: StudioLanguage = "zh"): string {
+function toolResultText(result: unknown, lang: StudioLanguage = "vi"): string {
   const text = extractToolError(result).trim();
   return text || pick(lang, "已完成。", "Done.");
 }
@@ -1220,7 +1227,7 @@ async function executeConfirmedProductionAction(args: {
   readonly signal: AbortSignal;
   readonly onTaskChange: (exec: CollectedToolExec) => Promise<void>;
 }): Promise<CollectedToolExec> {
-  const lang = args.language ?? "zh";
+  const lang = args.language ?? "vi";
   const id = args.taskId;
   const actionPayload = args.actionPayload;
   const configuredSkills = await loadAvailableAgentSkills({ projectRoot: args.root });
@@ -1258,6 +1265,7 @@ async function executeConfirmedProductionAction(args: {
     const title = requirePayloadText(payload?.title, pick(lang, "确认建书缺少书名，请重新生成确认卡。", "The book creation confirmation is missing a title. Regenerate the confirmation card."));
     tool = createSubAgentTool(args.pipeline, null, args.root, {
       actionPayload,
+      language: toWritingLanguage(lang),
       workerSkills: (worker) => worker === "architect" ? productionSkills("longWriting") : [],
     });
     agent = "architect";
@@ -1277,7 +1285,7 @@ async function executeConfirmedProductionAction(args: {
     if (!direction) throw new ApiError(400, "CONFIRMED_ACTION_PAYLOAD_INCOMPLETE", pick(lang, "确认短篇缺少方向，请重新生成确认卡。", "The short fiction confirmation is missing a direction. Regenerate the confirmation card."));
     tool = createShortFictionRunTool(args.pipeline, args.root, {
       actionPayload,
-      language: lang,
+      language: toWritingLanguage(lang),
       defaultSkills: productionSkills("shortWriting"),
     });
     params = {
@@ -1294,7 +1302,7 @@ async function executeConfirmedProductionAction(args: {
     }
     const chapterCount = actionPayload?.writeNext?.chapterCount ?? 1;
     tool = createSubAgentTool(args.pipeline, args.bookId, args.root, {
-      language: lang,
+      language: toWritingLanguage(lang),
       workerSkills: (worker) => worker === "writer" ? productionSkills("longWriting") : [],
     });
     agent = "writer";
@@ -1320,7 +1328,7 @@ async function executeConfirmedProductionAction(args: {
     const title = requirePayloadText(payload?.title, pick(lang, "确认创建剧本缺少标题，请重新生成确认卡。", "The script creation confirmation is missing a title. Regenerate the confirmation card."));
     tool = createScriptCreationTool(args.pipeline, args.root, {
       actionPayload,
-      language: lang,
+      language: toWritingLanguage(lang),
       defaultSkills: productionSkills("script"),
     });
     params = {
@@ -1341,7 +1349,7 @@ async function executeConfirmedProductionAction(args: {
     const title = requirePayloadText(payload?.title, pick(lang, "确认创建分镜缺少标题，请重新生成确认卡。", "The storyboard creation confirmation is missing a title. Regenerate the confirmation card."));
     tool = createStoryboardCreationTool(args.pipeline, args.root, {
       actionPayload,
-      language: lang,
+      language: toWritingLanguage(lang),
       defaultSkills: productionSkills("storyboard"),
     });
     params = {
@@ -1363,7 +1371,7 @@ async function executeConfirmedProductionAction(args: {
     const title = requirePayloadText(payload?.title, pick(lang, "确认创建互动影游缺少标题，请重新生成确认卡。", "The interactive film confirmation is missing a title. Regenerate the confirmation card."));
     tool = createInteractiveFilmCreationTool(args.pipeline, args.root, {
       actionPayload,
-      language: lang,
+      language: toWritingLanguage(lang),
       defaultSkills: productionSkills("interactiveFilm"),
     });
     params = {
@@ -1512,7 +1520,7 @@ async function executeConfirmedProductionAction(args: {
     const deps = filmLLMDepsFromClient(agentCtx.client, agentCtx.model, {
       activatedSkills: () => productionSkills("interactiveFilm"),
     });
-    tool = createDraftStructureTool(args.root, projectId, deps, lang);
+    tool = createDraftStructureTool(args.root, projectId, deps, toWritingLanguage(lang));
     params = {
       instruction: payload?.instruction?.trim() || args.instruction,
     };
@@ -2207,7 +2215,7 @@ function shouldTrustStaticModelsWhenLiveListUnavailable(endpoint: ReturnType<typ
   return endpoint?.group === "aggregator";
 }
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string, lang: StudioLanguage = "zh"): Promise<T> {
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string, lang: StudioLanguage = "vi"): Promise<T> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
@@ -2234,7 +2242,7 @@ function formatServiceProbeError(args: {
   readonly error: string;
   readonly language?: StudioLanguage;
 }): string {
-  const lang = args.language ?? "zh";
+  const lang = args.language ?? "vi";
   const rawDetail = args.error
     .replace(/\n\s*\(baseUrl:[\s\S]*?\)$/m, "")
     .trim();
@@ -2316,7 +2324,7 @@ async function fetchModelsFromServiceBaseUrl(
   baseUrl: string,
   apiKey: string,
   proxyUrl?: string,
-  lang: StudioLanguage = "zh",
+  lang: StudioLanguage = "vi",
 ): Promise<{ models: Array<{ id: string; name: string }>; error?: string; authFailed?: boolean }> {
   const endpoint = isCustomServiceId(serviceId)
     ? undefined
@@ -2354,7 +2362,7 @@ async function fetchModelsFromServiceBaseUrl(
   }
 }
 
-function buildBearerAuthHeaders(apiKey: string | undefined, lang: StudioLanguage = "zh"): Record<string, string> {
+function buildBearerAuthHeaders(apiKey: string | undefined, lang: StudioLanguage = "vi"): Record<string, string> {
   const trimmed = apiKey?.trim() ?? "";
   if (!trimmed) return {};
   if (!/^[\x20-\x7e]+$/.test(trimmed)) {
@@ -2378,7 +2386,7 @@ async function probeServiceCapabilities(args: {
   proxyUrl?: string;
   language?: StudioLanguage;
 }): Promise<ServiceProbeResult> {
-  const lang = args.language ?? "zh";
+  const lang = args.language ?? "vi";
   const rawConfig = await loadRawConfig(args.root).catch(() => ({} as Record<string, unknown>));
   const llm = (rawConfig.llm as Record<string, unknown> | undefined) ?? {};
   const envConfig = await readEnvConfigStatus(args.root);
@@ -2715,7 +2723,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
 
   // Read the project language fresh from inkos.json on every call, so a language
   // switch takes effect on the next request instead of being frozen at startup.
-  // A missing/corrupt inkos.json means "no project language configured" -> zh.
+  // A missing/corrupt inkos.json means "no project language configured" -> vi.
   async function currentProjectLanguage(): Promise<StudioLanguage> {
     const raw = await loadRawConfig(root).catch(() => ({} as Record<string, unknown>));
     return normalizeStudioLanguage(raw.language);
@@ -4136,8 +4144,9 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
       if (updates.stream !== undefined) {
         existing.llm.stream = updates.stream;
       }
-      if (updates.language === "zh" || updates.language === "en") {
-        existing.language = updates.language;
+      const STUDIO_LANGUAGES: readonly StudioLanguage[] = ["zh", "en", "vi"];
+      if (typeof updates.language === "string" && (STUDIO_LANGUAGES as readonly string[]).includes(updates.language)) {
+        existing.language = updates.language as StudioLanguage;
       }
       const { writeFile: writeFileFs } = await import("node:fs/promises");
       await writeFileFs(configPath, JSON.stringify(existing, null, 2), "utf-8");
@@ -4683,9 +4692,22 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
           throw new ApiError(404, "BOOK_NOT_FOUND", `Book not found: ${agentBookId}`);
         }
       }
-      const configLanguage = config.language === "en" ? "en" : "zh";
+      const configLanguage = toWritingLanguage(config.language);
       const bookLanguage = activeBookConfig?.language === "en" ? "en" : activeBookConfig?.language === "zh" ? "zh" : undefined;
       const requestedLanguage = actionPayload?.shortRun?.language ?? actionPayload?.createBook?.language;
+      // NOTE: surfaceLanguage is a WRITING language ("zh"|"en"), never the UI
+      // language ("zh"|"en"|"vi") — it is built from toWritingLanguage(config.language),
+      // the book's own `language` field, or inferLanguage(), none of which can produce
+      // "vi". It is passed as `language:` into executeConfirmedProductionAction and
+      // runAgentSession below, where ~40 user-facing strings resolve via
+      // pick(lang, zh, en, vi?) keyed off THIS value. Consequence: on this call path
+      // the `vi` slot of `pick` is unreachable, and a Vietnamese-UI project that has
+      // a legacy "zh" book will see these chat/task strings in CHINESE, not Vietnamese
+      // or English. This is a known limitation, not an oversight — restructuring this
+      // call path to thread the actual UI language through is out of scope here
+      // because of how large and risky that change would be; do not "fix" it by
+      // quietly passing the UI language into `surfaceLanguage`, since production
+      // code downstream depends on it staying a writing language.
       const surfaceLanguage = agentBookId
         ? (bookLanguage ?? configLanguage)
         : (requestedLanguage ?? inferLanguage(instruction));
@@ -5302,7 +5324,15 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
   // --- Language setup ---
 
   app.post("/api/v1/project/language", async (c) => {
-    const { language } = await c.req.json<{ language: "zh" | "en" }>();
+    const { language } = await c.req.json<{ language: unknown }>();
+    // Closed whitelist, matching PUT /api/v1/project: reject unknown values
+    // instead of coercing/persisting them. This route has had no caller since
+    // the first-run LanguageSelector was deleted, but keep it hardened in case
+    // something starts calling it again.
+    const STUDIO_LANGUAGES: readonly StudioLanguage[] = ["zh", "en", "vi"];
+    if (typeof language !== "string" || !(STUDIO_LANGUAGES as readonly string[]).includes(language)) {
+      return c.json({ error: `Invalid language: ${String(language)}` }, 400);
+    }
     const configPath = join(root, "inkos.json");
     try {
       const raw = await readFile(configPath, "utf-8");
@@ -6066,7 +6096,10 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
       targetChapters: body.targetChapters ?? 100,
       chapterWordCount: body.chapterWordCount ?? 3000,
       fanficMode: (body.mode ?? "canon") as "canon",
-      ...(body.language ? { language: body.language as "zh" | "en" } : {}),
+      // body.language is a UI language ("zh"/"en"/"vi"); normalize through
+      // toWritingLanguage instead of casting, so "vi" (or any other stray
+      // value) becomes "en", never a silently-cast "vi" persisted to book.json.
+      ...(body.language !== undefined ? { language: toWritingLanguage(body.language) } : {}),
       createdAt: now,
       updatedAt: now,
     };

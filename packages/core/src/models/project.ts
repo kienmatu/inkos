@@ -131,7 +131,9 @@ export type ResearchSearchConfig = z.infer<typeof ResearchSearchConfigSchema>;
 export const ProjectConfigSchema = z.object({
   name: z.string().min(1),
   version: z.literal("0.1.0"),
-  language: z.enum(["zh", "en"]).default("zh"),
+  // "vi" is a UI-only language: Studio renders in Vietnamese, prose stays English.
+  // Book and genre-profile schemas deliberately stay ["zh","en"].
+  language: z.enum(["zh", "en", "vi"]).default("vi"),
   llm: LLMConfigSchema,
   notify: z.array(NotifyChannelSchema).default([]),
   detection: DetectionConfigSchema.optional(),

@@ -4,6 +4,7 @@ import type { Theme } from "../hooks/use-theme";
 import type { TFunction } from "../hooks/use-i18n";
 import { useColors } from "../hooks/use-colors";
 import { Pencil, Save, X } from "lucide-react";
+import { tr } from "../lib/app-language";
 
 interface TruthFile {
   readonly name: string;
@@ -144,9 +145,13 @@ export function TruthFiles({ bookId, nav, theme, t }: { bookId: string; nav: Nav
                   data-testid="legacy-shim-warning"
                   className="mb-3 px-3 py-2 rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs leading-relaxed"
                 >
-                  <div className="font-medium">兼容层只读 / Read-only compat shim</div>
+                  <div className="font-medium">{tr("兼容层只读", "Read-only compat shim", "Lớp tương thích chỉ đọc")}</div>
                   <div className="mt-1">
-                    本文件已废弃，仅供外部读取。权威来源：
+                    {tr(
+                      "本文件已废弃，仅供外部读取。权威来源：",
+                      "This file is deprecated and kept for external reads only. Authoritative source:",
+                      "Tệp này đã ngừng dùng, chỉ giữ để đọc từ bên ngoài. Nguồn chuẩn:",
+                    )}
                     <code className="ml-1 px-1 py-0.5 rounded bg-background/40 font-mono">
                       {SHIM_AUTHORITATIVE_PATH[selected] ?? "outline/"}
                     </code>
@@ -158,9 +163,13 @@ export function TruthFiles({ bookId, nav, theme, t }: { bookId: string; nav: Nav
                   data-testid="runtime-diagnostic-warning"
                   className="mb-3 px-3 py-2 rounded-md border border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300 text-xs leading-relaxed"
                 >
-                  <div className="font-medium">运行时诊断文件 / Runtime diagnostic</div>
+                  <div className="font-medium">{tr("运行时诊断文件", "Runtime diagnostic", "Tệp chẩn đoán runtime")}</div>
                   <div className="mt-1">
-                    这里展示本章写作时的上下文选择、保护层、可压缩层和预算 trace。它只用于追溯系统看了什么，不作为可编辑设定。
+                    {tr(
+                      "这里展示本章写作时的上下文选择、保护层、可压缩层和预算 trace。它只用于追溯系统看了什么，不作为可编辑设定。",
+                      "This shows the context selection, protected layers, compressible layers, and budget trace used while writing this chapter. It is a record of what the system saw, not an editable setting.",
+                      "Phần này hiển thị lựa chọn ngữ cảnh, lớp được bảo vệ, lớp có thể nén và budget trace khi viết chương này. Đây là bản ghi những gì hệ thống đã đọc, không phải thiết định có thể sửa.",
+                    )}
                   </div>
                 </div>
               )}

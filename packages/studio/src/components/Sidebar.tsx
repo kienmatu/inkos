@@ -308,7 +308,8 @@ export function Sidebar({ nav, activePage, sse, t }: {
               {t("nav.createSection")}
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-1">
+          {/* 一行一项：越南语等长标签在两列布局里会被截断。 */}
+          <div className="grid grid-cols-1 gap-0.5">
             <CreateItem icon={<BookPlus size={16} />} label={t("nav.createNovel")} active={activePage === "book-create"} onClick={handleOpenBookCreate} />
             <CreateItem icon={<ScrollText size={16} />} label={t("nav.createShort")} onClick={() => launchProjectMode("short")} />
             <CreateItem icon={<Clapperboard size={16} />} label={t("nav.createScript")} onClick={() => launchProjectMode("script")} />

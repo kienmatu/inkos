@@ -2,6 +2,7 @@ import { Command } from "commander";
 import {
   PipelineRunner,
   runAgentSession,
+  toWritingLanguage,
 } from "@actalk/inkos-core";
 import { buildPipelineConfig, createClient, findProjectRoot, loadConfig } from "../utils.js";
 
@@ -84,7 +85,7 @@ export function createInteractCommand(hooks: InteractCommandHooks = {}): Command
         sessionKind,
         actionSource,
         requestedIntent,
-        language: config.language ?? "zh",
+        language: toWritingLanguage(config.language),
         pipeline,
         projectRoot,
         model: client._piModel

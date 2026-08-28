@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { BookCreationDraft } from "@actalk/inkos-core";
+import { toWritingLanguage, type BookCreationDraft } from "@actalk/inkos-core";
 import { BookPlus, CheckCircle2, RotateCcw, Sparkles } from "lucide-react";
 import { fetchJson, useApi } from "../hooks/use-api";
 import type { Theme } from "../hooks/use-theme";
@@ -229,6 +229,15 @@ export function defaultBookCreateForm(language: "zh" | "en"): BookCreateFormStat
 
 export function platformOptionsForLanguage(language: "zh" | "en"): ReadonlyArray<PlatformOption> {
   return language === "en" ? PLATFORMS_EN : PLATFORMS_ZH;
+}
+
+// The project config's language can be "zh" | "en" | "vi" ("vi" is a UI-only
+// language — Studio renders in Vietnamese, but book content and this page's
+// own copy stay English). Route it through toWritingLanguage so a vi project
+// gets English copy, platforms, and defaults instead of an undefined
+// PAGE_COPY lookup or a silent fall-through to Chinese.
+export function resolveProjectWritingLanguage(language: string | undefined): "zh" | "en" {
+  return toWritingLanguage(language);
 }
 
 function parsePositiveInteger(value: string): number | null {
@@ -579,7 +588,7 @@ export async function waitForBookReady(
 export function BookCreate({ nav, theme, t }: { nav: Nav; theme: Theme; t: TFunction }) {
   const c = useColors(theme);
   const { data: project } = useApi<{ language: string }>("/project");
-  const projectLang = (project?.language ?? "zh") as "zh" | "en";
+  const projectLang = resolveProjectWritingLanguage(project?.language);
   const copy = PAGE_COPY[projectLang];
   const platformChoices = platformOptionsForLanguage(projectLang);
 

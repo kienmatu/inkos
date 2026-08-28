@@ -1,6 +1,12 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import { buildPartsFromEvents, type StreamEvent } from "../parts-builder";
 import { setAppLanguage } from "../../../lib/app-language";
+
+// This file's default-mode assertions are written against Chinese labels;
+// reset the module-level default (now "vi") to "zh" before each test.
+beforeEach(() => {
+  setAppLanguage("zh");
+});
 
 describe("buildPartsFromEvents", () => {
   it("produces thinking → text parts from basic conversation", () => {
