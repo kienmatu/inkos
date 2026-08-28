@@ -558,6 +558,7 @@ export class WriterAgent extends BaseAgent {
       : undefined;
 
     const settlerUser = buildSettlerUserPrompt({
+      language: resolvedLang,
       chapterNumber: params.chapterNumber,
       title: params.title,
       content: params.content,
