@@ -6,10 +6,10 @@
 <h1 align="center">Story Creation AI Agent<br><sub>面向长短篇小说、剧本剧作、互动影游、IP 内容与多语言翻译的创作智能体系统</sub></h1>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@actalk/inkos"><img src="https://img.shields.io/npm/v/@actalk/inkos.svg?color=cb3837&logo=npm" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@kienmatu/inkos"><img src="https://img.shields.io/npm/v/@kienmatu/inkos.svg?color=cb3837&logo=npm" alt="npm version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg" alt="License: AGPL-3.0"></a>
   <a href="https://github.com/Narcooo/inkos/stargazers"><img src="https://img.shields.io/github/stars/Narcooo/inkos?style=flat&logo=github&color=yellow" alt="GitHub stars"></a>
-  <a href="https://www.npmjs.com/package/@actalk/inkos"><img src="https://img.shields.io/npm/dm/@actalk/inkos?color=cb3837&logo=npm&label=downloads" alt="npm downloads"></a>
+  <a href="https://www.npmjs.com/package/@kienmatu/inkos"><img src="https://img.shields.io/npm/dm/@kienmatu/inkos?color=cb3837&logo=npm&label=downloads" alt="npm downloads"></a>
   <a href="https://clawhub.ai/narcooo/inkos"><img src="https://img.shields.io/badge/🦞%20ClawHub-Skill-FF6B35?labelColor=1a1a1a" alt="ClawHub Skill"></a>
 </p>
 
@@ -101,7 +101,7 @@ InkOS 1.8.0 把“Chat Agent 调工具”和“各类作品管线”收敛成一
 需要 **Node.js 22 或更高版本**。
 
 ```bash
-npm i -g @actalk/inkos
+npm i -g @kienmatu/inkos
 ```
 
 ### 通过 OpenClaw 使用 🦞

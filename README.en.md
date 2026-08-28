@@ -6,10 +6,10 @@
 <h1 align="center">Story Creation AI Agent<br><sub>Creation system for long-form and short fiction, scripts, interactive film/games, IP content, and multilingual translation</sub></h1>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@actalk/inkos"><img src="https://img.shields.io/npm/v/@actalk/inkos.svg?color=cb3837&logo=npm" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@kienmatu/inkos"><img src="https://img.shields.io/npm/v/@kienmatu/inkos.svg?color=cb3837&logo=npm" alt="npm version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg" alt="License: AGPL-3.0"></a>
   <a href="https://github.com/Narcooo/inkos/stargazers"><img src="https://img.shields.io/github/stars/Narcooo/inkos?style=flat&logo=github&color=yellow" alt="GitHub stars"></a>
-  <a href="https://www.npmjs.com/package/@actalk/inkos"><img src="https://img.shields.io/npm/dm/@actalk/inkos?color=cb3837&logo=npm&label=downloads" alt="npm downloads"></a>
+  <a href="https://www.npmjs.com/package/@kienmatu/inkos"><img src="https://img.shields.io/npm/dm/@kienmatu/inkos?color=cb3837&logo=npm&label=downloads" alt="npm downloads"></a>
   <a href="https://clawhub.ai/narcooo/inkos"><img src="https://img.shields.io/badge/🦞%20ClawHub-Skill-FF6B35?labelColor=1a1a1a" alt="ClawHub Skill"></a>
 </p>
 
@@ -99,7 +99,7 @@ InkOS 1.8.0 converges the Chat Agent and every production workflow on one pi-age
 Requires **Node.js 22 or later**.
 
 ```bash
-npm i -g @actalk/inkos
+npm i -g @kienmatu/inkos
 ```
 
 ### Use via OpenClaw 🦞

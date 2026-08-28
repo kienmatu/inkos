@@ -2,7 +2,7 @@ import { Command } from "commander";
 import {
   PipelineRunner,
   runAgentSession,
-} from "@actalk/inkos-core";
+} from "@kienmatu/inkos-core";
 import { buildPipelineConfig, createClient, findProjectRoot, loadConfig } from "../utils.js";
 
 export interface InteractCommandHooks {
