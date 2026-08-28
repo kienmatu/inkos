@@ -6004,7 +6004,12 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
 
     try {
       const { analyzeStyle } = await import("@kienmatu/inkos-core");
-      const profile = analyzeStyle(text, sourceName ?? "unknown");
+      // Infer the language from the sample itself. Without this the analyzer
+      // defaults to "zh", which splits sentences on 。！？, counts characters
+      // instead of words, takes the first TWO CHARACTERS as an opening pattern,
+      // and labels counts with 次/处 — so an English sample came back as one
+      // giant sentence with patterns like "Br...(15次)".
+      const profile = analyzeStyle(text, sourceName ?? "unknown", inferLanguage(text));
       return c.json(profile);
     } catch (e) {
       return c.json({ error: String(e) }, 500);
