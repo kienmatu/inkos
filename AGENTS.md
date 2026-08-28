@@ -11,7 +11,12 @@ English docs, and English commit messages, plans, and specs.
 Chinese is **read-only legacy**. It is kept so existing Chinese material stays readable
 and existing Chinese users are not broken, but it is **no longer maintained**:
 
-- Do **not** write new Chinese docs, prompts, or UI strings.
+- Do **not** write new Chinese docs, prompts, or UI strings. Exception: an existing
+  trilingual label table keyed by language (e.g. `TOOL_LABELS` in
+  `packages/studio/src/store/chat/slices/message/runtime.ts`) must keep every entry
+  filled for every language it declares, since a missing slot ships a broken label
+  rather than an English one — new surfaces should not add Chinese, but existing
+  tables are maintained as-is.
 - Do **not** translate new English content into Chinese "for parity" — `README.zh.md`,
   `CHANGELOG.zh.md`, and other `*.zh.*` files are frozen and may drift.
 - Do **not** answer, plan, or write specs in Chinese. Use English.
@@ -50,8 +55,12 @@ merely narrow has no license to fall back to Chinese, while a function inferring
 ambiguous input does.
 
 Every language parameter with a default in `agents/writer-prompts.ts` and
-`agents/fanfic-prompt-sections.ts` now defaults to `"en"`; `inferLanguage()` is the sole
-intentional `"zh"` default, kept for the guessing-versus-narrowing reason above.
+`agents/fanfic-prompt-sections.ts` now defaults to `"en"`. Other modules across
+`packages/core/src/` (for example `utils/length-metrics.ts`, `agents/planner-prompts.ts`,
+`agents/post-write-validator.ts`, `agents/architect.ts`, `utils/narrative-control.ts`,
+`prompts/short-fiction.ts`, and `state/state-projections.ts`) still default to `"zh"` and
+are follow-up work, not sanctioned exceptions; `inferLanguage()` is the sole intentional
+`"zh"` default, kept for the guessing-versus-narrowing reason above.
 
 ### Prompt parity
 
