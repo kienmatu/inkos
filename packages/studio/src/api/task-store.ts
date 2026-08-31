@@ -25,6 +25,7 @@ export interface StudioTaskExecution {
 
 export interface StudioTaskSnapshot {
   readonly version: 1;
+  readonly revision?: number;
   readonly sessionId: string;
   readonly sourceRequestId?: string;
   readonly requestedIntent: RequestedIntent;
@@ -53,6 +54,10 @@ function isExecutionStatus(value: unknown): value is StudioTaskExecutionStatus {
 
 function parseStudioTaskSnapshot(value: unknown): StudioTaskSnapshot | null {
   if (!isRecord(value) || value.version !== 1) return null;
+  if (
+    value.revision !== undefined
+    && (typeof value.revision !== "number" || !Number.isInteger(value.revision) || value.revision < 1)
+  ) return null;
   if (typeof value.sessionId !== "string" || typeof value.requestedIntent !== "string") return null;
   if (value.sourceRequestId !== undefined && typeof value.sourceRequestId !== "string") return null;
   if (typeof value.updatedAt !== "number") return null;

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -97,5 +97,26 @@ describe("Studio task snapshots", () => {
 
     await expect(loadStudioTaskSnapshot(root, "session-3")).resolves.toBeNull();
     await expect(readFile(path, "utf-8")).resolves.toBe("{broken");
+  });
+
+  it("rejects an invalid task revision at the persisted JSON boundary", async () => {
+    const path = studioTaskSnapshotPath(root, "session-4");
+    await mkdir(join(root, ".inkos/tasks"), { recursive: true });
+    await writeFile(path, JSON.stringify({
+      version: 1,
+      revision: 0,
+      sessionId: "session-4",
+      requestedIntent: "short_run",
+      updatedAt: 20,
+      execution: {
+        id: "task-4",
+        tool: "short_fiction_run",
+        label: "Short fiction",
+        status: "running",
+        startedAt: 10,
+      },
+    }), "utf-8");
+
+    await expect(loadStudioTaskSnapshot(root, "session-4")).resolves.toBeNull();
   });
 });
