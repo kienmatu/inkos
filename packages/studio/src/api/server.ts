@@ -2665,6 +2665,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
   const state = new StateManager(root);
   let cachedConfig = initialConfig;
   const activeConfirmedTasks = new Map<string, AbortController>();
+  const confirmedTaskRevisions = new Map<string, number>();
   // 确认式生产任务的单任务名额（sessionId → taskId）。原来的检查是"await 读快照
   // → 之后才 set controller"的 check-then-act：两个并发确认请求都能通过检查，
   // 双任务同时启动、快照互相覆盖。这里在任何 await 之前同步占位，占位失败的
@@ -2699,8 +2700,11 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
     sourceRequestId?: string,
   ): Promise<void> => {
     if (deletedSessionIds.has(sessionId)) return;
+    const revision = (confirmedTaskRevisions.get(exec.id) ?? 0) + 1;
+    confirmedTaskRevisions.set(exec.id, revision);
     const snapshot: StudioTaskSnapshot = {
       version: 1,
+      revision,
       sessionId,
       ...(sourceRequestId ? { sourceRequestId } : {}),
       requestedIntent,
@@ -5152,6 +5156,7 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
           }, failure.status);
         } finally {
           activeConfirmedTasks.delete(taskId);
+          confirmedTaskRevisions.delete(taskId);
           reservedProductionSessions.delete(reservedSessionId);
         }
       }

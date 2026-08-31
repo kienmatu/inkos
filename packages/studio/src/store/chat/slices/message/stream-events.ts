@@ -350,11 +350,20 @@ export function attachSessionStreamListeners({
   streamEs.addEventListener("agent:complete", finishSessionStream);
   streamEs.addEventListener("agent:error", finishSessionStream);
 
+  // Replay is loaded asynchronously after the SSE subscriber is registered,
+  // so an older replay can arrive after a newer live task update.
+  const taskSnapshotRevisions = new Map<string, number>();
   streamEs.addEventListener("task:snapshot", (event: MessageEvent) => {
     try {
       const data = event.data ? JSON.parse(event.data) : null;
       if (!sessionMatchesEvent(sessionId, data) || !data?.execution) return;
       const execution = data.execution as ToolExecution;
+      const revision = Number.isInteger(data.revision) && data.revision > 0
+        ? data.revision as number
+        : undefined;
+      const latestRevision = taskSnapshotRevisions.get(execution.id);
+      if (latestRevision !== undefined && (revision === undefined || revision < latestRevision)) return;
+      if (revision !== undefined) taskSnapshotRevisions.set(execution.id, revision);
       const running = execution.status === "running" || execution.status === "processing";
       // EventSource may connect after the production task has already started, so its
       // real-time tool:start broadcast is missed and only this snapshot is replayed.

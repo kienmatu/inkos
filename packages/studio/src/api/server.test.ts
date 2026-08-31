@@ -3811,6 +3811,7 @@ describe("createStudioServer daemon lifecycle", () => {
       await vi.waitFor(() => {
         expect(snapshots).toContainEqual(expect.objectContaining({
           sessionId,
+          revision: 2,
           execution: expect.objectContaining({
             status: "running",
             logs: ["Writing chapters 3 (batch 3/8)..."],

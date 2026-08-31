@@ -412,6 +412,68 @@ describe("chat message actions", () => {
     });
   });
 
+  it("ignores a replayed task snapshot older than the latest live milestone", async () => {
+    const store = createTestStore();
+    fetchJson.mockResolvedValueOnce({
+      session: { sessionId: "ordered-short-session", bookId: null, sessionKind: "short", title: null },
+    });
+    const sessionId = await store.getState().createSession(null, "short");
+    fetchJson.mockResolvedValueOnce({
+      session: { sessionId, bookId: null, sessionKind: "short", title: null, messages: [] },
+      task: {
+        version: 1,
+        revision: 1,
+        sessionId,
+        requestedIntent: "short_run",
+        updatedAt: 20,
+        execution: {
+          id: "ordered-short-task",
+          tool: "short_fiction_run",
+          label: "生成短篇",
+          status: "running",
+          startedAt: 10,
+        },
+      },
+    });
+    await store.getState().loadSessionDetail(sessionId);
+
+    const stream = fakeEventSources[0]!;
+    stream.emit("task:snapshot", {
+      version: 1,
+      revision: 2,
+      sessionId,
+      requestedIntent: "short_run",
+      updatedAt: 30,
+      execution: {
+        id: "ordered-short-task",
+        tool: "short_fiction_run",
+        label: "生成短篇",
+        status: "running",
+        startedAt: 10,
+        logs: ["Writing chapters 3 (batch 3/8)..."],
+      },
+    });
+    stream.emit("task:snapshot", {
+      version: 1,
+      revision: 1,
+      sessionId,
+      requestedIntent: "short_run",
+      updatedAt: 20,
+      execution: {
+        id: "ordered-short-task",
+        tool: "short_fiction_run",
+        label: "生成短篇",
+        status: "running",
+        startedAt: 10,
+      },
+    });
+
+    expect(store.getState().sessions[sessionId]?.messages[0]?.toolExecutions?.[0]).toMatchObject({
+      status: "running",
+      logs: ["Writing chapters 3 (batch 3/8)..."],
+    });
+  });
+
   it("restores the transcript user bubble alongside the running task card without duplication", async () => {
     const store = createTestStore();
     fetchJson.mockResolvedValueOnce({
