@@ -72,6 +72,13 @@ interface BookSummary {
   readonly chaptersWritten: number;
 }
 
+interface ShortSummary {
+  readonly storyId: string;
+  readonly title: string;
+  readonly finalMarkdownPath: string;
+  readonly updatedAt: string;
+}
+
 interface Nav {
   toDashboard: () => void;
   toChat: () => void;
@@ -97,6 +104,7 @@ export function Sidebar({ nav, activePage, sse, t }: {
   t: TFunction;
 }) {
   const { data, refetch: refetchBooks, mutate: mutateBooks } = useApi<{ books: ReadonlyArray<BookSummary> }>("/books");
+  const { data: shortsData, refetch: refetchShorts } = useApi<{ shorts: ReadonlyArray<ShortSummary> }>("/shorts");
   const { data: filmsData, refetch: refetchFilms } = useApi<{ films: ReadonlyArray<{ projectId: string; title: string }> }>("/interactive-films");
   const { data: daemon, refetch: refetchDaemon } = useApi<{ running: boolean }>("/daemon");
   const sessions = useChatStore((s) => s.sessions);
@@ -110,6 +118,7 @@ export function Sidebar({ nav, activePage, sse, t }: {
   const renameSession = useChatStore((s) => s.renameSession);
   const deleteSession = useChatStore((s) => s.deleteSession);
   const setInput = useChatStore((s) => s.setInput);
+  const openProjectArtifact = useChatStore((s) => s.openProjectArtifact);
   const [renameTarget, setRenameTarget] = useState<{ sessionId: string; currentTitle: string } | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ sessionId: string; title: string } | null>(null);
@@ -119,6 +128,7 @@ export function Sidebar({ nav, activePage, sse, t }: {
   const [filmsExpanded, setFilmsExpanded] = useState(true);
 
   const books = data?.books ?? [];
+  const shorts = shortsData?.shorts ?? [];
   const films = filmsData?.films ?? [];
   const projectChatKey = "__null__";
   const projectChatSessions = useMemo(
@@ -170,7 +180,8 @@ export function Sidebar({ nav, activePage, sse, t }: {
 
   useEffect(() => {
     void refetchFilms();
-  }, [bookDataVersion, refetchFilms]);
+    void refetchShorts();
+  }, [bookDataVersion, refetchFilms, refetchShorts]);
 
   useEffect(() => {
     if (activePage === "chat") {
@@ -245,6 +256,12 @@ export function Sidebar({ nav, activePage, sse, t }: {
     void loadSessionDetail(sessionId);
   };
 
+  const openShort = (short: ShortSummary) => {
+    setInput("");
+    nav.toChat();
+    openProjectArtifact(short.finalMarkdownPath);
+  };
+
   const handleCreateProjectChatSession = () => {
     setProjectChatExpanded(true);
     const sessionId = createDraftSession(null, "chat");
@@ -284,7 +301,7 @@ export function Sidebar({ nav, activePage, sse, t }: {
   };
 
   return (
-    <aside className="w-[260px] shrink-0 border-r border-border bg-background/80 backdrop-blur-md flex flex-col h-full overflow-hidden select-none">
+    <aside className="w-[320px] shrink-0 border-r border-border bg-background/80 backdrop-blur-md flex flex-col h-full overflow-hidden select-none">
       {/* Logo Area */}
       <div className="px-6 py-8">
         <button
@@ -358,6 +375,7 @@ export function Sidebar({ nav, activePage, sse, t }: {
                     >
                       <FolderOpen size={14} className="shrink-0 text-muted-foreground/60" />
                       <span className="truncate flex-1 text-left">{book.title}</span>
+                      <WorkTypeBadge label={t("work.badgeNovel")} tone="novel" />
                     </button>
                   </div>
 
@@ -430,7 +448,20 @@ export function Sidebar({ nav, activePage, sse, t }: {
               );
             })}
 
-            {books.length === 0 && (
+            {shorts.map((short) => (
+              <button
+                key={short.storyId}
+                type="button"
+                onClick={() => openShort(short)}
+                className="flex w-full min-w-0 items-center gap-1.5 rounded-md py-1.5 pl-7 pr-2 text-[15px] leading-6 text-muted-foreground transition-colors hover:bg-secondary/30 hover:text-foreground"
+              >
+                <ScrollText size={14} className="shrink-0 text-muted-foreground/60" />
+                <span className="min-w-0 flex-1 truncate text-left">{short.title}</span>
+                <WorkTypeBadge label={t("work.badgeShort")} tone="short" />
+              </button>
+            ))}
+
+            {books.length === 0 && shorts.length === 0 && (
               <div className="px-3 py-6 text-xs text-muted-foreground/50 italic text-center">
                 {t("dash.noBooks")}
               </div>
@@ -778,6 +809,17 @@ function SectionHeader({ label, expanded, onToggle }: {
         className={`text-muted-foreground/50 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
       />
     </button>
+  );
+}
+
+function WorkTypeBadge({ label, tone }: { readonly label: string; readonly tone: "novel" | "short" }) {
+  const toneClass = tone === "novel"
+    ? "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+    : "border-sky-500/35 bg-sky-500/10 text-sky-700 dark:text-sky-300";
+  return (
+    <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${toneClass}`}>
+      {label}
+    </span>
   );
 }
 

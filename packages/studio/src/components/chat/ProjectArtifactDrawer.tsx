@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { cjk } from "@streamdown/cjk";
-import { AlertCircle, Loader2, Pencil, Save, X } from "lucide-react";
+import { AlertCircle, Check, Copy, Loader2, Pencil, Save, X } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { fetchJson } from "../../hooks/use-api";
 import { tr } from "../../lib/app-language";
@@ -36,6 +36,27 @@ function isJsonArtifact(path: string, contentType: string): boolean {
   return path.endsWith(".json") || contentType.includes("application/json");
 }
 
+function isMarkdownArtifact(path: string): boolean {
+  return /\.(?:md|markdown)$/iu.test(path);
+}
+
+interface ClipboardWriter {
+  writeText(text: string): Promise<void>;
+}
+
+export async function copyMarkdownToClipboard(
+  content: string,
+  clipboard: ClipboardWriter | undefined = typeof navigator === "undefined" ? undefined : navigator.clipboard,
+): Promise<boolean> {
+  if (!clipboard) return false;
+  try {
+    await clipboard.writeText(content);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function ProjectArtifactDrawer() {
   const path = useChatStore((s) => s.projectArtifactPath);
   const close = useChatStore((s) => s.closeProjectArtifact);
@@ -45,6 +66,8 @@ export function ProjectArtifactDrawer() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!path) return;
@@ -53,6 +76,7 @@ export function ProjectArtifactDrawer() {
     setError(null);
     setPayload(null);
     setEditing(false);
+    setCopied(false);
     void fetchJson<ProjectArtifactPayload>(`/project/artifacts/${encodeArtifactPath(path)}`)
       .then((data) => {
         if (cancelled) return;
@@ -70,6 +94,12 @@ export function ProjectArtifactDrawer() {
       cancelled = true;
     };
   }, [path]);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timeout = window.setTimeout(() => setCopied(false), 2_000);
+    return () => window.clearTimeout(timeout);
+  }, [copied]);
 
   const previewContent = useMemo(() => {
     if (!payload) return "";
@@ -101,6 +131,19 @@ export function ProjectArtifactDrawer() {
     }
   };
 
+  const handleCopy = async () => {
+    if (!payload || copying) return;
+    setCopying(true);
+    setError(null);
+    const ok = await copyMarkdownToClipboard(payload.content);
+    setCopying(false);
+    if (ok) {
+      setCopied(true);
+      return;
+    }
+    setError(tr("Couldn't copy Markdown.", "Couldn't copy Markdown.", "Không thể sao chép Markdown."));
+  };
+
   return (
     <div className="fixed inset-0 z-[80] flex justify-end bg-background/35 backdrop-blur-[2px]">
       <button
@@ -123,6 +166,20 @@ export function ProjectArtifactDrawer() {
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {isMarkdownArtifact(path) && (
+              <button
+                type="button"
+                data-testid="copy-markdown"
+                onClick={() => void handleCopy()}
+                disabled={!payload || copying}
+                className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-secondary/35 px-3 py-2 text-[14px] font-medium text-foreground transition hover:border-primary/45 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {copied ? <Check size={15} /> : <Copy size={15} />}
+                {copied
+                  ? tr("Copied", "Copied", "Đã sao chép")
+                  : tr("Copy Markdown", "Copy Markdown", "Sao chép Markdown")}
+              </button>
+            )}
             {payload && !editing && (
               <button
                 type="button"
