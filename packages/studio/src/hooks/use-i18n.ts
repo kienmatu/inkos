@@ -9,6 +9,8 @@ export const strings = {
   "nav.myBooks": { zh: "我的创作", en: "My Works", vi: "Tác phẩm của tôi" },
   "nav.createNovel": { zh: "长篇小说", en: "Long Novel", vi: "Tiểu thuyết dài" },
   "nav.createShort": { zh: "短篇小说", en: "Short Story", vi: "Truyện ngắn" },
+  "work.badgeNovel": { zh: "Novel", en: "Novel", vi: "Tiểu thuyết" },
+  "work.badgeShort": { zh: "Short", en: "Short", vi: "Truyện ngắn" },
   "nav.createScript": { zh: "剧本创作", en: "Script", vi: "Kịch bản" },
   "nav.createStoryboard": { zh: "分镜创作", en: "Storyboard", vi: "Phân cảnh" },
   "nav.createInteractiveFilm": { zh: "互动影游", en: "Interactive Film", vi: "Phim tương tác" },

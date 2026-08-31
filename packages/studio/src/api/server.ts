@@ -1655,6 +1655,73 @@ interface StudioBookListSummary {
   readonly [key: string]: unknown;
 }
 
+interface StudioShortListSummary {
+  readonly storyId: string;
+  readonly title: string;
+  readonly finalMarkdownPath: string;
+  readonly updatedAt: string;
+}
+
+interface CompleteShortRunIndex {
+  readonly storyId: string;
+  readonly updatedAt: string;
+}
+
+function parseCompleteShortRunIndex(value: unknown, expectedStoryId: string): CompleteShortRunIndex | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (
+    record.version !== 1
+    || record.kind !== "short-fiction"
+    || record.id !== expectedStoryId
+    || record.status !== "complete"
+    || typeof record.updatedAt !== "string"
+  ) {
+    return null;
+  }
+  return { storyId: expectedStoryId, updatedAt: record.updatedAt };
+}
+
+function parseShortStoryTitle(value: unknown): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const storyTitle = (value as Record<string, unknown>).storyTitle;
+  return typeof storyTitle === "string" && storyTitle.trim() ? storyTitle.trim() : null;
+}
+
+async function loadStudioShortList(root: string): Promise<ReadonlyArray<StudioShortListSummary>> {
+  const shortsDir = join(root, "shorts");
+  let storyIds: string[] = [];
+  try {
+    const entries = await readdir(shortsDir, { withFileTypes: true });
+    storyIds = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+
+  const shorts: StudioShortListSummary[] = [];
+  for (const storyId of storyIds) {
+    if (!isSafeBookId(storyId)) continue;
+    const shortDir = join(shortsDir, storyId);
+    try {
+      const status: unknown = JSON.parse(await readFile(join(shortDir, "status.json"), "utf-8"));
+      const run = parseCompleteShortRunIndex(status, storyId);
+      if (!run) continue;
+      const story: unknown = JSON.parse(await readFile(join(shortDir, "final", "short-story.json"), "utf-8"));
+      const title = parseShortStoryTitle(story) ?? storyId;
+      await access(join(shortDir, "final", "full.md"));
+      shorts.push({
+        storyId,
+        title,
+        finalMarkdownPath: toPosixPath(join("shorts", storyId, "final", "full.md")),
+        updatedAt: run.updatedAt,
+      });
+    } catch {
+      // A malformed or incomplete directory is not a completed short work.
+    }
+  }
+  return shorts;
+}
+
 // --- Event bus for SSE ---
 
 type EventHandler = (event: string, data: unknown) => void;
@@ -6409,6 +6476,11 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
     }
     films.sort((a, b) => a.title.localeCompare(b.title, "zh"));
     return c.json({ films });
+  });
+
+  app.get("/api/v1/shorts", async (c) => {
+    const shorts = await loadStudioShortList(root);
+    return c.json({ shorts });
   });
 
   app.get("/api/v1/translations", async (c) => {
