@@ -2711,7 +2711,10 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
         ...(exec.logs ? { logs: [...exec.logs] } : {}),
       },
     };
+    // Publish the same durable snapshot that refresh recovery reads, so an
+    // already-open task card sees milestone logs without requiring a reload.
     await saveStudioTaskSnapshot(root, snapshot);
+    broadcast("task:snapshot", snapshot);
   };
 
   const loadReconciledTaskSnapshot = async (sessionId: string): Promise<StudioTaskSnapshot | null> => {

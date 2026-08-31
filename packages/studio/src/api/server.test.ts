@@ -3726,6 +3726,105 @@ describe("createStudioServer daemon lifecycle", () => {
     await pendingResponse;
   });
 
+  it("broadcasts persisted short-fiction milestones to the live task stream", async () => {
+    const sessionId = "live-short-progress-session";
+    let resolveShort!: () => void;
+    createShortFictionRunToolMock.mockImplementationOnce(() => ({
+      name: "short_fiction_run",
+      execute: vi.fn((
+        _id: string,
+        _params: Record<string, unknown>,
+        _signal: AbortSignal | undefined,
+        onUpdate: ((result: unknown) => void) | undefined,
+      ) => new Promise((resolve) => {
+        onUpdate?.({ content: [{ type: "text", text: "Writing chapters 3 (batch 3/8)..." }] });
+        resolveShort = () => resolve({
+          content: [{ type: "text", text: "Short fiction completed." }],
+          details: {
+            kind: "short_fiction_created",
+            storyId: "live-progress",
+            finalMarkdownPath: "shorts/live-progress/final/full.md",
+          },
+        });
+      })),
+    }));
+    loadBookSessionMock.mockResolvedValue({
+      sessionId,
+      bookId: null,
+      sessionKind: "short",
+      title: null,
+      messages: [],
+      events: [],
+      draftRounds: [],
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const { createStudioServer } = await import("./server.js");
+    const app = createStudioServer(cloneProjectConfig() as never, root);
+
+    const sseResponse = await app.request(`http://localhost/api/v1/events?sessionId=${sessionId}`);
+    const snapshots: Array<Record<string, unknown>> = [];
+    const sseReader = sseResponse.body!.getReader();
+    const ssePump = (async () => {
+      const decoder = new TextDecoder();
+      let buffer = "";
+      try {
+        for (;;) {
+          const { done, value } = await sseReader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let frameEnd = buffer.indexOf("\n\n");
+          while (frameEnd !== -1) {
+            const lines = buffer.slice(0, frameEnd).split("\n");
+            buffer = buffer.slice(frameEnd + 2);
+            const eventName = lines.find((line) => line.startsWith("event:"))?.slice("event:".length).trim();
+            const dataRaw = lines.find((line) => line.startsWith("data:"))?.slice("data:".length).trim();
+            if (eventName === "task:snapshot" && dataRaw) {
+              snapshots.push(JSON.parse(dataRaw) as Record<string, unknown>);
+            }
+            frameEnd = buffer.indexOf("\n\n");
+          }
+        }
+      } catch {
+        // Cancelling the reader is the normal test cleanup path.
+      }
+    })();
+
+    const pendingTask = app.request("http://localhost/api/v1/agent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        instruction: "Write a suspense short.",
+        sessionId,
+        sessionKind: "short",
+        actionSource: "button",
+        requestedIntent: "short_run",
+        actionPayload: { shortRun: { direction: "Archive suspense", chapters: 8, cover: false } },
+      }),
+    });
+
+    try {
+      await vi.waitFor(async () => {
+        const task = await loadStudioTaskSnapshot(root, sessionId);
+        expect(task?.execution.logs).toEqual(["Writing chapters 3 (batch 3/8)..."]);
+      });
+      await vi.waitFor(() => {
+        expect(snapshots).toContainEqual(expect.objectContaining({
+          sessionId,
+          execution: expect.objectContaining({
+            status: "running",
+            logs: ["Writing chapters 3 (batch 3/8)..."],
+          }),
+        }));
+      });
+    } finally {
+      resolveShort();
+      await pendingTask;
+      await sseReader.cancel();
+      await ssePump;
+    }
+  });
+
   it("rewrites a stale running task snapshot to error when the server has no live task for it", async () => {
     // 直接写入 running 快照后新建 server 实例，等价于任务运行期间 server 进程重启：
     // 快照必须被改写为终态，否则前端每次刷新都会恢复出一个永远运行中的任务卡。
