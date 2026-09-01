@@ -11,6 +11,11 @@ export const createCreateSlice: StateCreator<ChatStore, [], [], CreateActions> =
     projectArtifactShortContext: shortContext,
   }),
   closeProjectArtifact: () => set({ projectArtifactPath: null, projectArtifactShortContext: null }),
+  markProjectArtifactShortComplete: (storyId) => set((state) => {
+    const current = state.projectArtifactShortContext;
+    if (!current || current.storyId !== storyId) return state;
+    return { projectArtifactShortContext: { ...current, status: "complete" } };
+  }),
   setBookSummary: (summary) => set({ bookSummary: summary }),
   markProposalResolved: (execId, resolution) =>
     set((s) => ({ resolvedProposals: { ...s.resolvedProposals, [execId]: resolution } })),

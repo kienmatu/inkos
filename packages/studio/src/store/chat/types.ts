@@ -245,6 +245,7 @@ export interface CreateActions {
   closeArtifact: () => void;
   openProjectArtifact: (path: string, shortContext?: ProjectArtifactShortContext | null) => void;
   closeProjectArtifact: () => void;
+  markProjectArtifactShortComplete: (storyId: string) => void;
   setBookSummary: (summary: BookSummary | null) => void;
   markProposalResolved: (execId: string, resolution: "confirmed" | "rejected") => void;
 }

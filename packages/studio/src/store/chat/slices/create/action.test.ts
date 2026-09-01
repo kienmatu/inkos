@@ -32,4 +32,22 @@ describe("project artifact actions", () => {
       projectArtifactShortContext: null,
     });
   });
+
+  it("marks only the matching open short complete when requests resolve out of order", () => {
+    const store = createTestStore();
+    const first = { storyId: "first-short", status: "needs-review" };
+    const second = { storyId: "second-short", status: "needs-review" };
+    Reflect.apply(store.getState().openProjectArtifact, store.getState(), ["shorts/first-short/final/full.md", first]);
+    Reflect.apply(store.getState().openProjectArtifact, store.getState(), ["shorts/second-short/final/full.md", second]);
+    const markComplete = Reflect.get(store.getState(), "markProjectArtifactShortComplete");
+
+    expect(typeof markComplete).toBe("function");
+    Reflect.apply(markComplete, store.getState(), ["first-short"]);
+    expect(store.getState()).toMatchObject({ projectArtifactShortContext: second });
+
+    Reflect.apply(markComplete, store.getState(), ["second-short"]);
+    expect(store.getState()).toMatchObject({
+      projectArtifactShortContext: { storyId: "second-short", status: "complete" },
+    });
+  });
 });
