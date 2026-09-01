@@ -11,6 +11,7 @@ export const strings = {
   "nav.createShort": { zh: "短篇小说", en: "Short Story", vi: "Truyện ngắn" },
   "work.badgeNovel": { zh: "Novel", en: "Novel", vi: "Tiểu thuyết" },
   "work.badgeShort": { zh: "Short", en: "Short", vi: "Truyện ngắn" },
+  "work.statusNeedsReview": { zh: "Needs review", en: "Needs review", vi: "Cần xem lại" },
   "nav.createScript": { zh: "剧本创作", en: "Script", vi: "Kịch bản" },
   "nav.createStoryboard": { zh: "分镜创作", en: "Storyboard", vi: "Phân cảnh" },
   "nav.createInteractiveFilm": { zh: "互动影游", en: "Interactive Film", vi: "Phim tương tác" },

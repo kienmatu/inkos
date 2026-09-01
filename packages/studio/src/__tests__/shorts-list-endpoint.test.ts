@@ -43,6 +43,7 @@ describe("GET /api/v1/shorts", () => {
       shorts: [{
         storyId: "night-ledger",
         title: "The Night Ledger",
+        status: "complete",
         finalMarkdownPath: "shorts/night-ledger/final/full.md",
         updatedAt: "2026-08-31T12:00:00.000Z",
       }],
@@ -77,36 +78,52 @@ describe("GET /api/v1/shorts", () => {
       shorts: [{
         storyId: "untitled-short",
         title: "untitled-short",
+        status: "complete",
         finalMarkdownPath: "shorts/untitled-short/final/full.md",
         updatedAt: "2026-08-31T13:00:00.000Z",
       }],
     });
   });
 
-  it("excludes a short whose durable run status is not complete", async () => {
-    const shortDir = join(root, "shorts", "unfinished-short");
+  it("returns a needs-review short when its final artifact is available", async () => {
+    const shortDir = join(root, "shorts", "reviewable-short");
     await mkdir(join(shortDir, "final"), { recursive: true });
     await writeFile(join(shortDir, "status.json"), JSON.stringify({
       version: 1,
       kind: "short-fiction",
-      id: "unfinished-short",
+      id: "reviewable-short",
       status: "needs-review",
       stage: "complete",
-      artifacts: ["shorts/unfinished-short/final/full.md"],
-      observations: [],
+      artifacts: ["shorts/reviewable-short/final/full.md"],
+      observations: [{
+        metric: "chapter-1-length",
+        expected: { min: 655, max: 1145, unit: "en_words" },
+        actual: { value: 1710, unit: "en_words" },
+        severity: "blocking",
+        evidence: "chapter 1",
+        repairable: true,
+      }],
       updatedAt: "2026-08-31T14:00:00.000Z",
     }), "utf-8");
     await writeFile(join(shortDir, "final", "short-story.json"), JSON.stringify({
-      storyTitle: "Unfinished Short",
+      storyTitle: "Reviewable Short",
       chapters: [],
-      rawContent: "# Unfinished Short",
+      rawContent: "# Reviewable Short",
     }), "utf-8");
-    await writeFile(join(shortDir, "final", "full.md"), "# Unfinished Short", "utf-8");
+    await writeFile(join(shortDir, "final", "full.md"), "# Reviewable Short", "utf-8");
 
     const app = createStudioServer({} as never, root);
     const response = await app.request("/api/v1/shorts");
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ shorts: [] });
+    expect(await response.json()).toEqual({
+      shorts: [{
+        storyId: "reviewable-short",
+        title: "Reviewable Short",
+        status: "needs-review",
+        finalMarkdownPath: "shorts/reviewable-short/final/full.md",
+        updatedAt: "2026-08-31T14:00:00.000Z",
+      }],
+    });
   });
 });

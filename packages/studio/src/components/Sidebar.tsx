@@ -75,6 +75,7 @@ interface BookSummary {
 interface ShortSummary {
   readonly storyId: string;
   readonly title: string;
+  readonly status: "complete" | "needs-review";
   readonly finalMarkdownPath: string;
   readonly updatedAt: string;
 }
@@ -458,6 +459,9 @@ export function Sidebar({ nav, activePage, sse, t }: {
                 <ScrollText size={14} className="shrink-0 text-muted-foreground/60" />
                 <span className="min-w-0 flex-1 truncate text-left">{short.title}</span>
                 <WorkTypeBadge label={t("work.badgeShort")} tone="short" />
+                {short.status === "needs-review" ? (
+                  <ReviewStatusBadge label={t("work.statusNeedsReview")} />
+                ) : null}
               </button>
             ))}
 
@@ -818,6 +822,14 @@ function WorkTypeBadge({ label, tone }: { readonly label: string; readonly tone:
     : "border-sky-500/35 bg-sky-500/10 text-sky-700 dark:text-sky-300";
   return (
     <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${toneClass}`}>
+      {label}
+    </span>
+  );
+}
+
+function ReviewStatusBadge({ label }: { readonly label: string }) {
+  return (
+    <span className="shrink-0 rounded-full border border-rose-500/35 bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">
       {label}
     </span>
   );
