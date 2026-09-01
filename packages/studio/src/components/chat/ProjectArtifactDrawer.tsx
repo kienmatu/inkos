@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { cjk } from "@streamdown/cjk";
-import { AlertCircle, Check, Copy, Loader2, Pencil, Save, X } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, Copy, Loader2, Pencil, Save, X } from "lucide-react";
 import { Streamdown } from "streamdown";
-import { fetchJson } from "../../hooks/use-api";
+import { fetchJson, postApi } from "../../hooks/use-api";
 import { tr } from "../../lib/app-language";
 import { useChatStore } from "../../store/chat";
 
@@ -59,7 +59,9 @@ export async function copyMarkdownToClipboard(
 
 export function ProjectArtifactDrawer() {
   const path = useChatStore((s) => s.projectArtifactPath);
+  const shortContext = useChatStore((s) => s.projectArtifactShortContext);
   const close = useChatStore((s) => s.closeProjectArtifact);
+  const markShortComplete = useChatStore((s) => s.markProjectArtifactShortComplete);
   const [payload, setPayload] = useState<ProjectArtifactPayload | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +70,7 @@ export function ProjectArtifactDrawer() {
   const [saving, setSaving] = useState(false);
   const [copying, setCopying] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [markingStoryId, setMarkingStoryId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!path) return;
@@ -144,6 +147,23 @@ export function ProjectArtifactDrawer() {
     setError(tr("Couldn't copy Markdown.", "Couldn't copy Markdown.", "Không thể sao chép Markdown."));
   };
 
+  const handleMarkDone = async () => {
+    if (!shortContext || markingStoryId === shortContext.storyId) return;
+    const storyId = shortContext.storyId;
+    setMarkingStoryId(storyId);
+    setError(null);
+    try {
+      await postApi(`/shorts/${encodeURIComponent(storyId)}/complete`);
+      markShortComplete(storyId);
+    } catch (err) {
+      if (useChatStore.getState().projectArtifactShortContext?.storyId === storyId) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    } finally {
+      setMarkingStoryId((current) => current === storyId ? null : current);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[80] flex justify-end bg-background/35 backdrop-blur-[2px]">
       <button
@@ -166,6 +186,20 @@ export function ProjectArtifactDrawer() {
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {shortContext?.status === "needs-review" && (
+              <button
+                type="button"
+                data-testid="mark-short-done"
+                onClick={() => void handleMarkDone()}
+                disabled={markingStoryId === shortContext.storyId}
+                className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[14px] font-semibold text-emerald-600 transition hover:bg-emerald-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {markingStoryId === shortContext.storyId
+                  ? <Loader2 size={15} className="animate-spin" />
+                  : <CheckCircle2 size={15} />}
+                {tr("完成", "Done", "Đã xong")}
+              </button>
+            )}
             {isMarkdownArtifact(path) && (
               <button
                 type="button"

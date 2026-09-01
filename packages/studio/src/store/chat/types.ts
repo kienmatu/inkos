@@ -196,11 +196,17 @@ export interface CreateState {
   artifactFile: string | null;         // foundation file name, e.g. "story_bible.md"
   artifactChapter: number | null;      // chapter number, e.g. 1
   projectArtifactPath: string | null;  // generated project artifact, e.g. "interactive-films/demo/script.md"
+  projectArtifactShortContext: ProjectArtifactShortContext | null;
   bookSummary: BookSummary | null;
   // Proposed-action cards (propose_action) are one-shot: once confirmed or
   // rejected, the card locks so the user can't re-fire the production action.
   // Keyed by the proposal's ToolExecution id.
   resolvedProposals: Record<string, "confirmed" | "rejected">;
+}
+
+export interface ProjectArtifactShortContext {
+  readonly storyId: string;
+  readonly status: "complete" | "needs-review";
 }
 
 export type ChatState = MessageState & CreateState;
@@ -237,8 +243,9 @@ export interface CreateActions {
   openArtifact: (file: string) => void;
   openChapterArtifact: (chapterNum: number) => void;
   closeArtifact: () => void;
-  openProjectArtifact: (path: string) => void;
+  openProjectArtifact: (path: string, shortContext?: ProjectArtifactShortContext | null) => void;
   closeProjectArtifact: () => void;
+  markProjectArtifactShortComplete: (storyId: string) => void;
   setBookSummary: (summary: BookSummary | null) => void;
   markProposalResolved: (execId: string, resolution: "confirmed" | "rejected") => void;
 }

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createStudioServer } from "../api/server.js";
@@ -151,5 +151,68 @@ describe("GET /api/v1/shorts", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ shorts: [] });
+  });
+});
+
+describe("POST /api/v1/shorts/:id/complete", () => {
+  let root: string;
+
+  beforeEach(async () => {
+    root = await mkdtemp(join(tmpdir(), "short-complete-"));
+  });
+
+  afterEach(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
+
+  it("marks a needs-review short complete without discarding its review evidence", async () => {
+    const shortDir = join(root, "shorts", "reviewable-short");
+    const observations = [{
+      metric: "chapter-1-length",
+      expected: { min: 655, max: 1145, unit: "en_words" },
+      actual: { value: 1710, unit: "en_words" },
+      severity: "blocking",
+      evidence: "chapter 1",
+      repairable: true,
+    }];
+    await mkdir(shortDir, { recursive: true });
+    await writeFile(join(shortDir, "status.json"), JSON.stringify({
+      version: 1,
+      kind: "short-fiction",
+      id: "reviewable-short",
+      status: "needs-review",
+      stage: "complete",
+      artifacts: ["shorts/reviewable-short/final/full.md"],
+      observations,
+      updatedAt: "2026-08-31T14:00:00.000Z",
+    }), "utf-8");
+
+    const app = createStudioServer({} as never, root);
+    const response = await app.request("/api/v1/shorts/reviewable-short/complete", { method: "POST" });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      ok: true,
+      storyId: "reviewable-short",
+      status: "complete",
+    });
+    const persisted = JSON.parse(await readFile(join(shortDir, "status.json"), "utf-8"));
+    expect(persisted).toMatchObject({
+      version: 1,
+      kind: "short-fiction",
+      id: "reviewable-short",
+      status: "complete",
+      stage: "complete",
+      observations,
+    });
+    expect(persisted.updatedAt).not.toBe("2026-08-31T14:00:00.000Z");
+  });
+
+  it("rejects an unsafe short id before resolving its status file", async () => {
+    const app = createStudioServer({} as never, root);
+
+    const response = await app.request("/api/v1/shorts/not:safe/complete", { method: "POST" });
+
+    expect(response.status).toBe(400);
   });
 });

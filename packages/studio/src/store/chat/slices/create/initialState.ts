@@ -6,6 +6,7 @@ export const initialCreateState: CreateState = {
   artifactFile: null,
   artifactChapter: null,
   projectArtifactPath: null,
+  projectArtifactShortContext: null,
   bookSummary: null,
   resolvedProposals: {},
 };
