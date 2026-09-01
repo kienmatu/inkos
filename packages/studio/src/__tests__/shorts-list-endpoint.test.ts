@@ -126,4 +126,30 @@ describe("GET /api/v1/shorts", () => {
       }],
     });
   });
+
+  it("excludes a needs-review short whose final Markdown path is not a readable file", async () => {
+    const shortDir = join(root, "shorts", "broken-short");
+    await mkdir(join(shortDir, "final", "full.md"), { recursive: true });
+    await writeFile(join(shortDir, "status.json"), JSON.stringify({
+      version: 1,
+      kind: "short-fiction",
+      id: "broken-short",
+      status: "needs-review",
+      stage: "complete",
+      artifacts: ["shorts/broken-short/final/full.md"],
+      observations: [],
+      updatedAt: "2026-08-31T15:00:00.000Z",
+    }), "utf-8");
+    await writeFile(join(shortDir, "final", "short-story.json"), JSON.stringify({
+      storyTitle: "Broken Short",
+      chapters: [],
+      rawContent: "# Broken Short",
+    }), "utf-8");
+
+    const app = createStudioServer({} as never, root);
+    const response = await app.request("/api/v1/shorts");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ shorts: [] });
+  });
 });

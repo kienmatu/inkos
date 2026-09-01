@@ -1713,7 +1713,7 @@ async function loadStudioShortList(root: string): Promise<ReadonlyArray<StudioSh
       if (!run) continue;
       const story: unknown = JSON.parse(await readFile(join(shortDir, "final", "short-story.json"), "utf-8"));
       const title = parseShortStoryTitle(story) ?? storyId;
-      await access(join(shortDir, "final", "full.md"));
+      await readFile(join(shortDir, "final", "full.md"), "utf-8");
       shorts.push({
         storyId,
         title,
