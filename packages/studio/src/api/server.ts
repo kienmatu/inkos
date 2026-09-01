@@ -1655,31 +1655,36 @@ interface StudioBookListSummary {
   readonly [key: string]: unknown;
 }
 
+type StudioShortStatus = "complete" | "needs-review";
+
 interface StudioShortListSummary {
   readonly storyId: string;
   readonly title: string;
+  readonly status: StudioShortStatus;
   readonly finalMarkdownPath: string;
   readonly updatedAt: string;
 }
 
-interface CompleteShortRunIndex {
+interface VisibleShortRunIndex {
   readonly storyId: string;
+  readonly status: StudioShortStatus;
   readonly updatedAt: string;
 }
 
-function parseCompleteShortRunIndex(value: unknown, expectedStoryId: string): CompleteShortRunIndex | null {
+function parseVisibleShortRunIndex(value: unknown, expectedStoryId: string): VisibleShortRunIndex | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
+  const status = record.status;
   if (
     record.version !== 1
     || record.kind !== "short-fiction"
     || record.id !== expectedStoryId
-    || record.status !== "complete"
+    || (status !== "complete" && status !== "needs-review")
     || typeof record.updatedAt !== "string"
   ) {
     return null;
   }
-  return { storyId: expectedStoryId, updatedAt: record.updatedAt };
+  return { storyId: expectedStoryId, status, updatedAt: record.updatedAt };
 }
 
 function parseShortStoryTitle(value: unknown): string | null {
@@ -1704,14 +1709,15 @@ async function loadStudioShortList(root: string): Promise<ReadonlyArray<StudioSh
     const shortDir = join(shortsDir, storyId);
     try {
       const status: unknown = JSON.parse(await readFile(join(shortDir, "status.json"), "utf-8"));
-      const run = parseCompleteShortRunIndex(status, storyId);
+      const run = parseVisibleShortRunIndex(status, storyId);
       if (!run) continue;
       const story: unknown = JSON.parse(await readFile(join(shortDir, "final", "short-story.json"), "utf-8"));
       const title = parseShortStoryTitle(story) ?? storyId;
-      await access(join(shortDir, "final", "full.md"));
+      await readFile(join(shortDir, "final", "full.md"), "utf-8");
       shorts.push({
         storyId,
         title,
+        status: run.status,
         finalMarkdownPath: toPosixPath(join("shorts", storyId, "final", "full.md")),
         updatedAt: run.updatedAt,
       });

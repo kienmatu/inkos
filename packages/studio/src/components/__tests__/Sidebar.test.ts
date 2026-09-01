@@ -9,7 +9,7 @@ vi.mock("../../hooks/use-api", () => ({
     data: path === "/books"
       ? { books: [{ id: "novel-one", title: "Novel One", genre: "mystery", status: "drafting", chaptersWritten: 3 }] }
       : path === "/shorts"
-        ? { shorts: [{ storyId: "short-one", title: "Short One", finalMarkdownPath: "shorts/short-one/final/full.md", updatedAt: "2026-08-31T12:00:00.000Z" }] }
+        ? { shorts: [{ storyId: "short-one", title: "Short One", status: "needs-review", finalMarkdownPath: "shorts/short-one/final/full.md", updatedAt: "2026-08-31T12:00:00.000Z" }] }
         : path === "/interactive-films"
           ? { films: [] }
           : path === "/daemon"
@@ -52,6 +52,8 @@ describe("Sidebar My Works", () => {
         ? "Novel Badge"
         : key === "work.badgeShort"
           ? "Short Badge"
+          : key === "work.statusNeedsReview"
+            ? "Needs Review Badge"
           : key,
     }));
 
@@ -59,5 +61,6 @@ describe("Sidebar My Works", () => {
     expect(html).toContain("Novel Badge");
     expect(html).toContain("Short One");
     expect(html).toContain("Short Badge");
+    expect(html).toContain("Needs Review Badge");
   });
 });
