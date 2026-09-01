@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # Convenience wrapper around scripts/release.mjs.
 #
-#   ./release.sh              # patch: 0.1.3 -> 0.1.4
-#   ./release.sh minor        # minor: 0.1.3 -> 0.2.0
+#   ./release.sh              # next patch after npm latest
+#   ./release.sh minor        # next minor after npm latest
 #   ./release.sh major
-#   ./release.sh 0.4.0
+#   ./release.sh 3.4.0        # must be a valid next semantic release
+#   ./release.sh --resume     # finish a partially published tagged release
 #   ./release.sh minor --dry-run
 #   ./release.sh minor --push -y
 #
 # Everything after the version argument is forwarded to the Node script.
 set -euo pipefail
 cd "$(dirname "$0")"
-git pull
 exec node scripts/release.mjs "$@"
