@@ -1,6 +1,6 @@
 {
   "name": "@kienmatu/inkos",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "InkOS Story Creation AI Agent CLI and TUI for fiction, scripts, interactive worlds, and translation.",
   "keywords": [
     "story-creation-ai-agent",
