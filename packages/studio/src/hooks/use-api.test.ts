@@ -95,6 +95,10 @@ describe("deriveInvalidationPaths", () => {
     expect(deriveInvalidationPaths("/daemon/stop")).toEqual(["/api/v1/daemon"]);
   });
 
+  it("refreshes the short collection after marking a short complete", () => {
+    expect(deriveInvalidationPaths("/shorts/reviewable-short/complete")).toEqual(["/api/v1/shorts"]);
+  });
+
   it("refreshes project data after project mutations", () => {
     expect(deriveInvalidationPaths("/project")).toEqual(["/api/v1/project"]);
     expect(deriveInvalidationPaths("/project/language")).toEqual(["/api/v1/project", "/api/v1/project/language"]);

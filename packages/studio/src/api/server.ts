@@ -40,6 +40,7 @@ import {
   chatCompletion,
   runWorkerAgent,
   buildExportArtifact,
+  createProductionRunSnapshot,
   evaluateBookQuality,
   ConsolidatorAgent,
   DetectionConfigSchema,
@@ -126,12 +127,15 @@ import {
   type ResolvedModel,
   type PipelineConfig,
   type PlayMode,
+  type ProductionObservation,
+  type ProductionRunSnapshot,
   type ProjectConfig,
   type LogSink,
   type LogEntry,
   type RequestedIntent,
   type SessionKind,
   type AgentSessionAttachment,
+  writeProductionRunSnapshot,
 } from "@kienmatu/inkos-core";
 import { isConfirmedProductionAction } from "../shared/confirmed-production.js";
 import { summarizeToolResult } from "../shared/tool-result.js";
@@ -1669,6 +1673,70 @@ interface VisibleShortRunIndex {
   readonly storyId: string;
   readonly status: StudioShortStatus;
   readonly updatedAt: string;
+}
+
+function parseProductionObservation(value: unknown): ProductionObservation | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.metric !== "string"
+    || !["info", "warning", "blocking"].includes(String(record.severity))
+    || typeof record.repairable !== "boolean"
+    || (record.evidence !== undefined && typeof record.evidence !== "string")
+  ) {
+    return null;
+  }
+  return {
+    metric: record.metric,
+    expected: record.expected,
+    actual: record.actual,
+    severity: record.severity as ProductionObservation["severity"],
+    ...(typeof record.evidence === "string" ? { evidence: record.evidence } : {}),
+    repairable: record.repairable,
+  };
+}
+
+function parseStudioShortRun(value: unknown, expectedStoryId: string): ProductionRunSnapshot | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const status = record.status;
+  const artifacts = Array.isArray(record.artifacts) && record.artifacts.every((item) => typeof item === "string")
+    ? record.artifacts
+    : null;
+  const observations = Array.isArray(record.observations)
+    ? record.observations.map(parseProductionObservation)
+    : null;
+  if (
+    record.version !== 1
+    || record.kind !== "short-fiction"
+    || record.id !== expectedStoryId
+    || (status !== "complete" && status !== "needs-review")
+    || typeof record.stage !== "string"
+    || !artifacts
+    || !observations
+    || observations.some((observation) => observation === null)
+    || typeof record.updatedAt !== "string"
+    || (record.model !== undefined && typeof record.model !== "string")
+    || (record.skillIds !== undefined && (!Array.isArray(record.skillIds) || !record.skillIds.every((item) => typeof item === "string")))
+    || (record.resumeCursor !== undefined && typeof record.resumeCursor !== "string")
+    || (record.error !== undefined && typeof record.error !== "string")
+  ) {
+    return null;
+  }
+  return {
+    version: 1,
+    kind: "short-fiction",
+    id: expectedStoryId,
+    status,
+    stage: record.stage,
+    artifacts,
+    observations: observations as ReadonlyArray<ProductionObservation>,
+    ...(typeof record.model === "string" ? { model: record.model } : {}),
+    ...(Array.isArray(record.skillIds) ? { skillIds: record.skillIds as ReadonlyArray<string> } : {}),
+    ...(typeof record.resumeCursor === "string" ? { resumeCursor: record.resumeCursor } : {}),
+    ...(typeof record.error === "string" ? { error: record.error } : {}),
+    updatedAt: record.updatedAt,
+  };
 }
 
 function parseVisibleShortRunIndex(value: unknown, expectedStoryId: string): VisibleShortRunIndex | null {
@@ -6495,6 +6563,39 @@ export function createStudioServer(initialConfig: ProjectConfig, root: string, o
   app.get("/api/v1/shorts", async (c) => {
     const shorts = await loadStudioShortList(root);
     return c.json({ shorts });
+  });
+
+  app.post("/api/v1/shorts/:id/complete", async (c) => {
+    const storyId = c.req.param("id");
+    if (!isSafeBookId(storyId)) {
+      return c.json({ error: "Invalid short id" }, 400);
+    }
+
+    const runPath = join("shorts", storyId, "status.json");
+    let raw: unknown;
+    try {
+      raw = JSON.parse(await readFile(join(root, runPath), "utf-8"));
+    } catch {
+      return c.json({ error: "Short not found" }, 404);
+    }
+    const run = parseStudioShortRun(raw, storyId);
+    if (!run) {
+      return c.json({ error: "Short status is invalid" }, 409);
+    }
+
+    if (run.status === "needs-review") {
+      await writeProductionRunSnapshot({
+        rootDir: root,
+        runPath,
+        run: createProductionRunSnapshot({
+          ...run,
+          status: "complete",
+          updatedAt: new Date().toISOString(),
+        }),
+      });
+    }
+
+    return c.json({ ok: true, storyId, status: "complete" });
   });
 
   app.get("/api/v1/translations", async (c) => {

@@ -260,7 +260,10 @@ export function Sidebar({ nav, activePage, sse, t }: {
   const openShort = (short: ShortSummary) => {
     setInput("");
     nav.toChat();
-    openProjectArtifact(short.finalMarkdownPath);
+    openProjectArtifact(short.finalMarkdownPath, {
+      storyId: short.storyId,
+      status: short.status,
+    });
   };
 
   const handleCreateProjectChatSession = () => {
