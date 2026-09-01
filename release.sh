@@ -11,4 +11,5 @@
 # Everything after the version argument is forwarded to the Node script.
 set -euo pipefail
 cd "$(dirname "$0")"
+git pull
 exec node scripts/release.mjs "$@"
