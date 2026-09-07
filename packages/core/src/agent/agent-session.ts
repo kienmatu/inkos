@@ -863,7 +863,7 @@ function createModeTools(params: CreateAgentToolsForModeParams) {
     if (isConfirmed("generate_cover")) {
       return [createGenerateCoverTool(params.projectRoot, { actionPayload: params.actionPayload, language: lang })];
     }
-    return [proposalTool, materialTool, materialRetrievalTool];
+    return [proposalTool, projectReadTool, materialTool, materialRetrievalTool];
   }
 
   if (params.sessionKind === "script") {

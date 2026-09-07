@@ -928,6 +928,7 @@ describe("runAgentSession cache — bookId switch", () => {
     );
     expect(agentInstances[0].state.tools.map((tool: any) => tool.name)).toEqual([
       "propose_action",
+      "read",
       "ingest_material",
       "retrieve_material",
       "use_skill",
@@ -943,6 +944,21 @@ describe("runAgentSession cache — bookId switch", () => {
       "retrieve_material",
       "use_skill",
     ]);
+  });
+
+  it("lets free-text short sessions read saved checkpoints without exposing the runner", async () => {
+    const model = { provider: "x", id: "y", api: "anthropic-messages" } as any;
+    const pipeline = {} as any;
+
+    await runAgentSession(
+      { sessionId: "short-checkpoint-session", bookId: null, sessionKind: "short", language: "en", pipeline, projectRoot, model },
+      "resume my saved short",
+    );
+
+    const toolNames = agentInstances.at(-1).state.tools.map((tool: any) => tool.name);
+    expect(toolNames).toContain("propose_action");
+    expect(toolNames).toContain("read");
+    expect(toolNames).not.toContain("short_fiction_run");
   });
 
   it("treats propose_action as a terminal UI proposal instead of asking the model to continue", async () => {
