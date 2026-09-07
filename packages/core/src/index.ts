@@ -509,6 +509,19 @@ export { normalizeProbedModel, normalizeProbedModels, probeModelsFromUpstream, t
 
 // Agents
 export { BaseAgent, type AgentContext } from "./agents/base.js";
+export {
+  parseShortFictionSemanticBatchPlan,
+  resolveSemanticChapterGroups,
+  resolveShortFictionBatchCapacity,
+  SHORT_FICTION_BATCH_USABLE_RATIO,
+  SHORT_FICTION_MAX_SEMANTIC_BATCH_CHAPTERS,
+  SHORT_FICTION_MIN_SEMANTIC_BATCH_CHAPTERS,
+  SHORT_FICTION_UNKNOWN_MODEL_OUTPUT_TOKENS,
+  type ResolvedSemanticChapterGroups,
+  type ShortFictionBatchCapacity,
+  type ShortFictionBatchCapacityInput,
+  type ShortFictionSemanticBatch,
+} from "./agents/short-fiction-batching.js";
 export { ArchitectAgent, type ArchitectOutput } from "./agents/architect.js";
 export { WriterAgent, type WriteChapterInput, type WriteChapterOutput, type TokenUsage } from "./agents/writer.js";
 export { ContinuityAuditor, type AuditResult, type AuditIssue } from "./agents/continuity.js";
