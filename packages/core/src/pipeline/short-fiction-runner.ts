@@ -22,6 +22,7 @@ import {
   findEmptyShortFictionChapters,
   formatShortFictionChapterHeading,
   parseShortFictionOutline,
+  parseShortFictionBatchDraft,
   renderShortFictionDraftMarkdown,
   validateShortFictionDraftForFinal,
   type ShortFictionBatchDraft,
@@ -147,12 +148,13 @@ export async function runShortFictionProduction(
   // A stable storyId lets a re-run resume from disk instead of redoing finished
   // work — a transient failure in a late stage used to throw the whole short
   // away (orphaning outline/drafts). If it already finished, return it as-is.
-  if (
-    providedStoryId
-    && await projectFileExists(root, join(outDir, providedStoryId, "final", "full.md"))
-    && !await isFailedShortRun(root, join(outDir, providedStoryId, "status.json"))
-  ) {
-    return buildShortRunResult(providedStoryId, join(outDir, providedStoryId), { coverError: "already-complete" });
+  if (providedStoryId && await projectFileExists(root, join(outDir, providedStoryId, "final", "full.md"))) {
+    const existingRun = await readShortRunResumeState(root, join(outDir, providedStoryId, "status.json"));
+    const shouldResume = existingRun?.status === "failed"
+      || (existingRun?.status === "needs-review" && existingRun.resumeCursor === "draft-v001");
+    if (!shouldResume) {
+      return buildShortRunResult(providedStoryId, join(outDir, providedStoryId), { coverError: "already-complete" });
+    }
   }
 
   try {
@@ -160,14 +162,18 @@ export async function runShortFictionProduction(
   } catch (error) {
     // Mark the partial output as failed so drafts can't masquerade as a short.
     if (providedStoryId) {
-      await writeShortRunSnapshot(root, join(outDir, providedStoryId), {
-        storyId: providedStoryId,
-        status: "failed",
-        stage: "production",
-        artifacts: [],
-        observations: [],
-        error: error instanceof Error ? error.message : String(error),
-      }).catch(() => undefined);
+      const baseDir = join(outDir, providedStoryId);
+      const existingRun = await readShortRunResumeState(root, join(baseDir, "status.json"));
+      if (existingRun?.status !== "needs-review" || existingRun.resumeCursor !== "draft-v001") {
+        await writeShortRunSnapshot(root, baseDir, {
+          storyId: providedStoryId,
+          status: "failed",
+          stage: "production",
+          artifacts: [],
+          observations: [],
+          error: error instanceof Error ? error.message : String(error),
+        }).catch(() => undefined);
+      }
     }
     throw error;
   }
@@ -333,42 +339,64 @@ async function produceShort(
   let revisionWarning: string | undefined;
   let salesPackage: ShortFictionSalesPackage;
   try {
-    options.onProgress?.("Writing full short fiction draft...");
-    const writer = new ShortFictionWriterAgent(options.runtimes.writer);
-    let draftV1 = await writer.writeDraft({
-      direction: options.direction,
-      outlineMarkdown,
+    const resumedDraft = await tryLoadCompleteDraftCheckpoint(
+      root,
+      baseDir,
       chapterCount,
-      charsPerChapter,
       language,
-      chapterGroups: semanticGroups.groups,
-      batchCapacity: writerBatchCapacity,
-      onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Writing", info)),
-    });
-    let missingFromDraft = findEmptyShortFictionChapters(draftV1);
-    if (missingFromDraft.length > 0) {
-      await writeDraftArtifacts(root, baseDir, "v001-partial", draftV1, language);
-      for (let attempt = 1; missingFromDraft.length > 0 && attempt <= SHORT_FICTION_DRAFT_COMPLETION_ATTEMPTS; attempt += 1) {
-        options.onProgress?.(`Completing missing short fiction chapters: ${missingFromDraft.join(", ")}...`);
-        draftV1 = await writer.continueDraft({
-          direction: options.direction,
-          outlineMarkdown,
-          chapterCount,
-          charsPerChapter,
-          language,
-          chapterGroups: semanticGroups.groups,
-          batchCapacity: writerBatchCapacity,
-          draft: draftV1,
-          onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Completing", info)),
-        });
-        missingFromDraft = findEmptyShortFictionChapters(draftV1);
-        if (missingFromDraft.length > 0) {
-          await writeDraftArtifacts(root, baseDir, "v001-partial", draftV1, language);
+      options.onProgress,
+    );
+    let draftV1: ShortFictionBatchDraft;
+    if (resumedDraft) {
+      options.onProgress?.("Resuming from existing complete draft (skipping chapter generation)...");
+      draftV1 = resumedDraft;
+    } else {
+      options.onProgress?.("Writing full short fiction draft...");
+      const writer = new ShortFictionWriterAgent(options.runtimes.writer);
+      draftV1 = await writer.writeDraft({
+        direction: options.direction,
+        outlineMarkdown,
+        chapterCount,
+        charsPerChapter,
+        language,
+        chapterGroups: semanticGroups.groups,
+        batchCapacity: writerBatchCapacity,
+        onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Writing", info)),
+      });
+      let missingFromDraft = findEmptyShortFictionChapters(draftV1);
+      if (missingFromDraft.length > 0) {
+        await writeDraftArtifacts(root, baseDir, "v001-partial", draftV1, language);
+        for (let attempt = 1; missingFromDraft.length > 0 && attempt <= SHORT_FICTION_DRAFT_COMPLETION_ATTEMPTS; attempt += 1) {
+          options.onProgress?.(`Completing missing short fiction chapters: ${missingFromDraft.join(", ")}...`);
+          draftV1 = await writer.continueDraft({
+            direction: options.direction,
+            outlineMarkdown,
+            chapterCount,
+            charsPerChapter,
+            language,
+            chapterGroups: semanticGroups.groups,
+            batchCapacity: writerBatchCapacity,
+            draft: draftV1,
+            onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Completing", info)),
+          });
+          missingFromDraft = findEmptyShortFictionChapters(draftV1);
+          if (missingFromDraft.length > 0) {
+            await writeDraftArtifacts(root, baseDir, "v001-partial", draftV1, language);
+          }
         }
       }
     }
     validateShortFictionDraftForFinal(draftV1, { expectedChapters: chapterCount });
     await writeDraftArtifacts(root, baseDir, "v001", draftV1, language);
+    await writeFinalArtifacts(root, baseDir, draftV1, language);
+    await writeShortRunSnapshot(root, baseDir, {
+      storyId,
+      status: "needs-review",
+      stage: "draft-review",
+      resumeCursor: "draft-v001",
+      artifacts: draftReviewCheckpointArtifacts(baseDir),
+      observations: [],
+    });
 
     options.onProgress?.("Reviewing full draft...");
     const draftReviewer = new ShortFictionDraftReviewerAgent(options.runtimes.draftReview);
@@ -436,14 +464,27 @@ async function produceShort(
     });
     await writePackageArtifacts(root, baseDir, salesPackage, language);
   } catch (error) {
-    await writeShortRunSnapshot(root, baseDir, {
-      storyId,
-      status: "failed",
-      stage: "draft",
-      artifacts: [],
-      observations: [],
-      error: error instanceof Error ? error.message : String(error),
-    }).catch(() => undefined);
+    const existingRun = await readShortRunResumeState(root, join(baseDir, "status.json"));
+    const reviewCheckpointExists = existingRun?.status === "needs-review"
+      && existingRun.resumeCursor === "draft-v001";
+    await writeShortRunSnapshot(root, baseDir, reviewCheckpointExists
+      ? {
+          storyId,
+          status: "needs-review",
+          stage: "draft-review",
+          resumeCursor: "draft-v001",
+          artifacts: draftReviewCheckpointArtifacts(baseDir),
+          observations: [],
+          error: error instanceof Error ? error.message : String(error),
+        }
+      : {
+          storyId,
+          status: "failed",
+          stage: "draft",
+          artifacts: [],
+          observations: [],
+          error: error instanceof Error ? error.message : String(error),
+        }).catch(() => undefined);
     throw error;
   }
 
@@ -540,14 +581,26 @@ async function projectFileExists(root: string, path: string): Promise<boolean> {
   }
 }
 
-async function isFailedShortRun(root: string, path: string): Promise<boolean> {
+async function readShortRunResumeState(
+  root: string,
+  path: string,
+): Promise<{ readonly status: "complete" | "needs-review" | "failed"; readonly resumeCursor?: string } | undefined> {
   const raw = await tryReadProjectText(root, path);
-  if (!raw) return false;
+  if (!raw) return undefined;
   try {
-    const parsed = JSON.parse(raw) as { status?: unknown };
-    return parsed.status === "failed";
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
+    const record = parsed as Record<string, unknown>;
+    if (record.status !== "complete" && record.status !== "needs-review" && record.status !== "failed") {
+      return undefined;
+    }
+    if (record.resumeCursor !== undefined && typeof record.resumeCursor !== "string") return undefined;
+    return {
+      status: record.status,
+      ...(typeof record.resumeCursor === "string" ? { resumeCursor: record.resumeCursor } : {}),
+    };
   } catch {
-    return false;
+    return undefined;
   }
 }
 
@@ -557,6 +610,34 @@ async function tryReadProjectText(root: string, path: string): Promise<string | 
   } catch {
     return undefined;
   }
+}
+
+async function tryLoadCompleteDraftCheckpoint(
+  root: string,
+  baseDir: string,
+  expectedChapters: number,
+  language: ShortFictionLanguage,
+  onProgress?: (message: string) => void,
+): Promise<ShortFictionBatchDraft | undefined> {
+  const raw = await tryReadProjectText(root, join(baseDir, "drafts", "v001", "full.md"));
+  if (raw === undefined) return undefined;
+  try {
+    const draft = parseShortFictionBatchDraft(raw, { expectedChapters, language });
+    validateShortFictionDraftForFinal(draft, { expectedChapters });
+    return draft;
+  } catch {
+    onProgress?.("Existing draft checkpoint is invalid; regenerating full draft...");
+    return undefined;
+  }
+}
+
+function draftReviewCheckpointArtifacts(baseDir: string): string[] {
+  return [
+    join(baseDir, "outline", "v002.md"),
+    join(baseDir, "drafts", "v001", "full.md"),
+    join(baseDir, "final", "full.md"),
+    join(baseDir, "final", "short-story.json"),
+  ].map(projectPath);
 }
 
 export async function generateShortFictionCover(
@@ -714,6 +795,7 @@ async function writeShortRunSnapshot(
     readonly stage: string;
     readonly artifacts: ReadonlyArray<string>;
     readonly observations: ReadonlyArray<ProductionObservation>;
+    readonly resumeCursor?: string;
     readonly error?: string;
   },
 ): Promise<void> {
@@ -727,6 +809,7 @@ async function writeShortRunSnapshot(
       stage: input.stage,
       artifacts: input.artifacts,
       observations: input.observations,
+      ...(input.resumeCursor ? { resumeCursor: input.resumeCursor } : {}),
       ...(input.error ? { error: input.error } : {}),
     }),
   });

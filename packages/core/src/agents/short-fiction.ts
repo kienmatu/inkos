@@ -721,18 +721,18 @@ function extractFirstHeading(raw: string): string {
 }
 
 function extractMarkdownChapterTitle(raw: string, number: number): string {
-  const pattern = new RegExp(`^##\\s*(?:${markdownChapterPrefixPattern(number)})?(.+)$`, "m");
+  const pattern = new RegExp(`^##[ \\t]*(?:${markdownChapterPrefixPattern(number)})(.*)$`, "m");
   return pattern.exec(raw)?.[1]?.trim() ?? "";
 }
 
 function extractMarkdownChapterContent(raw: string, number: number): string {
-  const pattern = new RegExp(`^##\\s*(?:${markdownChapterPrefixPattern(number)})?.*$\\n([\\s\\S]*?)(?=^##\\s*(?:${markdownChapterPrefixPattern(number + 1)})?.*$|(?![\\s\\S]))`, "m");
+  const pattern = new RegExp(`^##[ \\t]*(?:${markdownChapterPrefixPattern(number)})[^\\r\\n]*\\r?\\n([\\s\\S]*?)(?=^##[ \\t]*(?:${markdownChapterPrefixPattern(number + 1)})[^\\r\\n]*$|(?![\\s\\S]))`, "m");
   return pattern.exec(raw)?.[1]?.trim() ?? "";
 }
 
 // Matches a zh "第N章" or en "Chapter N" heading prefix inside markdown fallbacks.
 function markdownChapterPrefixPattern(number: number): string {
-  return `第\\s*${number}\\s*章\\s*|Chapter\\s*${number}\\s*[:：.\\-–—]?\\s*`;
+  return `第[ \\t]*${number}[ \\t]*章[ \\t]*|Chapter[ \\t]*${number}[ \\t]*[:：.\\-–—]?[ \\t]*`;
 }
 
 function extractDuplicateTitleTaggedChapterContent(raw: string, number: number): string {
