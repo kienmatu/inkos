@@ -21,6 +21,7 @@ import {
   ShortFictionWriterAgent,
   findEmptyShortFictionChapters,
   formatShortFictionChapterHeading,
+  parseShortFictionOutline,
   renderShortFictionDraftMarkdown,
   validateShortFictionDraftForFinal,
   type ShortFictionBatchDraft,
@@ -30,12 +31,18 @@ import {
   type ShortFictionSalesPackage,
 } from "../agents/short-fiction.js";
 import {
+  resolveSemanticChapterGroups,
+  resolveShortFictionBatchCapacity,
+  type ShortFictionSemanticBatch,
+} from "../agents/short-fiction-batching.js";
+import {
   coverSecretKey,
   normalizeCoverBaseUrl,
   resolveCoverProviderPreset,
   type CoverProviderPreset,
 } from "../llm/cover-providers.js";
 import { loadSecrets } from "../llm/secrets.js";
+import { resolveModelCapability } from "../llm/provider.js";
 import {
   createProductionRunSnapshot,
   createRangeObservation,
@@ -201,6 +208,31 @@ async function produceShort(
         SHORT_FICTION_MAX_CHARS_PER_CHAPTER,
       );
 
+  const writerModelCapability = resolveModelCapability(options.runtimes.writer.client, options.runtimes.writer.model);
+  const reviserModelCapability = resolveModelCapability(options.runtimes.revise.client, options.runtimes.revise.model);
+  const writerBatchCapacity = resolveShortFictionBatchCapacity({
+    modelMaxOutput: writerModelCapability.maxOutput,
+    capacitySource: writerModelCapability.source,
+    charsPerChapter,
+    language,
+  });
+  const reviserBatchCapacity = resolveShortFictionBatchCapacity({
+    modelMaxOutput: reviserModelCapability.maxOutput,
+    capacitySource: reviserModelCapability.source,
+    charsPerChapter,
+    language,
+  });
+  const maxChaptersPerBatch = Math.min(
+    writerBatchCapacity.maxChaptersPerBatch,
+    reviserBatchCapacity.maxChaptersPerBatch,
+  );
+  options.runtimes.writer.logger?.info(
+    `[short-fiction] writer model=${options.runtimes.writer.model} capability=${writerBatchCapacity.capacitySource} capacity=${writerBatchCapacity.capacityTokens} usable=${writerBatchCapacity.usableTokens} maxBatch=${writerBatchCapacity.maxChaptersPerBatch}`,
+  );
+  options.runtimes.revise.logger?.info(
+    `[short-fiction] reviser model=${options.runtimes.revise.model} capability=${reviserBatchCapacity.capacitySource} capacity=${reviserBatchCapacity.capacityTokens} usable=${reviserBatchCapacity.usableTokens} maxBatch=${reviserBatchCapacity.maxChaptersPerBatch}`,
+  );
+
   // Resume the (3-stage) outline from disk if v002 already exists for this id —
   // the writer + everything downstream only need the outline markdown.
   const resumedOutline = providedStoryId
@@ -208,6 +240,7 @@ async function produceShort(
     : undefined;
 
   let outlineMarkdown: string;
+  let proposedBatches: ReadonlyArray<ShortFictionSemanticBatch> | undefined;
   let outlineRevisionWarning: string | undefined;
   let storyId: string;
   let baseDir: string;
@@ -215,6 +248,7 @@ async function produceShort(
     storyId = providedStoryId;
     baseDir = join(outDir, storyId);
     outlineMarkdown = resumedOutline;
+    proposedBatches = parseShortFictionOutline(resumedOutline, language).proposedBatches;
     options.onProgress?.("Resuming from existing outline (skipping outline stages)...");
   } else {
     options.onProgress?.("Creating short fiction outline...");
@@ -225,6 +259,7 @@ async function produceShort(
       charsPerChapter,
       reference: options.reference,
       language,
+      maxChaptersPerBatch,
     });
 
     storyId = providedStoryId ?? safeSegment(slugify(outlineV1.storyTitle || options.direction));
@@ -238,6 +273,7 @@ async function produceShort(
       outline: outlineV1,
       reference: options.reference,
       language,
+      maxChaptersPerBatch,
     });
     await writeText(root, join(baseDir, "reviews", "outline-v001.md"), outlineReview);
 
@@ -252,12 +288,15 @@ async function produceShort(
         chapterCount,
         charsPerChapter,
         language,
+        maxChaptersPerBatch,
       });
       await writeText(root, join(baseDir, "outline", "v002.md"), outlineV2.rawContent);
       outlineMarkdown = outlineV2.rawContent;
+      proposedBatches = outlineV2.proposedBatches;
     } catch (error) {
       outlineRevisionWarning = error instanceof Error ? error.message : String(error);
       outlineMarkdown = outlineV1.rawContent;
+      proposedBatches = outlineV1.proposedBatches;
       await writeText(root, join(baseDir, "outline", "v002.md"), outlineMarkdown);
       await writeText(root, join(baseDir, "reviews", "outline-v002-warning.md"), language === "en"
         ? [
@@ -281,6 +320,15 @@ async function produceShort(
     }
   }
 
+  const semanticGroups = resolveSemanticChapterGroups({
+    chapterCount,
+    maxChaptersPerBatch,
+    proposed: proposedBatches,
+  });
+  options.runtimes.writer.logger?.info(
+    `[short-fiction] semantic batches source=${semanticGroups.source} ranges=${semanticGroups.groups.map((group) => `${group[0]}-${group[group.length - 1]}`).join(",")}`,
+  );
+
   let finalDraft: ShortFictionBatchDraft;
   let revisionWarning: string | undefined;
   let salesPackage: ShortFictionSalesPackage;
@@ -293,6 +341,8 @@ async function produceShort(
       chapterCount,
       charsPerChapter,
       language,
+      chapterGroups: semanticGroups.groups,
+      batchCapacity: writerBatchCapacity,
       onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Writing", info)),
     });
     let missingFromDraft = findEmptyShortFictionChapters(draftV1);
@@ -306,6 +356,8 @@ async function produceShort(
           chapterCount,
           charsPerChapter,
           language,
+          chapterGroups: semanticGroups.groups,
+          batchCapacity: writerBatchCapacity,
           draft: draftV1,
           onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Completing", info)),
         });
@@ -342,6 +394,8 @@ async function produceShort(
         chapterCount,
         charsPerChapter,
         language,
+        chapterGroups: semanticGroups.groups,
+        batchCapacity: reviserBatchCapacity,
         onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Revising", info)),
       });
       validateShortFictionDraftForFinal(draftV2, { expectedChapters: chapterCount });

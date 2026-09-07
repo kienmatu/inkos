@@ -61,16 +61,16 @@ describe("English format re-cut", () => {
     expect(SHORT_FICTION_MIN_CHAPTERS * SHORT_FICTION_MIN_CHARS_PER_CHAPTER).toBe(7_200);
   });
 
-  it("still batches one English chapter per call across the whole new range", () => {
-    for (const words of [900, 1200, 1500]) {
-      expect(resolveChaptersPerBatch(words, "en")).toBe(1);
-    }
+  it("uses the 10k fallback capacity across the English length range", () => {
+    expect(resolveChaptersPerBatch(900, "en")).toBe(6);
+    expect(resolveChaptersPerBatch(1200, "en")).toBe(4);
+    expect(resolveChaptersPerBatch(1500, "en")).toBe(3);
   });
 
-  it("still batches Chinese as before", () => {
-    expect(resolveChaptersPerBatch(900, "zh")).toBe(2);
-    expect(resolveChaptersPerBatch(1000, "zh")).toBe(2);
-    expect(resolveChaptersPerBatch(1200, "zh")).toBe(1);
+  it("caps fallback Chinese batches at six", () => {
+    expect(resolveChaptersPerBatch(900, "zh")).toBe(6);
+    expect(resolveChaptersPerBatch(1000, "zh")).toBe(6);
+    expect(resolveChaptersPerBatch(1200, "zh")).toBe(6);
   });
 });
 

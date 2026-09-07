@@ -1,6 +1,6 @@
-import { BaseAgent } from "./base.js";
+import { BaseAgent, type AgentContext } from "./base.js";
 import type { LLMMessage, LLMResponse } from "../llm/provider.js";
-import { PartialResponseError } from "../llm/provider.js";
+import { PartialResponseError, resolveModelCapability } from "../llm/provider.js";
 import { countChapterLength, resolveLengthCountingMode } from "../utils/length-metrics.js";
 import {
   type ShortFictionLanguage,
@@ -31,6 +31,10 @@ import {
 } from "../models/short-fiction-format.js";
 import {
   parseShortFictionSemanticBatchPlan,
+  resolveSemanticChapterGroups,
+  resolveShortFictionBatchCapacity,
+  SHORT_FICTION_MAX_SEMANTIC_BATCH_CHAPTERS,
+  type ShortFictionBatchCapacity,
   type ShortFictionSemanticBatch,
 } from "./short-fiction-batching.js";
 
@@ -54,34 +58,9 @@ export {
   SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER,
 };
 
-// Conservative per-call output budget. Endpoints that ignore max_tokens and
-// enforce their own have been observed cutting at roughly 1,300-2,000 tokens.
-// Sizing below that keeps the common case single-shot; adaptive halving in
-// runChapterBatches covers any endpoint stricter than this.
-//
-// Accepted trade-off (2026-08-28 editorial re-cut): a default English chapter
-// is now SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER (1,200) words, which is
-// ~1,560 estimated output tokens at ~1.3 tokens/word — ABOVE this 1,400
-// budget and inside the 1,300-2,000 window cited above as where strict
-// endpoints cut. resolveChaptersPerBatch cannot return less than 1 chapter,
-// and runChapterBatches (below) rethrows rather than splitting further once a
-// group is already down to one chapter, so on the strictest endpoints English
-// generation has no fallback left below that point. This was considered and
-// the decision was to keep 1,200 words rather than add further error-handling
-// or splitting machinery. On an endpoint that caps output under roughly 1,600
-// tokens, the operator's lever is a lower `--chars` value, not a code change.
-// See "Accepted trade-offs" in
-// docs/superpowers/specs/2026-08-28-short-fiction-editorial-review.md.
-const SHORT_FICTION_BATCH_OUTPUT_TOKEN_BUDGET = 1_400;
-
-// Upper clamp. Never batch more than this many chapters even when they are
-// short enough to fit, so one failed batch never costs too much rework.
-// Currently unreachable: with the re-cut constants the largest value
-// resolveChaptersPerBatch can return is 2 (zh at its 900-character minimum),
-// so this clamp of 3 never actually triggers. It stays as a backstop in case
-// the length constants move again and chapters get short enough to fit 3+
-// per batch.
-export const SHORT_FICTION_MAX_CHAPTERS_PER_BATCH = 3;
+// Compatibility export for callers that previously consumed the old fixed
+// clamp. New execution uses the complete capability policy below.
+export const SHORT_FICTION_MAX_CHAPTERS_PER_BATCH = SHORT_FICTION_MAX_SEMANTIC_BATCH_CHAPTERS;
 
 // zh chapters are measured in characters (~1.44 chars/token), en chapters in
 // words (~1.3 tokens/word). See length-metrics.ts for the units.
@@ -96,11 +75,11 @@ export function resolveChaptersPerBatch(
   charsPerChapter: number,
   language: ShortFictionLanguage = "en",
 ): number {
-  const tokensPerChapter = language === "en"
-    ? charsPerChapter * 1.3
-    : charsPerChapter * 0.7;
-  const fitted = Math.floor(SHORT_FICTION_BATCH_OUTPUT_TOKEN_BUDGET / tokensPerChapter);
-  return Math.min(Math.max(fitted, 1), SHORT_FICTION_MAX_CHAPTERS_PER_BATCH);
+  return resolveShortFictionBatchCapacity({
+    capacitySource: "unknown",
+    charsPerChapter,
+    language,
+  }).maxChaptersPerBatch;
 }
 
 export interface ShortFictionBatchProgress {
@@ -214,6 +193,8 @@ export interface ShortFictionDraftInput {
   readonly charsPerChapter: number;
   readonly language?: ShortFictionLanguage;
   readonly onBatchProgress?: (info: ShortFictionBatchProgress) => void;
+  readonly chapterGroups?: ReadonlyArray<ReadonlyArray<number>>;
+  readonly batchCapacity?: ShortFictionBatchCapacity;
 }
 
 export interface ShortFictionDraftReviewInput extends ShortFictionDraftInput {
@@ -287,14 +268,18 @@ export class ShortFictionWriterAgent extends BaseAgent {
   }
 
   async writeDraft(input: ShortFictionDraftInput): Promise<ShortFictionBatchDraft> {
-    const allChapters = Array.from({ length: input.chapterCount }, (_, index) => index + 1);
-    const groups = chunkChapters(allChapters, resolveChaptersPerBatch(input.charsPerChapter, input.language));
+    const batchCapacity = input.batchCapacity ?? resolveAgentBatchCapacity(this.ctx, input);
+    const groups = input.chapterGroups ?? resolveSemanticChapterGroups({
+      chapterCount: input.chapterCount,
+      maxChaptersPerBatch: batchCapacity.maxChaptersPerBatch,
+    }).groups;
 
     const fragments = await runChapterBatches({
       agentName: this.name,
       log: this.log,
       groups,
       charsPerChapter: input.charsPerChapter,
+      maxTokensForBatch: batchCapacity.maxTokensForBatch,
       temperature: 0.58,
       chat: (messages, options) => this.chat(messages, options),
       onBatchProgress: input.onBatchProgress,
@@ -343,7 +328,12 @@ export class ShortFictionWriterAgent extends BaseAgent {
     const missingChapters = findEmptyShortFictionChapters(input.draft);
     if (missingChapters.length === 0) return input.draft;
 
-    const groups = chunkChapters(missingChapters, resolveChaptersPerBatch(input.charsPerChapter, input.language));
+    const batchCapacity = input.batchCapacity ?? resolveAgentBatchCapacity(this.ctx, input);
+    const baseGroups = input.chapterGroups ?? resolveSemanticChapterGroups({
+      chapterCount: input.chapterCount,
+      maxChaptersPerBatch: batchCapacity.maxChaptersPerBatch,
+    }).groups;
+    const groups = intersectMissingChapterGroups(baseGroups, missingChapters);
     const baseRaw = input.draft.rawContent.trim();
 
     const fragments = await runChapterBatches({
@@ -351,6 +341,7 @@ export class ShortFictionWriterAgent extends BaseAgent {
       log: this.log,
       groups,
       charsPerChapter: input.charsPerChapter,
+      maxTokensForBatch: batchCapacity.maxTokensForBatch,
       temperature: 0.68,
       chat: (messages, options) => this.chat(messages, options),
       onBatchProgress: input.onBatchProgress,
@@ -413,8 +404,11 @@ export class ShortFictionDraftReviserAgent extends BaseAgent {
   // revised-so-far prose, and the review notes — adding the shaping block on
   // top would be redundant instruction, not new information.
   async reviseDraft(input: ShortFictionDraftRevisionInput): Promise<ShortFictionBatchDraft> {
-    const allChapters = Array.from({ length: input.chapterCount }, (_, index) => index + 1);
-    const groups = chunkChapters(allChapters, resolveChaptersPerBatch(input.charsPerChapter, input.language));
+    const batchCapacity = input.batchCapacity ?? resolveAgentBatchCapacity(this.ctx, input);
+    const groups = input.chapterGroups ?? resolveSemanticChapterGroups({
+      chapterCount: input.chapterCount,
+      maxChaptersPerBatch: batchCapacity.maxChaptersPerBatch,
+    }).groups;
     const v1Markdown = input.draft.rawContent.trim()
       || renderShortFictionDraftMarkdown(input.draft, input.language);
 
@@ -423,6 +417,7 @@ export class ShortFictionDraftReviserAgent extends BaseAgent {
       ...(this.log ? { log: this.log } : {}),
       groups,
       charsPerChapter: input.charsPerChapter,
+      maxTokensForBatch: batchCapacity.maxTokensForBatch,
       temperature: 0.45,
       chat: (messages, options) => this.chat(messages, options),
       ...(input.onBatchProgress ? { onBatchProgress: input.onBatchProgress } : {}),
@@ -724,15 +719,38 @@ function fallbackChapterTitle(number: number, language: ShortFictionLanguage): s
   return language === "en" ? `Chapter ${number}` : `第${number}章`;
 }
 
-// charsPerChapter is the language's native unit (zh chars / en words). The 2.2
-// multiplier is calibrated for zh chars (~1-1.5 tokens each); for en words
-// (~1.3-1.5 tokens each) it simply leaves extra headroom, which is safe for a cap.
-// The `4096` floor is currently unreachable: the smallest input this function
-// receives is 1 chapter at SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER (900),
-// giving ceil(900 * 2.2) + 4096 = 6,076, already above the floor. It stays as
-// a backstop in case the length constants shrink again.
-function estimateShortFictionMaxTokens(chapterCount: number, charsPerChapter: number): number {
-  return Math.max(4096, Math.ceil(chapterCount * charsPerChapter * 2.2) + 4096);
+function resolveAgentBatchCapacity(
+  ctx: AgentContext,
+  input: Pick<ShortFictionDraftInput, "charsPerChapter" | "language">,
+): ShortFictionBatchCapacity {
+  const capability = resolveModelCapability(ctx.client, ctx.model);
+  return resolveShortFictionBatchCapacity({
+    modelMaxOutput: capability.maxOutput,
+    capacitySource: capability.source,
+    charsPerChapter: input.charsPerChapter,
+    language: input.language,
+  });
+}
+
+function intersectMissingChapterGroups(
+  groups: ReadonlyArray<ReadonlyArray<number>>,
+  missingChapters: readonly number[],
+): number[][] {
+  const missing = new Set(missingChapters);
+  return groups.flatMap((group) => {
+    const segments: number[][] = [];
+    let active: number[] = [];
+    for (const chapter of group) {
+      if (missing.has(chapter)) {
+        active.push(chapter);
+      } else if (active.length > 0) {
+        segments.push(active);
+        active = [];
+      }
+    }
+    if (active.length > 0) segments.push(active);
+    return segments;
+  });
 }
 
 function isOutputLimitError(error: unknown): boolean {
@@ -749,6 +767,7 @@ async function runChapterBatches(params: {
   readonly log?: { warn(message: string): void };
   readonly groups: ReadonlyArray<readonly number[]>;
   readonly charsPerChapter: number;
+  readonly maxTokensForBatch: (chapterCount: number) => number;
   readonly temperature: number;
   readonly chat: (messages: ReadonlyArray<LLMMessage>, options: { temperature: number; maxTokens: number }) => Promise<LLMResponse>;
   readonly buildMessages: (chapters: readonly number[], fragmentsSoFar: readonly string[]) => LLMMessage[];
@@ -763,7 +782,7 @@ async function runChapterBatches(params: {
       const response = await retryShortFictionCall(() =>
         params.chat(params.buildMessages(chapters, fragments), {
           temperature: params.temperature,
-          maxTokens: estimateShortFictionMaxTokens(chapters.length, params.charsPerChapter),
+          maxTokens: params.maxTokensForBatch(chapters.length),
         }), params.agentName, params.log);
 
       fragments.push(stripOuterCodeFence(response.content));
