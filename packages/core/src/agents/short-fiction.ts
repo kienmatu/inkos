@@ -63,7 +63,6 @@ export {
 // Compatibility export for callers that previously consumed the old fixed
 // clamp. New execution uses the complete capability policy below.
 export const SHORT_FICTION_MAX_CHAPTERS_PER_BATCH = SHORT_FICTION_MAX_SEMANTIC_BATCH_CHAPTERS;
-const SHORT_FICTION_REVIEW_GROUP_SIZE = 2;
 
 // zh chapters are measured in characters (~1.44 chars/token), en chapters in
 // words (~1.3 tokens/word). See length-metrics.ts for the units.
@@ -393,10 +392,10 @@ export class ShortFictionDraftReviewerAgent extends BaseAgent {
       return response.content.trim();
     }
 
-    const groups = chunkChapters(
-      input.draft.chapters.map((chapter) => chapter.number),
-      SHORT_FICTION_REVIEW_GROUP_SIZE,
-    );
+    const groups = input.chapterGroups ?? resolveSemanticChapterGroups({
+      chapterCount: input.chapterCount,
+      maxChaptersPerBatch: resolveAgentBatchCapacity(this.ctx, input).maxChaptersPerBatch,
+    }).groups;
     const maxTokens = Math.min(24_576, this.ctx.client.defaults?.maxTokens ?? 8_192);
     const sectionReports: Array<{
       chapterRange: readonly [number, number];

@@ -423,6 +423,7 @@ async function produceShort(
       chapterCount,
       charsPerChapter,
       language,
+      chapterGroups: semanticGroups.groups,
       onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Reviewing", info)),
     });
     await writeText(root, join(baseDir, "reviews", "draft-v001.md"), draftReview);
