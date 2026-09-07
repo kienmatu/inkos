@@ -28,6 +28,8 @@ import {
   buildShortFictionDraftContinuationUserPrompt,
   buildShortFictionDraftReviewSystemPrompt,
   buildShortFictionDraftReviewUserPrompt,
+  buildShortFictionDraftSectionReviewUserPrompt,
+  buildShortFictionDraftReviewSynthesisUserPrompt,
   buildShortFictionDraftRevisionFollowup,
   buildShortFictionPackageSystemPrompt,
   buildShortFictionPackageUserPrompt,
@@ -541,6 +543,23 @@ const SHORT_FICTION_ENGLISH_PROMPTS: ReadonlyArray<{ readonly name: string; read
     build: () => buildShortFictionDraftReviewUserPrompt({
       ...SHORT_FICTION_DRAFT_INPUT,
       draftMarkdown: "# The Draft Body",
+    }),
+  },
+  {
+    name: "short-fiction draft section review user prompt",
+    build: () => buildShortFictionDraftSectionReviewUserPrompt({
+      direction: SHORT_FICTION_DRAFT_INPUT.direction,
+      outlineMarkdown: SHORT_FICTION_DRAFT_INPUT.outlineMarkdown,
+      chapterRange: [1, 2],
+      draftMarkdown: "# The Draft Section",
+    }),
+  },
+  {
+    name: "short-fiction draft review synthesis user prompt",
+    build: () => buildShortFictionDraftReviewSynthesisUserPrompt({
+      direction: SHORT_FICTION_DRAFT_INPUT.direction,
+      outlineMarkdown: SHORT_FICTION_DRAFT_INPUT.outlineMarkdown,
+      sectionReports: [{ chapterRange: [1, 2], report: "The opening pulls, but the turn needs evidence." }],
     }),
   },
   {

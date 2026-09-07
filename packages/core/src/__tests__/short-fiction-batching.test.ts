@@ -695,6 +695,141 @@ import {
 } from "../agents/short-fiction.js";
 import { runShortFictionProduction } from "../pipeline/short-fiction-runner.js";
 
+function reviewDraftMarkdown(chapterCount: number): string {
+  return [
+    "=== SHORT_FICTION_TITLE ===",
+    "The Extra Floor",
+    ...Array.from({ length: chapterCount }, (_, index) => [
+      `=== CHAPTER ${index + 1} TITLE ===`,
+      `Chapter ${index + 1}`,
+      `=== CHAPTER ${index + 1} CONTENT ===`,
+      `PROSE_FOR_CHAPTER_${index + 1}`,
+    ].join("\n")),
+  ].join("\n");
+}
+
+function requestedReviewChapters(call: unknown[], chapterCount: number): number[] {
+  const prompt = userText(call);
+  return Array.from({ length: chapterCount }, (_, index) => index + 1)
+    .filter((chapter) => prompt.includes(`PROSE_FOR_CHAPTER_${chapter}`));
+}
+
+describe("reviewDraft batching", () => {
+  it("reviews two-chapter sections before synthesizing without sending the full prose again", async () => {
+    const agent = new ShortFictionDraftReviewerAgent({
+      client: { provider: "openai" } as never,
+      model: "fake",
+      projectRoot: "/tmp/does-not-matter",
+    });
+    const chat = spyChat(agent);
+    const progress: string[] = [];
+    chat.mockImplementation((...args: unknown[]) => {
+      const chapters = requestedReviewChapters(args, 8);
+      return Promise.resolve({
+        content: chapters.length > 0 ? `Report for chapters ${chapters.join("-")}` : "Synthesized review",
+        usage: undefined,
+      });
+    });
+
+    const review = await agent.reviewDraft({
+      direction: "A courier discovers the parcels are evidence",
+      outlineMarkdown: "## Plan\nAll eight chapter beats",
+      chapterCount: 8,
+      charsPerChapter: 1200,
+      language: "en",
+      draft: parseShortFictionBatchDraft(reviewDraftMarkdown(8), { expectedChapters: 8, language: "en" }),
+      onBatchProgress: (info) => progress.push(`${info.batch}/${info.totalBatches}:${info.chapters.join(",")}`),
+    });
+
+    expect(chat.mock.calls.map((call) => requestedReviewChapters(call as unknown[], 8))).toEqual([
+      [1, 2], [3, 4], [5, 6], [7, 8], [],
+    ]);
+    const synthesisPrompt = userText(chat.mock.calls[4] as unknown[]);
+    expect(synthesisPrompt).toContain("Report for chapters 1-2");
+    expect(synthesisPrompt).toContain("Report for chapters 3-4");
+    expect(synthesisPrompt).toContain("Report for chapters 5-6");
+    expect(synthesisPrompt).toContain("Report for chapters 7-8");
+    expect(synthesisPrompt).not.toContain("PROSE_FOR_CHAPTER_");
+    expect(progress).toEqual(["1/4:1,2", "2/4:3,4", "3/4:5,6", "4/4:7,8"]);
+    expect(review).toBe("Synthesized review");
+  });
+
+  it("splits an output-limited two-chapter review without repeating completed sections", async () => {
+    const agent = new ShortFictionDraftReviewerAgent({
+      client: { provider: "openai" } as never,
+      model: "fake",
+      projectRoot: "/tmp/does-not-matter",
+    });
+    const chat = spyChat(agent);
+    const seen: number[][] = [];
+    chat.mockImplementation((...args: unknown[]) => {
+      const chapters = requestedReviewChapters(args, 8);
+      seen.push(chapters);
+      if (chapters.join(",") === "3,4") {
+        return Promise.reject(new PartialResponseError(
+          "x".repeat(533),
+          new Error("model reached the output limit (length)"),
+          "output-limit",
+        ));
+      }
+      return Promise.resolve({
+        content: chapters.length > 0 ? `Report for chapters ${chapters.join("-")}` : "Synthesized review",
+        usage: undefined,
+      });
+    });
+
+    const review = await agent.reviewDraft({
+      direction: "A courier discovers the parcels are evidence",
+      outlineMarkdown: "## Plan\nAll eight chapter beats",
+      chapterCount: 8,
+      charsPerChapter: 1200,
+      language: "en",
+      draft: parseShortFictionBatchDraft(reviewDraftMarkdown(8), { expectedChapters: 8, language: "en" }),
+    });
+
+    expect(seen).toEqual([[1, 2], [3, 4], [3], [4], [5, 6], [7, 8], []]);
+    expect(review).toBe("Synthesized review");
+  });
+
+  it("returns deterministic Markdown with every section report when synthesis hits the output limit", async () => {
+    const warn = vi.fn();
+    const agent = new ShortFictionDraftReviewerAgent({
+      client: { provider: "openai" } as never,
+      model: "fake",
+      projectRoot: "/tmp/does-not-matter",
+      logger: { warn } as never,
+    });
+    const chat = spyChat(agent);
+    chat.mockImplementation((...args: unknown[]) => {
+      const chapters = requestedReviewChapters(args, 8);
+      if (chapters.length === 0) {
+        return Promise.reject(new PartialResponseError(
+          "",
+          new Error("model reached the output limit (length)"),
+          "output-limit",
+        ));
+      }
+      return Promise.resolve({ content: `Report for chapters ${chapters.join("-")}`, usage: undefined });
+    });
+
+    const review = await agent.reviewDraft({
+      direction: "A courier discovers the parcels are evidence",
+      outlineMarkdown: "## Plan\nAll eight chapter beats",
+      chapterCount: 8,
+      charsPerChapter: 1200,
+      language: "en",
+      draft: parseShortFictionBatchDraft(reviewDraftMarkdown(8), { expectedChapters: 8, language: "en" }),
+    });
+
+    expect(review).toContain("# Draft Review");
+    for (const range of ["1-2", "3-4", "5-6", "7-8"]) {
+      expect(review).toContain(`## Chapters ${range}`);
+      expect(review).toContain(`Report for chapters ${range}`);
+    }
+    expect(warn).toHaveBeenCalledOnce();
+  });
+});
+
 describe("runner batch progress", () => {
   it("reports each draft batch through onProgress", async () => {
     const root = await mkdtemp(join(tmpdir(), "inkos-shortbatch-"));

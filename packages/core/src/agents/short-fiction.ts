@@ -5,7 +5,8 @@ import { countChapterLength, resolveLengthCountingMode } from "../utils/length-m
 import {
   type ShortFictionLanguage,
   buildShortFictionDraftReviewSystemPrompt,
-  buildShortFictionDraftReviewUserPrompt,
+  buildShortFictionDraftReviewSynthesisUserPrompt,
+  buildShortFictionDraftSectionReviewUserPrompt,
   buildShortFictionDraftContinuationUserPrompt,
   buildShortFictionDraftRevisionFollowup,
   buildShortFictionOutlineReviewSystemPrompt,
@@ -61,6 +62,7 @@ export {
 // Compatibility export for callers that previously consumed the old fixed
 // clamp. New execution uses the complete capability policy below.
 export const SHORT_FICTION_MAX_CHAPTERS_PER_BATCH = SHORT_FICTION_MAX_SEMANTIC_BATCH_CHAPTERS;
+const SHORT_FICTION_REVIEW_GROUP_SIZE = 2;
 
 // zh chapters are measured in characters (~1.44 chars/token), en chapters in
 // words (~1.3 tokens/word). See length-metrics.ts for the units.
@@ -377,16 +379,77 @@ export class ShortFictionDraftReviewerAgent extends BaseAgent {
   }
 
   async reviewDraft(input: ShortFictionDraftReviewInput): Promise<string> {
-    const response = await retryShortFictionCall(() =>
-      this.chat([
-        { role: "system", content: buildShortFictionDraftReviewSystemPrompt(input.language) },
-        { role: "user", content: buildShortFictionDraftReviewUserPrompt({
-          ...input,
-          draftMarkdown: renderShortFictionDraftMarkdown(input.draft, input.language),
-        }, input.language) },
-      ], { temperature: 0.3, maxTokens: 8192 }), this.name, this.log);
+    const groups = chunkChapters(
+      input.draft.chapters.map((chapter) => chapter.number),
+      SHORT_FICTION_REVIEW_GROUP_SIZE,
+    );
+    const maxTokens = Math.min(24_576, this.ctx.client.defaults?.maxTokens ?? 8_192);
+    const sectionReports: Array<{
+      chapterRange: readonly [number, number];
+      report: string;
+    }> = [];
 
-    return response.content.trim();
+    const reviewSection = async (chapters: readonly number[]): Promise<void> => {
+      const chapterRange: readonly [number, number] = [chapters[0]!, chapters[chapters.length - 1]!];
+      const sectionDraft: ShortFictionBatchDraft = {
+        storyTitle: input.draft.storyTitle,
+        ...(chapters.includes(1) && input.draft.openingHook ? { openingHook: input.draft.openingHook } : {}),
+        chapters: input.draft.chapters.filter((chapter) => chapters.includes(chapter.number)),
+        rawContent: "",
+      };
+      try {
+        const response = await retryShortFictionCall(() => this.chat([
+          { role: "system", content: buildShortFictionDraftReviewSystemPrompt(input.language) },
+          { role: "user", content: buildShortFictionDraftSectionReviewUserPrompt({
+            direction: input.direction,
+            outlineMarkdown: input.outlineMarkdown,
+            chapterRange,
+            draftMarkdown: renderShortFictionDraftMarkdown(sectionDraft, input.language),
+          }) },
+        ], { temperature: 0.3, maxTokens }), this.name, this.log);
+        sectionReports.push({ chapterRange, report: response.content.trim() });
+      } catch (error) {
+        if (!isOutputLimitError(error) || chapters.length <= 1) throw error;
+        const mid = Math.ceil(chapters.length / 2);
+        this.log?.warn(
+          `[${this.name}] output limit reviewing chapters ${chapters.join(", ")}; splitting the section: ${String(error)}`,
+        );
+        await reviewSection(chapters.slice(0, mid));
+        await reviewSection(chapters.slice(mid));
+      }
+    };
+
+    for (const [index, chapters] of groups.entries()) {
+      input.onBatchProgress?.({
+        batch: index + 1,
+        totalBatches: groups.length,
+        chapters,
+      });
+      await reviewSection(chapters);
+    }
+
+    try {
+      const response = await retryShortFictionCall(() => this.chat([
+        { role: "system", content: buildShortFictionDraftReviewSystemPrompt(input.language) },
+        { role: "user", content: buildShortFictionDraftReviewSynthesisUserPrompt({
+          direction: input.direction,
+          outlineMarkdown: input.outlineMarkdown,
+          sectionReports,
+        }) },
+      ], { temperature: 0.3, maxTokens }), this.name, this.log);
+
+      return response.content.trim();
+    } catch (error) {
+      if (!isOutputLimitError(error)) throw error;
+      this.log?.warn(`[${this.name}] output limit synthesizing the draft review; returning section reports: ${String(error)}`);
+      return [
+        "# Draft Review",
+        ...sectionReports.flatMap(({ chapterRange, report }) => [
+          `## Chapters ${chapterRange[0] === chapterRange[1] ? chapterRange[0] : `${chapterRange[0]}-${chapterRange[1]}`}`,
+          report,
+        ]),
+      ].join("\n\n");
+    }
   }
 }
 
