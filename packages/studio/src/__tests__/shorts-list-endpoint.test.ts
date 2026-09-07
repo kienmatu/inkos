@@ -127,6 +127,45 @@ describe("GET /api/v1/shorts", () => {
     });
   });
 
+  it("returns a draft-review checkpoint when its published v1 final artifact is available", async () => {
+    const shortDir = join(root, "shorts", "pending-draft-review");
+    await mkdir(join(shortDir, "final"), { recursive: true });
+    await writeFile(join(shortDir, "status.json"), JSON.stringify({
+      version: 1,
+      kind: "short-fiction",
+      id: "pending-draft-review",
+      status: "needs-review",
+      stage: "draft-review",
+      resumeCursor: "draft-v001",
+      artifacts: [
+        "shorts/pending-draft-review/final/full.md",
+        "shorts/pending-draft-review/final/short-story.json",
+      ],
+      observations: [],
+      updatedAt: "2026-09-07T12:00:00.000Z",
+    }), "utf-8");
+    await writeFile(join(shortDir, "final", "short-story.json"), JSON.stringify({
+      storyTitle: "Pending Draft Review",
+      chapters: [],
+      rawContent: "# Pending Draft Review",
+    }), "utf-8");
+    await writeFile(join(shortDir, "final", "full.md"), "# Pending Draft Review", "utf-8");
+
+    const app = createStudioServer({} as never, root);
+    const response = await app.request("/api/v1/shorts");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      shorts: [{
+        storyId: "pending-draft-review",
+        title: "Pending Draft Review",
+        status: "needs-review",
+        finalMarkdownPath: "shorts/pending-draft-review/final/full.md",
+        updatedAt: "2026-09-07T12:00:00.000Z",
+      }],
+    });
+  });
+
   it("excludes a needs-review short whose final Markdown path is not a readable file", async () => {
     const shortDir = join(root, "shorts", "broken-short");
     await mkdir(join(shortDir, "final", "full.md"), { recursive: true });

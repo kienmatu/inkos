@@ -262,6 +262,20 @@ describe("buildAgentSystemPrompt", () => {
       expect(prompt).not.toContain("architect");
     });
 
+    it("directs English short recovery to saved checkpoints and a renewed confirmation", () => {
+      const prompt = buildAgentSystemPrompt(null, "en", "short");
+
+      expect(prompt).toContain("Available tools: propose_action, read, ingest_material, retrieve_material.");
+      expect(prompt).toContain("retry, resume, or continue reviewing a prior short");
+      expect(prompt).toContain("shorts/<storyId>/status.json");
+      expect(prompt).toContain("shorts/<storyId>/drafts/v001/full.md");
+      expect(prompt).toContain("most recent self-contained shortRun confirmation");
+      expect(prompt).toContain("stored storyId from conversation history");
+      expect(prompt).toContain("propose_action with action=short_run");
+      expect(prompt).toContain("Never ask the user to upload or paste a draft that InkOS already saved");
+      expect(prompt).toContain("Never review or rewrite chapters directly in conversational text");
+    });
+
     it("fills shortRun.language from the user's requested output language instead of hardcoding the session language", () => {
       const zhPrompt = buildAgentSystemPrompt(null, "zh", "short");
       expect(zhPrompt).not.toContain("language=zh、chapters");

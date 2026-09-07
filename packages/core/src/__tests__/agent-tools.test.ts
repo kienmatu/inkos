@@ -360,6 +360,27 @@ describe("agent deterministic writing tools", () => {
     });
   });
 
+  it("derives the runner story ID for a title-only short confirmation", async () => {
+    const tool = createProposeActionTool("en", { sameSession: true });
+
+    const result = await tool.execute("proposal-title-only-short", {
+      action: "short_run",
+      instruction: "Write the confirmed short.",
+      shortRun: {
+        title: "The Midnight Ledger: 100% Debts?! Revised Edition — Volume Two, Again",
+        direction: "A debt collector learns the ledger records future promises.",
+      },
+    });
+
+    expect(result.details).toMatchObject({
+      actionPayload: {
+        shortRun: {
+          storyId: "the-midnight-ledger-100-debts-revised-edition-volume-two-aga",
+        },
+      },
+    });
+  });
+
   it("carries skills activated by the agent into the confirmed action", async () => {
     const activatedSkillIds = ["writer-distillation"];
     const tool = createProposeActionTool("zh", {

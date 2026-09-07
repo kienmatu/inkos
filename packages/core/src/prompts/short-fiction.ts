@@ -77,6 +77,22 @@ export interface ShortFictionDraftReviewPromptInput extends ShortFictionDraftPro
   readonly draftMarkdown: string;
 }
 
+export interface ShortFictionDraftSectionReviewPromptInput {
+  readonly direction: string;
+  readonly outlineMarkdown: string;
+  readonly chapterRange: readonly [number, number];
+  readonly draftMarkdown: string;
+}
+
+export interface ShortFictionDraftReviewSynthesisPromptInput {
+  readonly direction: string;
+  readonly outlineMarkdown: string;
+  readonly sectionReports: ReadonlyArray<{
+    readonly chapterRange: readonly [number, number];
+    readonly report: string;
+  }>;
+}
+
 export interface ShortFictionDraftRevisionPromptInput extends ShortFictionDraftPromptInput {
   readonly review: string;
   // Second-version chapters already rewritten in earlier batches, rendered as
@@ -485,6 +501,48 @@ export function buildShortFictionDraftReviewUserPrompt(
     "## 审稿要求",
     "直接说人话：这本读起来哪里有欲望、哪里出戏、哪里像梗概、哪里后半段泄气、哪里标题或章节标题不想点。",
     "不要因为某章略短或略长就判死；先判断内容是否完整、有戏、有回报。",
+  ].join("\n");
+}
+
+export function buildShortFictionDraftSectionReviewUserPrompt(
+  input: ShortFictionDraftSectionReviewPromptInput,
+): string {
+  return [
+    "## Creative Direction",
+    input.direction,
+    "",
+    "## Original Story Plan",
+    input.outlineMarkdown,
+    "",
+    "## Assigned Chapter Range",
+    `Chapters ${chapterRangeLabel(input.chapterRange[0], input.chapterRange[1])}`,
+    "",
+    "## Assigned Prose",
+    input.draftMarkdown,
+    "",
+    "## Review Instructions",
+    "Return concise, actionable Markdown for this assigned range. Identify what pulls the reader forward, what breaks immersion, what reads like a synopsis, and what needs revision. Preserve strengths worth keeping.",
+  ].join("\n");
+}
+
+export function buildShortFictionDraftReviewSynthesisUserPrompt(
+  input: ShortFictionDraftReviewSynthesisPromptInput,
+): string {
+  return [
+    "## Creative Direction",
+    input.direction,
+    "",
+    "## Original Story Plan",
+    input.outlineMarkdown,
+    "",
+    "## Section Reports",
+    ...input.sectionReports.flatMap(({ chapterRange, report }) => [
+      `### Chapters ${chapterRangeLabel(chapterRange[0], chapterRange[1])}`,
+      report.trim(),
+      "",
+    ]),
+    "## Synthesis Instructions",
+    "Combine the section reports into one complete, actionable Markdown review. Prioritize the issues that most affect reader retention, story logic, escalation, and the ending payoff. Do not invent observations beyond the reports.",
   ].join("\n");
 }
 

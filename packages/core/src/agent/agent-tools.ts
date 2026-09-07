@@ -19,7 +19,7 @@ import {
   type BookConfig,
   type FanficMode,
 } from "../models/book.js";
-import { generateShortFictionCover, runShortFictionProduction } from "../pipeline/short-fiction-runner.js";
+import { generateShortFictionCover, runShortFictionProduction, shortStoryIdFromTitle } from "../pipeline/short-fiction-runner.js";
 import {
   SHORT_FICTION_MIN_CHAPTERS,
   SHORT_FICTION_MAX_CHAPTERS,
@@ -566,7 +566,10 @@ function proposedActionPayload(
   }
   if (params.action === "short_run") {
     const shortRun = compactObject(params.shortRun);
-    if (shortRun) payload.shortRun = { language, ...shortRun };
+    if (shortRun) {
+      const storyId = shortRun.storyId ?? (shortRun.title ? shortStoryIdFromTitle(shortRun.title) : undefined);
+      payload.shortRun = { language, ...shortRun, ...(storyId ? { storyId } : {}) };
+    }
   }
   if (params.action === "play_start") {
     const playStart = compactPlayStartPayload(params.playStart);

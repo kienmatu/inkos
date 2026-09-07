@@ -5,6 +5,8 @@ import { countChapterLength, resolveLengthCountingMode } from "../utils/length-m
 import {
   type ShortFictionLanguage,
   buildShortFictionDraftReviewSystemPrompt,
+  buildShortFictionDraftReviewSynthesisUserPrompt,
+  buildShortFictionDraftSectionReviewUserPrompt,
   buildShortFictionDraftReviewUserPrompt,
   buildShortFictionDraftContinuationUserPrompt,
   buildShortFictionDraftRevisionFollowup,
@@ -377,16 +379,90 @@ export class ShortFictionDraftReviewerAgent extends BaseAgent {
   }
 
   async reviewDraft(input: ShortFictionDraftReviewInput): Promise<string> {
-    const response = await retryShortFictionCall(() =>
-      this.chat([
-        { role: "system", content: buildShortFictionDraftReviewSystemPrompt(input.language) },
-        { role: "user", content: buildShortFictionDraftReviewUserPrompt({
-          ...input,
-          draftMarkdown: renderShortFictionDraftMarkdown(input.draft, input.language),
-        }, input.language) },
-      ], { temperature: 0.3, maxTokens: 8192 }), this.name, this.log);
+    if (input.language === "zh") {
+      const response = await retryShortFictionCall(() =>
+        this.chat([
+          { role: "system", content: buildShortFictionDraftReviewSystemPrompt(input.language) },
+          { role: "user", content: buildShortFictionDraftReviewUserPrompt({
+            ...input,
+            draftMarkdown: renderShortFictionDraftMarkdown(input.draft, input.language),
+          }, input.language) },
+        ], { temperature: 0.3, maxTokens: 8192 }), this.name, this.log);
 
-    return response.content.trim();
+      return response.content.trim();
+    }
+
+    const groups = input.chapterGroups ?? resolveSemanticChapterGroups({
+      chapterCount: input.chapterCount,
+      maxChaptersPerBatch: resolveAgentBatchCapacity(this.ctx, input).maxChaptersPerBatch,
+    }).groups;
+    const maxTokens = Math.min(24_576, this.ctx.client.defaults?.maxTokens ?? 8_192);
+    const sectionReports: Array<{
+      chapterRange: readonly [number, number];
+      report: string;
+    }> = [];
+
+    const reviewSection = async (chapters: readonly number[]): Promise<void> => {
+      const chapterRange: readonly [number, number] = [chapters[0]!, chapters[chapters.length - 1]!];
+      const sectionDraft: ShortFictionBatchDraft = {
+        storyTitle: input.draft.storyTitle,
+        ...(chapters.includes(1) && input.draft.openingHook ? { openingHook: input.draft.openingHook } : {}),
+        chapters: input.draft.chapters.filter((chapter) => chapters.includes(chapter.number)),
+        rawContent: "",
+      };
+      try {
+        const response = await retryShortFictionCall(() => this.chat([
+          { role: "system", content: buildShortFictionDraftReviewSystemPrompt(input.language) },
+          { role: "user", content: buildShortFictionDraftSectionReviewUserPrompt({
+            direction: input.direction,
+            outlineMarkdown: input.outlineMarkdown,
+            chapterRange,
+            draftMarkdown: renderShortFictionDraftMarkdown(sectionDraft, input.language),
+          }) },
+        ], { temperature: 0.3, maxTokens }), this.name, this.log);
+        sectionReports.push({ chapterRange, report: response.content.trim() });
+      } catch (error) {
+        if (!isOutputLimitError(error) || chapters.length <= 1) throw error;
+        const mid = Math.ceil(chapters.length / 2);
+        this.log?.warn(
+          `[${this.name}] output limit reviewing chapters ${chapters.join(", ")}; splitting the section: ${String(error)}`,
+        );
+        await reviewSection(chapters.slice(0, mid));
+        await reviewSection(chapters.slice(mid));
+      }
+    };
+
+    for (const [index, chapters] of groups.entries()) {
+      input.onBatchProgress?.({
+        batch: index + 1,
+        totalBatches: groups.length,
+        chapters,
+      });
+      await reviewSection(chapters);
+    }
+
+    try {
+      const response = await retryShortFictionCall(() => this.chat([
+        { role: "system", content: buildShortFictionDraftReviewSystemPrompt(input.language) },
+        { role: "user", content: buildShortFictionDraftReviewSynthesisUserPrompt({
+          direction: input.direction,
+          outlineMarkdown: input.outlineMarkdown,
+          sectionReports,
+        }) },
+      ], { temperature: 0.3, maxTokens }), this.name, this.log);
+
+      return response.content.trim();
+    } catch (error) {
+      if (!isOutputLimitError(error)) throw error;
+      this.log?.warn(`[${this.name}] output limit synthesizing the draft review; returning section reports: ${String(error)}`);
+      return [
+        "# Draft Review",
+        ...sectionReports.flatMap(({ chapterRange, report }) => [
+          `## Chapters ${chapterRange[0] === chapterRange[1] ? chapterRange[0] : `${chapterRange[0]}-${chapterRange[1]}`}`,
+          report,
+        ]),
+      ].join("\n\n");
+    }
   }
 }
 
@@ -515,7 +591,8 @@ export function parseShortFictionBatchDraft(
     || fallbackTitle,
   ) || fallbackTitle;
   const openingHook = extractTaggedBlock(rawContent, "SHORT_FICTION_OPENING_HOOK")
-    || extractTaggedBlock(rawContent, "OPENING_HOOK");
+    || extractTaggedBlock(rawContent, "OPENING_HOOK")
+    || extractMarkdownOpeningHook(rawContent, language);
 
   const chapters: ShortFictionChapter[] = [];
   for (let number = 1; number <= expectedChapters; number += 1) {
@@ -643,19 +720,25 @@ function extractFirstHeading(raw: string): string {
   return raw.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? "";
 }
 
+function extractMarkdownOpeningHook(raw: string, language: ShortFictionLanguage): string {
+  const heading = language === "en" ? "Opening Hook" : "开篇钩子";
+  const pattern = new RegExp(`^##[ \\t]*${heading}[ \\t]*\\r?\\n([\\s\\S]*?)(?=^##[ \\t]+|(?![\\s\\S]))`, "m");
+  return pattern.exec(raw)?.[1]?.trim() ?? "";
+}
+
 function extractMarkdownChapterTitle(raw: string, number: number): string {
-  const pattern = new RegExp(`^##\\s*(?:${markdownChapterPrefixPattern(number)})?(.+)$`, "m");
+  const pattern = new RegExp(`^##[ \\t]*(?:${markdownChapterPrefixPattern(number)})(.*)$`, "m");
   return pattern.exec(raw)?.[1]?.trim() ?? "";
 }
 
 function extractMarkdownChapterContent(raw: string, number: number): string {
-  const pattern = new RegExp(`^##\\s*(?:${markdownChapterPrefixPattern(number)})?.*$\\n([\\s\\S]*?)(?=^##\\s*(?:${markdownChapterPrefixPattern(number + 1)})?.*$|(?![\\s\\S]))`, "m");
+  const pattern = new RegExp(`^##[ \\t]*(?:${markdownChapterPrefixPattern(number)})[^\\r\\n]*\\r?\\n([\\s\\S]*?)(?=^##[ \\t]*(?:${markdownChapterPrefixPattern(number + 1)})[^\\r\\n]*$|(?![\\s\\S]))`, "m");
   return pattern.exec(raw)?.[1]?.trim() ?? "";
 }
 
 // Matches a zh "第N章" or en "Chapter N" heading prefix inside markdown fallbacks.
 function markdownChapterPrefixPattern(number: number): string {
-  return `第\\s*${number}\\s*章\\s*|Chapter\\s*${number}\\s*[:：.\\-–—]?\\s*`;
+  return `第[ \\t]*${number}[ \\t]*章[ \\t]*|Chapter[ \\t]*${number}(?!\\d)[ \\t]*[:：.\\-–—]?[ \\t]*`;
 }
 
 function extractDuplicateTitleTaggedChapterContent(raw: string, number: number): string {
