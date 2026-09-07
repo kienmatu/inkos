@@ -29,6 +29,10 @@ import {
   SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER,
   SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER,
 } from "../models/short-fiction-format.js";
+import {
+  parseShortFictionSemanticBatchPlan,
+  type ShortFictionSemanticBatch,
+} from "./short-fiction-batching.js";
 
 // Re-exported so existing importers of this module (agent-tools.ts,
 // interaction/action-envelope.ts, the pipeline runner, tests) keep working
@@ -150,6 +154,7 @@ export type { ShortFictionLanguage } from "../prompts/short-fiction.js";
 export interface ShortFictionOutline {
   readonly storyTitle: string;
   readonly rawContent: string;
+  readonly proposedBatches?: ReadonlyArray<ShortFictionSemanticBatch>;
 }
 
 export interface ShortFictionChapter {
@@ -185,6 +190,7 @@ export interface ShortFictionOutlineInput {
   readonly charsPerChapter: number;
   readonly reference?: ShortFictionReference;
   readonly language?: ShortFictionLanguage;
+  readonly maxChaptersPerBatch?: number;
 }
 
 export interface ShortFictionOutlineReviewInput {
@@ -192,6 +198,7 @@ export interface ShortFictionOutlineReviewInput {
   readonly outline: ShortFictionOutline;
   readonly reference?: ShortFictionReference;
   readonly language?: ShortFictionLanguage;
+  readonly maxChaptersPerBatch?: number;
 }
 
 export interface ShortFictionOutlineRevisionInput extends ShortFictionOutlineReviewInput {
@@ -486,7 +493,12 @@ export function parseShortFictionOutline(
     || extractFirstHeading(rawContent)
     || fallbackTitle,
   ) || fallbackTitle;
-  return { storyTitle, rawContent: rawContent.trim() };
+  const proposedBatches = parseShortFictionSemanticBatchPlan(rawContent);
+  return {
+    storyTitle,
+    rawContent: rawContent.trim(),
+    ...(proposedBatches ? { proposedBatches } : {}),
+  };
 }
 
 export function parseShortFictionBatchDraft(
