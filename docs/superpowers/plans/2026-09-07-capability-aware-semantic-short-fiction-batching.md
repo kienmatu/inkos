@@ -33,7 +33,7 @@
 - Consumes: untrusted OpenAI-compatible `{ data: unknown }` JSON.
 - Produces: `ProbedModel { id, name, contextWindow, maxOutput? }` with validated positive integer capabilities.
 
-- [ ] **Step 1: Add failing 9router and invalid-metadata tests**
+- [x] **Step 1: Add failing 9router and invalid-metadata tests**
 
 ```ts
 it("preserves 9router output and context limits", async () => {
@@ -58,13 +58,13 @@ it("keeps the model but drops invalid capabilities", async () => {
 });
 ```
 
-- [ ] **Step 2: Run the probe tests and confirm the new assertions fail**
+- [x] **Step 2: Run the probe tests and confirm the new assertions fail**
 
 Run: `pnpm --filter @kienmatu/inkos-core test --run src/__tests__/probe.test.ts`
 
 Expected: FAIL because `contextWindow` remains zero and `maxOutput` is absent.
 
-- [ ] **Step 3: Implement one shared raw-model normalizer**
+- [x] **Step 3: Implement one shared raw-model normalizer**
 
 ```ts
 function positiveInteger(value: unknown): number | undefined {
@@ -84,13 +84,13 @@ export function normalizeProbedModel(value: unknown): ProbedModel | undefined {
 }
 ```
 
-- [ ] **Step 4: Run probe tests**
+- [x] **Step 4: Run probe tests**
 
 Run: `pnpm --filter @kienmatu/inkos-core test --run src/__tests__/probe.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit the trusted probe boundary**
+- [x] **Step 5: Commit the trusted probe boundary**
 
 ```bash
 git add packages/core/src/llm/providers/probe.ts packages/core/src/__tests__/probe.test.ts
@@ -113,7 +113,7 @@ git commit -m "feat(core): preserve live model output limits"
 - Consumes: `ProbedModel.maxOutput/contextWindow` from Task 1 and legacy `models: string[]` service entries.
 - Produces: optional `modelCapabilities: Record<string, ModelCapability>` on service entries and the effective selected LLM config.
 
-- [ ] **Step 1: Add failing schema and Studio save tests**
+- [x] **Step 1: Add failing schema and Studio save tests**
 
 ```ts
 const service = {
@@ -130,13 +130,13 @@ expect(ProjectConfigSchema.parse(projectWith(service)).llm.services?.[0]).toMatc
 
 Assert that `saveServiceConfig()` sends the same capability map in its `/services/config` request and that the server returns it from `/api/v1/services/config`.
 
-- [ ] **Step 2: Run focused config and Studio tests and confirm failure**
+- [x] **Step 2: Run focused config and Studio tests and confirm failure**
 
 Run: `pnpm --filter @kienmatu/inkos-core test --run src/__tests__/effective-llm-config.test.ts && pnpm --filter @kienmatu/inkos-studio test --run src/pages/service-detail-state.test.ts src/api/server.test.ts`
 
 Expected: FAIL because schemas and client types currently strip capability metadata.
 
-- [ ] **Step 3: Add the shared persisted capability schema**
+- [x] **Step 3: Add the shared persisted capability schema**
 
 ```ts
 export const ModelCapabilitySchema = z.object({
@@ -149,7 +149,7 @@ const ModelCapabilitiesSchema = z.record(z.string().min(1), ModelCapabilitySchem
 
 Add `modelCapabilities: ModelCapabilitiesSchema.optional()` to `LLMServiceEntrySchema` and the runtime `LLMConfigSchema`. Keep `models` as `z.array(z.string())`.
 
-- [ ] **Step 4: Normalize and merge Studio service capability maps**
+- [x] **Step 4: Normalize and merge Studio service capability maps**
 
 Add `modelCapabilities` to `ServiceConfigEntry`, preserve only entries whose key remains in `models`, and merge refreshed entries by exact model ID. Change Studio model DTOs to:
 
@@ -174,21 +174,21 @@ modelCapabilities: Object.fromEntries(savedModels.flatMap((model) => {
 }))
 ```
 
-- [ ] **Step 5: Make both Studio `/models` paths use Task 1's normalizer**
+- [x] **Step 5: Make both Studio `/models` paths use Task 1's normalizer**
 
 Replace the local ID-only mapping in `fetchModelsFromServiceBaseUrl` with `normalizeProbedModels(json)` from core. Widen `modelListCache` and `ServiceProbeResult.models` to retain `maxOutput` and `contextWindow`.
 
-- [ ] **Step 6: Propagate the selected service capability map into effective config**
+- [x] **Step 6: Propagate the selected service capability map into effective config**
 
 When `applyProjectServiceConfig` selects a service, assign its normalized map to `llm.modelCapabilities`. Delete stale top-level runtime capability data when the service has none so one provider cannot leak limits into another.
 
-- [ ] **Step 7: Run focused config and Studio tests**
+- [x] **Step 7: Run focused config and Studio tests**
 
 Run: `pnpm --filter @kienmatu/inkos-core test --run src/__tests__/effective-llm-config.test.ts src/__tests__/config-loader.test.ts && pnpm --filter @kienmatu/inkos-studio test --run src/pages/service-detail-state.test.ts src/api/server.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 8: Commit capability persistence**
+- [x] **Step 8: Commit capability persistence**
 
 ```bash
 git add packages/core/src/models/project.ts packages/core/src/utils/effective-llm-config.ts packages/core/src/__tests__/effective-llm-config.test.ts packages/studio/src/api/server.ts packages/studio/src/pages/service-detail-state.ts packages/studio/src/pages/ServiceDetailPage.tsx packages/studio/src/api/server.test.ts packages/studio/src/pages/service-detail-state.test.ts
@@ -206,7 +206,7 @@ git commit -m "feat(studio): persist live model capabilities"
 - Consumes: selected LLM config capability map from Task 2 and static `lookupModel(service, model)`.
 - Produces: `resolveModelCapability(client, model): ResolvedModelCapability` for short-fiction policy and model overrides.
 
-- [ ] **Step 1: Add failing runtime resolution tests**
+- [x] **Step 1: Add failing runtime resolution tests**
 
 ```ts
 const client = createLLMClient(config({
@@ -226,13 +226,13 @@ expect(resolveModelCapability(client, "missing/model")).toEqual({ source: "unkno
 
 Also assert that the selected Pi model uses 128k output and 400k context rather than the unknown-model defaults.
 
-- [ ] **Step 2: Run provider tests and confirm failure**
+- [x] **Step 2: Run provider tests and confirm failure**
 
 Run: `pnpm --filter @kienmatu/inkos-core test --run src/__tests__/provider.test.ts`
 
 Expected: FAIL because `LLMClient` does not retain live model capabilities.
 
-- [ ] **Step 3: Add a discriminated capability source and resolver**
+- [x] **Step 3: Add a discriminated capability source and resolver**
 
 ```ts
 export interface ResolvedModelCapability {
@@ -253,13 +253,13 @@ export function resolveModelCapability(client: LLMClient, model: string): Resolv
 
 Store a frozen normalized map on `LLMClient`. Resolve the selected model before building `defaults` and `_piModel` so live metadata wins over static/fallback values.
 
-- [ ] **Step 4: Export the capability API and run tests**
+- [x] **Step 4: Export the capability API and run tests**
 
 Run: `pnpm --filter @kienmatu/inkos-core test --run src/__tests__/provider.test.ts src/__tests__/providers-lookup.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit runtime capability resolution**
+- [x] **Step 5: Commit runtime capability resolution**
 
 ```bash
 git add packages/core/src/llm/provider.ts packages/core/src/__tests__/provider.test.ts packages/core/src/index.ts
@@ -277,7 +277,7 @@ git commit -m "feat(core): resolve runtime model capabilities"
 - Consumes: `ResolvedModelCapability`, language, target chapter length, chapter count, and optional parsed semantic batches.
 - Produces: `ShortFictionBatchCapacity`, validated `ShortFictionSemanticBatch[]`, executable `number[][]`, and balanced fallbacks.
 
-- [ ] **Step 1: Write failing capacity tests**
+- [x] **Step 1: Write failing capacity tests**
 
 ```ts
 expect(resolveShortFictionBatchCapacity({
@@ -291,7 +291,7 @@ expect(resolveShortFictionBatchCapacity({
 }).maxChaptersPerBatch).toBe(3);
 ```
 
-- [ ] **Step 2: Write failing semantic validation and fallback tests**
+- [x] **Step 2: Write failing semantic validation and fallback tests**
 
 ```ts
 expect(resolveSemanticChapterGroups({
@@ -309,13 +309,13 @@ expect(resolveSemanticChapterGroups({ chapterCount: 13, maxChaptersPerBatch: 6 }
 
 Add table tests for gaps, overlaps, oversized ranges, empty reasons, old outlines, and resplitting `[1-5] [6-10]` under maximum three to `[1-3] [4-5] [6-8] [9-10]`.
 
-- [ ] **Step 3: Run the new policy tests and confirm module-not-found failure**
+- [x] **Step 3: Run the new policy tests and confirm module-not-found failure**
 
 Run: `pnpm --filter @kienmatu/inkos-core test --run src/__tests__/short-fiction-batch-policy.test.ts`
 
 Expected: FAIL because the module does not exist.
 
-- [ ] **Step 4: Implement capacity resolution and bounded request budgets**
+- [x] **Step 4: Implement capacity resolution and bounded request budgets**
 
 ```ts
 const UNKNOWN_CAPACITY = 10_000;
@@ -343,17 +343,17 @@ export function resolveShortFictionBatchCapacity(input: ShortFictionBatchCapacit
 }
 ```
 
-- [ ] **Step 5: Implement schema narrowing, balanced groups, and semantic-preserving resplit**
+- [x] **Step 5: Implement schema narrowing, balanced groups, and semantic-preserving resplit**
 
 Use a Zod schema for the tagged JSON payload. Validate whole-story coverage in one function; on failure return `{ source: "balanced-fallback", warning, groups }`. Partition a range of length `n` into `ceil(n / max)` groups, distribute the remainder across the earliest groups, and never emit an avoidable singleton.
 
-- [ ] **Step 6: Run policy tests**
+- [x] **Step 6: Run policy tests**
 
 Run: `pnpm --filter @kienmatu/inkos-core test --run src/__tests__/short-fiction-batch-policy.test.ts`
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit the domain module**
+- [x] **Step 7: Commit the domain module**
 
 ```bash
 git add packages/core/src/agents/short-fiction-batching.ts packages/core/src/__tests__/short-fiction-batch-policy.test.ts packages/core/src/index.ts
@@ -373,21 +373,21 @@ git commit -m "feat(core): model semantic chapter batches"
 - Consumes: shared `maxChaptersPerBatch` from Task 4.
 - Produces: optional parsed `ShortFictionSemanticBatch[]` on `ShortFictionOutline`; create/review/revise prompts that carry the exact tagged JSON contract.
 
-- [ ] **Step 1: Add failing prompt and parser tests**
+- [x] **Step 1: Add failing prompt and parser tests**
 
 Assert that the English outline prompt contains the maximum, exact-coverage rules, phase-boundary rule, and `SHORT_FICTION_BATCH_PLAN` format. Assert that outline review and revision retain the contract. Parse a plan containing `[1-5] [6-8]` into typed batches while an old outline returns no proposal.
 
-- [ ] **Step 2: Run short-fiction prompt tests and confirm failure**
+- [x] **Step 2: Run short-fiction prompt tests and confirm failure**
 
 Run: `pnpm --filter @kienmatu/inkos-core test --run src/__tests__/short-fiction-en.test.ts src/__tests__/short-fiction-editorial.test.ts src/__tests__/en-prompt-parity.test.ts`
 
 Expected: FAIL because the prompts and outline type have no semantic plan.
 
-- [ ] **Step 3: Extend outline inputs and builders**
+- [x] **Step 3: Extend outline inputs and builders**
 
 Add `maxChaptersPerBatch` to outline creation/revision prompt inputs and tell the model to emit contiguous two-to-maximum ranges, start new phases at new batches, and keep coupled setup/payoff beats together. The reviewer must flag mechanical or incoherent boundaries.
 
-- [ ] **Step 4: Parse the optional tagged plan at the boundary**
+- [x] **Step 4: Parse the optional tagged plan at the boundary**
 
 ```ts
 export interface ShortFictionOutline {
@@ -399,13 +399,13 @@ export interface ShortFictionOutline {
 
 Use Task 4's parser. Do not throw away a usable outline when only the optional plan is invalid; return no proposal and let the runner log/use fallback.
 
-- [ ] **Step 5: Run prompt and parity tests**
+- [x] **Step 5: Run prompt and parity tests**
 
 Run: `pnpm --filter @kienmatu/inkos-core test --run src/__tests__/short-fiction-en.test.ts src/__tests__/short-fiction-editorial.test.ts src/__tests__/en-prompt-parity.test.ts`
 
 Expected: PASS with no new Chinese prompt text.
 
-- [ ] **Step 6: Commit the outline contract**
+- [x] **Step 6: Commit the outline contract**
 
 ```bash
 git add packages/core/src/prompts/short-fiction.ts packages/core/src/agents/short-fiction.ts packages/core/src/__tests__/short-fiction-en.test.ts packages/core/src/__tests__/short-fiction-editorial.test.ts packages/core/src/__tests__/en-prompt-parity.test.ts
@@ -424,39 +424,39 @@ git commit -m "feat(core): let outlines choose semantic batches"
 - Consumes: Task 3 capability resolver, Task 4 capacity/group decisions, Task 5 parsed outline proposal.
 - Produces: one shared ordered group list passed to `writeDraft`, `continueDraft`, and `reviseDraft`.
 
-- [ ] **Step 1: Add failing runner integration tests**
+- [x] **Step 1: Add failing runner integration tests**
 
 For an eight-chapter 128k writer/reviser and outline proposal `[1-5] [6-8]`, assert draft and revision each call those two ranges. Add an unknown-model test that falls back to 10k and balanced `[1-4] [5-8]`. Add a resume test proving an old outline without a plan uses balanced fallback.
 
-- [ ] **Step 2: Run batching and resume tests and confirm failure**
+- [x] **Step 2: Run batching and resume tests and confirm failure**
 
 Run: `pnpm --filter @kienmatu/inkos-core test --run src/__tests__/short-fiction-batching.test.ts src/__tests__/short-fiction-resume.test.ts`
 
 Expected: FAIL because agents still call `chunkChapters` with a scalar size.
 
-- [ ] **Step 3: Resolve writer/reviser capacities before the outline stages**
+- [x] **Step 3: Resolve writer/reviser capacities before the outline stages**
 
 In `produceShort`, call `resolveModelCapability` for `options.runtimes.writer` and `.revise`, derive both short-fiction capacities, and pass `Math.min(writer.maxChaptersPerBatch, reviser.maxChaptersPerBatch)` into outline create/revise inputs.
 
-- [ ] **Step 4: Resolve one trusted semantic group list after outline revision or resume**
+- [x] **Step 4: Resolve one trusted semantic group list after outline revision or resume**
 
 Parse resumed outlines through `parseShortFictionOutline`. Call `resolveSemanticChapterGroups` with the final proposal, `chapterCount`, and shared capacity maximum. Log the source, ranges, and warning without prose.
 
-- [ ] **Step 5: Replace scalar batching inputs with explicit groups**
+- [x] **Step 5: Replace scalar batching inputs with explicit groups**
 
 Add `chapterGroups: ReadonlyArray<ReadonlyArray<number>>` to draft inputs. `writeDraft` and `reviseDraft` use those groups directly. `continueDraft` intersects missing chapters with the trusted groups and splits discontinuities instead of recomputing a scalar chunk size.
 
-- [ ] **Step 6: Cap per-call output using the active agent's policy**
+- [x] **Step 6: Cap per-call output using the active agent's policy**
 
 Pass `maxTokensForBatch(chapters.length)` into `runChapterBatches`. Writer and reviser use their own capacity function while retaining the same semantic ranges. Keep recursive halving and outer retry behavior unchanged.
 
-- [ ] **Step 7: Add decision logs and run integration tests**
+- [x] **Step 7: Add decision logs and run integration tests**
 
 Run: `pnpm --filter @kienmatu/inkos-core test --run src/__tests__/short-fiction-batching.test.ts src/__tests__/short-fiction-resume.test.ts src/__tests__/short-fiction-en.test.ts`
 
 Expected: PASS; progress messages show semantic batch indices/ranges.
 
-- [ ] **Step 8: Commit semantic execution**
+- [x] **Step 8: Commit semantic execution**
 
 ```bash
 git add packages/core/src/agents/short-fiction.ts packages/core/src/pipeline/short-fiction-runner.ts packages/core/src/__tests__/short-fiction-batching.test.ts packages/core/src/__tests__/short-fiction-resume.test.ts
@@ -473,17 +473,17 @@ git commit -m "feat(core): execute semantic short-fiction batches"
 - Consumes: all implemented interfaces and live `http://localhost:20128/v1/models`.
 - Produces: passing repository verification, recorded live probe evidence, and a ready PR.
 
-- [ ] **Step 1: Add the release note**
+- [x] **Step 1: Add the release note**
 
 Add one English bullet under the current unreleased section describing live model-capability preservation and phase-aware two-to-six-chapter short-fiction batches with a 10k unknown fallback.
 
-- [ ] **Step 2: Run type checks**
+- [x] **Step 2: Run type checks**
 
 Run: `pnpm --filter @kienmatu/inkos-core typecheck && pnpm --filter @kienmatu/inkos-studio typecheck`
 
 Expected: both commands exit zero.
 
-- [ ] **Step 3: Run focused suites**
+- [x] **Step 3: Run focused suites**
 
 Run: `pnpm --filter @kienmatu/inkos-core test --run src/__tests__/probe.test.ts src/__tests__/provider.test.ts src/__tests__/effective-llm-config.test.ts src/__tests__/short-fiction-batch-policy.test.ts src/__tests__/short-fiction-batching.test.ts src/__tests__/short-fiction-resume.test.ts src/__tests__/short-fiction-en.test.ts src/__tests__/short-fiction-editorial.test.ts src/__tests__/en-prompt-parity.test.ts`
 
@@ -491,13 +491,13 @@ Run: `pnpm --filter @kienmatu/inkos-studio test --run src/pages/service-detail-s
 
 Expected: all focused tests pass.
 
-- [ ] **Step 4: Run complete core and Studio suites**
+- [x] **Step 4: Run complete core and Studio suites**
 
 Run: `pnpm --filter @kienmatu/inkos-core test && pnpm --filter @kienmatu/inkos-studio test`
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Probe live 9router through the compiled InkOS helper**
+- [x] **Step 5: Probe live 9router through the compiled InkOS helper**
 
 Build core, then execute this read-only probe:
 
@@ -518,13 +518,13 @@ Expected:
 }
 ```
 
-- [ ] **Step 6: Review the entire branch diff**
+- [x] **Step 6: Review the entire branch diff**
 
 Run: `git diff --check master...HEAD && git diff --stat master...HEAD && git status --short`
 
 Expected: no whitespace errors, only scoped files, clean worktree after final commit.
 
-- [ ] **Step 7: Commit release notes and plan completion**
+- [x] **Step 7: Commit release notes and plan completion**
 
 ```bash
 git add CHANGELOG.md
@@ -532,7 +532,7 @@ git add -f docs/superpowers/plans/2026-09-07-capability-aware-semantic-short-fic
 git commit -m "docs: document semantic short-fiction batching"
 ```
 
-- [ ] **Step 8: Push and mark PR ready**
+- [x] **Step 8: Push and mark PR ready**
 
 ```bash
 git push
