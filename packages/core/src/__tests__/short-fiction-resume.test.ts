@@ -47,6 +47,13 @@ const CHAPTER_5_ONLY_CONTINUATION_MD = `
 === CHAPTER 5 CONTENT ===
 ${"第五章补写完成，电梯井里传来旧广播声。".repeat(20)}
 `;
+const EN_CHECKPOINT_WITHOUT_CHAPTER_1 = [
+  "# Missing First Chapter",
+  ...Array.from({ length: 11 }, (_, index) => {
+    const chapter = index + 2;
+    return `## Chapter ${chapter}: Part ${chapter}\n\nChapter ${chapter} has complete prose.`;
+  }),
+].join("\n\n");
 
 function ctx(projectRoot: string) {
   return { client: { provider: "openai" } as never, model: "fake", projectRoot };
@@ -85,6 +92,26 @@ describe("short fiction resume + failure marker (C2)", () => {
     await mkdir(join(root, "shorts", "elevator", "drafts", "v001"), { recursive: true });
     await writeFile(join(root, "shorts", "elevator", "outline", "v002.md"), "## 既有大纲\n12章完整方案", "utf-8");
     await writeFile(join(root, "shorts", "elevator", "drafts", "v001", "full.md"), raw, "utf-8");
+  }
+
+  async function writeStaleReviewCursor(checkpoint?: string, finalAsDirectory = false) {
+    await mkdir(join(root, "shorts", "elevator", "outline"), { recursive: true });
+    await writeFile(join(root, "shorts", "elevator", "outline", "v002.md"), "## Existing outline", "utf-8");
+    if (checkpoint !== undefined) {
+      await mkdir(join(root, "shorts", "elevator", "drafts", "v001"), { recursive: true });
+      await writeFile(join(root, "shorts", "elevator", "drafts", "v001", "full.md"), checkpoint, "utf-8");
+    }
+    if (finalAsDirectory) {
+      await writeFile(join(root, "shorts", "elevator", "final"), "blocks final artifact directory", "utf-8");
+    } else {
+      await mkdir(join(root, "shorts", "elevator", "final"), { recursive: true });
+      await writeFile(join(root, "shorts", "elevator", "final", "full.md"), "# stale final", "utf-8");
+    }
+    await writeFile(join(root, "shorts", "elevator", "status.json"), JSON.stringify({
+      status: "needs-review",
+      stage: "draft-review",
+      resumeCursor: "draft-v001",
+    }), "utf-8");
   }
 
   it("uses a later non-empty duplicate chapter content block when filling a previously empty chapter", () => {
@@ -167,6 +194,57 @@ describe("short fiction resume + failure marker (C2)", () => {
 
     expect(writeDraft).toHaveBeenCalledOnce();
     expect(progress.some((message) => /checkpoint.*invalid.*regenerat/i.test(message))).toBe(true);
+  });
+
+  it("rejects an English checkpoint missing chapter 1 instead of aliasing chapter 10", async () => {
+    await writeDraftCheckpoint(EN_CHECKPOINT_WITHOUT_CHAPTER_1);
+    const complete = parseShortFictionBatchDraft(DRAFT_MD, { expectedChapters: CH, language: "en" });
+    const writeDraft = vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft").mockResolvedValue(complete);
+    vi.spyOn(ShortFictionDraftReviewerAgent.prototype, "reviewDraft").mockResolvedValue("looks fine");
+    vi.spyOn(ShortFictionDraftReviserAgent.prototype, "reviseDraft").mockResolvedValue(complete);
+    vi.spyOn(ShortFictionPackagingAgent.prototype, "generatePackage").mockResolvedValue({
+      title: "Elevator", intro: "Hook", sellingPoints: ["Twist"], coverPrompt: "", rawContent: "",
+    });
+    const progress: string[] = [];
+
+    await runShortFictionProduction({
+      projectRoot: root, direction: "Horror short", storyId: "elevator", language: "en",
+      chapterCount: CH, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
+      onProgress: (message) => progress.push(message),
+    });
+
+    expect(writeDraft).toHaveBeenCalledOnce();
+    expect(progress.some((message) => /checkpoint.*invalid.*regenerat/i.test(message))).toBe(true);
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["malformed", "not a complete draft"],
+  ])("does not preserve a stale review cursor when the %s checkpoint falls back to a failing writer", async (_kind, checkpoint) => {
+    await writeStaleReviewCursor(checkpoint);
+    vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft").mockRejectedValue(new Error("writer failed"));
+
+    await expect(runShortFictionProduction({
+      projectRoot: root, direction: "Horror short", storyId: "elevator", language: "en",
+      chapterCount: CH, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
+    })).rejects.toThrow("writer failed");
+
+    expect(JSON.parse(await readFile(join(root, "shorts", "elevator", "status.json"), "utf-8")))
+      .toMatchObject({ status: "failed" });
+  });
+
+  it("does not preserve a stale review cursor when final publication fails before the new checkpoint snapshot", async () => {
+    await writeStaleReviewCursor("not a complete draft", true);
+    const complete = parseShortFictionBatchDraft(DRAFT_MD, { expectedChapters: CH, language: "en" });
+    vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft").mockResolvedValue(complete);
+
+    await expect(runShortFictionProduction({
+      projectRoot: root, direction: "Horror short", storyId: "elevator", language: "en",
+      chapterCount: CH, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
+    })).rejects.toThrow();
+
+    expect(JSON.parse(await readFile(join(root, "shorts", "elevator", "status.json"), "utf-8")))
+      .toMatchObject({ status: "failed" });
   });
 
   it("publishes the complete v1 final artifacts and review cursor before draft review starts", async () => {

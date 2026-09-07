@@ -338,6 +338,7 @@ async function produceShort(
   let finalDraft: ShortFictionBatchDraft;
   let revisionWarning: string | undefined;
   let salesPackage: ShortFictionSalesPackage;
+  let draftReviewCheckpointPublished = false;
   try {
     const resumedDraft = await tryLoadCompleteDraftCheckpoint(
       root,
@@ -397,6 +398,7 @@ async function produceShort(
       artifacts: draftReviewCheckpointArtifacts(baseDir),
       observations: [],
     });
+    draftReviewCheckpointPublished = true;
 
     options.onProgress?.("Reviewing full draft...");
     const draftReviewer = new ShortFictionDraftReviewerAgent(options.runtimes.draftReview);
@@ -464,10 +466,7 @@ async function produceShort(
     });
     await writePackageArtifacts(root, baseDir, salesPackage, language);
   } catch (error) {
-    const existingRun = await readShortRunResumeState(root, join(baseDir, "status.json"));
-    const reviewCheckpointExists = existingRun?.status === "needs-review"
-      && existingRun.resumeCursor === "draft-v001";
-    await writeShortRunSnapshot(root, baseDir, reviewCheckpointExists
+    await writeShortRunSnapshot(root, baseDir, draftReviewCheckpointPublished
       ? {
           storyId,
           status: "needs-review",

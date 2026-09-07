@@ -732,7 +732,7 @@ function extractMarkdownChapterContent(raw: string, number: number): string {
 
 // Matches a zh "第N章" or en "Chapter N" heading prefix inside markdown fallbacks.
 function markdownChapterPrefixPattern(number: number): string {
-  return `第[ \\t]*${number}[ \\t]*章[ \\t]*|Chapter[ \\t]*${number}[ \\t]*[:：.\\-–—]?[ \\t]*`;
+  return `第[ \\t]*${number}[ \\t]*章[ \\t]*|Chapter[ \\t]*${number}(?!\\d)[ \\t]*[:：.\\-–—]?[ \\t]*`;
 }
 
 function extractDuplicateTitleTaggedChapterContent(raw: string, number: number): string {
