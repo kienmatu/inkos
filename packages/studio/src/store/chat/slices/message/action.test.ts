@@ -665,6 +665,97 @@ describe("chat message actions", () => {
       .find((execution) => execution.id === "direct-short_run-1");
   }
 
+  it("refreshes work collections when a restored short finishes through a terminal task snapshot", async () => {
+    const store = createTestStore();
+    const sessionId = await setupRunningTaskSession(store);
+
+    fakeEventSources[0]?.emit("task:snapshot", {
+      sessionId,
+      execution: {
+        id: "direct-short_run-1",
+        tool: "short_fiction_run",
+        label: "短篇生产",
+        status: "completed",
+        startedAt: 10,
+        completedAt: 40,
+        result: "短篇已完成",
+      },
+    });
+
+    expect(store.getState().bookDataVersion).toBe(1);
+  });
+
+  it("refreshes work collections when the final HTTP response is the only short completion signal", async () => {
+    const store = createTestStore();
+    const sessionId = await setupRunningTaskSession(store);
+    fetchJson.mockClear();
+    fetchJson.mockResolvedValueOnce({
+      response: "短篇已完成。",
+      details: {
+        toolExecutions: [{
+          id: "direct-short_run-1",
+          tool: "short_fiction_run",
+          label: "短篇生产",
+          status: "completed",
+          startedAt: 10,
+          completedAt: 40,
+          result: "短篇已完成",
+        }],
+      },
+      session: { sessionId, sessionKind: "short" },
+    });
+
+    await store.getState().sendMessage(sessionId, "确认生成短篇", {
+      sessionKind: "short",
+      actionSource: "button",
+      requestedIntent: "short_run",
+    });
+
+    expect(store.getState().bookDataVersion).toBe(1);
+  });
+
+  it("refreshes work collections once when SSE and HTTP report the same short completion", async () => {
+    const store = createTestStore();
+    const sessionId = await setupRunningTaskSession(store);
+    let resolveAgent!: (value: unknown) => void;
+    fetchJson.mockClear();
+    fetchJson.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveAgent = resolve;
+    }));
+
+    const sent = store.getState().sendMessage(sessionId, "确认生成短篇", {
+      sessionKind: "short",
+      actionSource: "button",
+      requestedIntent: "short_run",
+    });
+    await vi.waitFor(() => expect(fakeEventSources).toHaveLength(2));
+
+    fakeEventSources[1]?.emit("tool:end", {
+      sessionId,
+      id: "direct-short_run-1",
+      tool: "short_fiction_run",
+      result: "短篇已完成",
+    });
+    resolveAgent({
+      response: "",
+      details: {
+        toolExecutions: [{
+          id: "direct-short_run-1",
+          tool: "short_fiction_run",
+          label: "短篇生产",
+          status: "completed",
+          startedAt: 10,
+          completedAt: 40,
+          result: "短篇已完成",
+        }],
+      },
+      session: { sessionId, sessionKind: "short" },
+    });
+    await sent;
+
+    expect(store.getState().bookDataVersion).toBe(1);
+  });
+
   it("sends a chat message while a production task is running without aborting the task", async () => {
     const store = createTestStore();
     const sessionId = await setupRunningTaskSession(store);

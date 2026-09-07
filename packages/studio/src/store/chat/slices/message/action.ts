@@ -12,7 +12,7 @@ import type {
 } from "../../types";
 import { fetchJson } from "../../../../hooks/use-api";
 import { tr } from "../../../../lib/app-language";
-import { isConfirmedProductionSend } from "../../message-policy";
+import { isConfirmedProductionSend, shouldRefreshSidebarForExecutionTransition } from "../../message-policy";
 import { attachSessionStreamListeners } from "./stream-events";
 import {
   bookKey,
@@ -586,6 +586,12 @@ export const createMessageSlice: StateCreator<ChatStore, [], [], MessageActions>
       const finalContent = data.details?.draftRaw || data.response || "";
       const toolCall = data.details?.toolCall ?? undefined;
       const responseToolExecutions = data.details?.toolExecutions ?? [];
+      const shouldRefreshSidebar = responseToolExecutions.some((execution) => (
+        shouldRefreshSidebarForExecutionTransition(
+          get().sessions[sessionId]?.messages ?? [],
+          execution,
+        )
+      ));
       const responseBookId = data.session?.activeBookId ?? data.session?.bookId;
       const responseSessionKind = data.session?.sessionKind;
       if (responseBookId || responseSessionKind || data.session?.title || data.session?.playMode) {
@@ -681,6 +687,7 @@ export const createMessageSlice: StateCreator<ChatStore, [], [], MessageActions>
           if (get().sessions[sessionId]?.isChatStreaming) rememberFailedSend();
         }
       }
+      if (shouldRefreshSidebar) get().bumpBookDataVersion();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       // 用户主动停止会先把 isChatStreaming 置回 false，被中止的请求随后 reject 到
