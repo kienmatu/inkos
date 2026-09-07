@@ -1,6 +1,6 @@
 import { access, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { ProjectConfigSchema, type LLMConfig, type ProjectConfig } from "../models/project.js";
+import { ProjectConfigSchema, type LLMConfig, type ModelCapability, type ProjectConfig } from "../models/project.js";
 import { loadSecrets } from "../llm/secrets.js";
 import { getEndpoint } from "../llm/providers/index.js";
 import { guessServiceFromBaseUrl, resolveServicePreset, resolveServiceProviderFamily } from "../llm/service-presets.js";
@@ -47,6 +47,7 @@ interface ServiceConfigEntry {
   readonly name?: string;
   readonly baseUrl?: string;
   readonly models?: readonly string[];
+  readonly modelCapabilities?: Readonly<Record<string, ModelCapability>>;
   readonly temperature?: number;
   readonly maxTokens?: number;
   readonly apiFormat?: "chat" | "responses";
@@ -312,6 +313,11 @@ function applyServiceEntry(llm: Record<string, unknown>, entry: ServiceConfigEnt
   llm.service = entry.service;
   llm.provider = deriveProviderFromService(entry.service);
   llm.baseUrl = entry.baseUrl ?? resolveServicePreset(entry.service)?.baseUrl ?? "";
+  if (entry.modelCapabilities && Object.keys(entry.modelCapabilities).length > 0) {
+    llm.modelCapabilities = entry.modelCapabilities;
+  } else {
+    delete llm.modelCapabilities;
+  }
 
   if (entry.temperature !== undefined) llm.temperature = entry.temperature;
   if (entry.apiFormat !== undefined) llm.apiFormat = entry.apiFormat;
@@ -353,16 +359,10 @@ function normalizeServiceEntries(raw: unknown): ServiceConfigEntry[] {
   if (Array.isArray(raw)) {
     return raw
       .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
-      .map((entry) => ({
-        service: typeof entry.service === "string" && entry.service.length > 0 ? entry.service : "custom",
-        ...(typeof entry.name === "string" && entry.name.length > 0 ? { name: entry.name } : {}),
-        ...(typeof entry.baseUrl === "string" && entry.baseUrl.length > 0 ? { baseUrl: entry.baseUrl } : {}),
-        ...(Array.isArray(entry.models) ? { models: normalizeModelIds(entry.models) } : {}),
-        ...(typeof entry.temperature === "number" ? { temperature: entry.temperature } : {}),
-        ...(typeof entry.maxTokens === "number" ? { maxTokens: entry.maxTokens } : {}),
-        ...(entry.apiFormat === "chat" || entry.apiFormat === "responses" ? { apiFormat: entry.apiFormat } : {}),
-        ...(typeof entry.stream === "boolean" ? { stream: entry.stream } : {}),
-      }));
+      .map((entry) => normalizeServiceEntryRecord(
+        typeof entry.service === "string" && entry.service.length > 0 ? entry.service : "custom",
+        entry,
+      ));
   }
 
   if (raw && typeof raw === "object") {
@@ -376,39 +376,63 @@ function normalizeServiceEntries(raw: unknown): ServiceConfigEntry[] {
 
 function normalizeServiceEntryFromPatch(serviceId: string, value: Record<string, unknown>): ServiceConfigEntry {
   if (serviceId.startsWith("custom:")) {
-    return {
-      service: "custom",
+    return normalizeServiceEntryRecord("custom", {
+      ...value,
       name: decodeURIComponent(serviceId.slice("custom:".length)),
-      ...(typeof value.baseUrl === "string" && value.baseUrl.length > 0 ? { baseUrl: value.baseUrl } : {}),
-      ...(Array.isArray(value.models) ? { models: normalizeModelIds(value.models) } : {}),
-      ...(typeof value.temperature === "number" ? { temperature: value.temperature } : {}),
-      ...(typeof value.maxTokens === "number" ? { maxTokens: value.maxTokens } : {}),
-      ...(value.apiFormat === "chat" || value.apiFormat === "responses" ? { apiFormat: value.apiFormat } : {}),
-      ...(typeof value.stream === "boolean" ? { stream: value.stream } : {}),
-    };
+    });
   }
+  return normalizeServiceEntryRecord(serviceId, value);
+}
 
-  if (serviceId === "custom") {
-    return {
-      service: "custom",
-      ...(typeof value.name === "string" && value.name.length > 0 ? { name: value.name } : {}),
-      ...(typeof value.baseUrl === "string" && value.baseUrl.length > 0 ? { baseUrl: value.baseUrl } : {}),
-      ...(Array.isArray(value.models) ? { models: normalizeModelIds(value.models) } : {}),
-      ...(typeof value.temperature === "number" ? { temperature: value.temperature } : {}),
-      ...(typeof value.maxTokens === "number" ? { maxTokens: value.maxTokens } : {}),
-      ...(value.apiFormat === "chat" || value.apiFormat === "responses" ? { apiFormat: value.apiFormat } : {}),
-      ...(typeof value.stream === "boolean" ? { stream: value.stream } : {}),
-    };
-  }
-
+function normalizeServiceEntryRecord(service: string, value: Record<string, unknown>): ServiceConfigEntry {
+  const models = Array.isArray(value.models) ? normalizeModelIds(value.models) : undefined;
+  const modelCapabilities = normalizeModelCapabilities(value.modelCapabilities, models);
   return {
-    service: serviceId,
-    ...(Array.isArray(value.models) ? { models: normalizeModelIds(value.models) } : {}),
+    service,
+    ...(typeof value.name === "string" && value.name.length > 0 ? { name: value.name } : {}),
+    ...(typeof value.baseUrl === "string" && value.baseUrl.length > 0 ? { baseUrl: value.baseUrl } : {}),
+    ...(models ? { models } : {}),
+    ...(Object.keys(modelCapabilities).length > 0 ? { modelCapabilities } : {}),
     ...(typeof value.temperature === "number" ? { temperature: value.temperature } : {}),
     ...(typeof value.maxTokens === "number" ? { maxTokens: value.maxTokens } : {}),
     ...(value.apiFormat === "chat" || value.apiFormat === "responses" ? { apiFormat: value.apiFormat } : {}),
     ...(typeof value.stream === "boolean" ? { stream: value.stream } : {}),
   };
+}
+
+function normalizeModelCapabilities(
+  raw: unknown,
+  models?: readonly string[],
+): Record<string, ModelCapability> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const allowed = models ? new Set(models.map((model) => model.toLowerCase())) : undefined;
+  const normalized: Record<string, ModelCapability> = {};
+  for (const [model, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!model.trim() || (allowed && !allowed.has(model.toLowerCase()))) continue;
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+    const record = value as Record<string, unknown>;
+    const maxOutput = positiveInteger(record.maxOutput);
+    const contextWindow = positiveInteger(record.contextWindow);
+    const consistentMax = maxOutput !== undefined
+      && (contextWindow === undefined || maxOutput <= contextWindow)
+      ? maxOutput
+      : undefined;
+    if (consistentMax === undefined && contextWindow === undefined) continue;
+    normalized[model] = {
+      ...(consistentMax !== undefined ? { maxOutput: consistentMax } : {}),
+      ...(contextWindow !== undefined ? { contextWindow } : {}),
+    };
+  }
+  return normalized;
+}
+
+function positiveInteger(value: unknown): number | undefined {
+  return typeof value === "number"
+    && Number.isFinite(value)
+    && Number.isInteger(value)
+    && value > 0
+    ? value
+    : undefined;
 }
 
 function selectServiceEntry(

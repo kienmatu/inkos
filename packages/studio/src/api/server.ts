@@ -36,6 +36,7 @@ import {
   isApiKeyOptionalForEndpoint,
   getAllEndpoints,
   probeModelsFromUpstream,
+  normalizeProbedModels,
   fetchWithProxy,
   chatCompletion,
   runWorkerAgent,
@@ -1803,13 +1804,26 @@ const subscribers = new Set<EventHandler>();
 const bookCreateStatus = new Map<string, { status: "creating" | "error"; error?: string }>();
 
 // 内存缓存：service -> 模型列表 + 更新时间戳；避免每次 sidebar 挂载时都打真实 LLM /models
-const modelListCache = new Map<string, { models: Array<{ id: string; name: string }>; at: number }>();
+type ServiceModelInfo = {
+  readonly id: string;
+  readonly name: string;
+  readonly maxOutput?: number;
+  readonly contextWindow?: number;
+};
+
+type ServiceModelCapability = {
+  readonly maxOutput?: number;
+  readonly contextWindow?: number;
+};
+
+const modelListCache = new Map<string, { models: ServiceModelInfo[]; at: number }>();
 
 interface ServiceConfigEntry {
   service: string;
   name?: string;
   baseUrl?: string;
   models?: string[];
+  modelCapabilities?: Record<string, ServiceModelCapability>;
   temperature?: number;
   apiFormat?: "chat" | "responses";
   stream?: boolean;
@@ -1839,7 +1853,7 @@ interface EnvConfigStatus {
 
 interface ServiceProbeResult {
   ok: boolean;
-  models: Array<{ id: string; name: string }>;
+  models: ServiceModelInfo[];
   selectedModel?: string;
   apiFormat?: "chat" | "responses";
   stream?: boolean;
@@ -1935,17 +1949,52 @@ function normalizeServiceModelIds(value: unknown): string[] {
   return models;
 }
 
+function normalizeServiceModelCapabilities(
+  value: unknown,
+  models?: readonly string[],
+): Record<string, ServiceModelCapability> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const allowed = models ? new Set(models.map((model) => model.toLowerCase())) : undefined;
+  const result: Record<string, ServiceModelCapability> = {};
+  for (const [model, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (!model.trim() || (allowed && !allowed.has(model.toLowerCase()))) continue;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const record = raw as Record<string, unknown>;
+    const contextWindow = positiveInteger(record.contextWindow);
+    const candidateMax = positiveInteger(record.maxOutput);
+    const maxOutput = candidateMax !== undefined
+      && (contextWindow === undefined || candidateMax <= contextWindow)
+      ? candidateMax
+      : undefined;
+    if (maxOutput === undefined && contextWindow === undefined) continue;
+    result[model] = {
+      ...(maxOutput !== undefined ? { maxOutput } : {}),
+      ...(contextWindow !== undefined ? { contextWindow } : {}),
+    };
+  }
+  return result;
+}
+
+function positiveInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && Number.isInteger(value) && value > 0
+    ? value
+    : undefined;
+}
+
 function mergeServiceModelIds(...groups: ReadonlyArray<readonly string[] | undefined>): string[] {
   return normalizeServiceModelIds(groups.flatMap((group) => group ?? []));
 }
 
 function normalizeServiceEntry(serviceId: string, value: Record<string, unknown>): ServiceConfigEntry {
+  const models = Array.isArray(value.models) ? normalizeServiceModelIds(value.models) : undefined;
+  const modelCapabilities = normalizeServiceModelCapabilities(value.modelCapabilities, models);
   if (serviceId.startsWith("custom:")) {
     return {
       service: "custom",
       name: decodeURIComponent(serviceId.slice("custom:".length)),
       ...(typeof value.baseUrl === "string" && value.baseUrl.length > 0 ? { baseUrl: value.baseUrl } : {}),
-      ...(Array.isArray(value.models) ? { models: normalizeServiceModelIds(value.models) } : {}),
+      ...(models ? { models } : {}),
+      ...(Object.keys(modelCapabilities).length > 0 ? { modelCapabilities } : {}),
       ...(typeof value.temperature === "number" ? { temperature: value.temperature } : {}),
       ...(value.apiFormat === "chat" || value.apiFormat === "responses" ? { apiFormat: value.apiFormat } : {}),
       ...(typeof value.stream === "boolean" ? { stream: value.stream } : {}),
@@ -1957,7 +2006,8 @@ function normalizeServiceEntry(serviceId: string, value: Record<string, unknown>
       service: "custom",
       ...(typeof value.name === "string" && value.name.length > 0 ? { name: value.name } : {}),
       ...(typeof value.baseUrl === "string" && value.baseUrl.length > 0 ? { baseUrl: value.baseUrl } : {}),
-      ...(Array.isArray(value.models) ? { models: normalizeServiceModelIds(value.models) } : {}),
+      ...(models ? { models } : {}),
+      ...(Object.keys(modelCapabilities).length > 0 ? { modelCapabilities } : {}),
       ...(typeof value.temperature === "number" ? { temperature: value.temperature } : {}),
       ...(value.apiFormat === "chat" || value.apiFormat === "responses" ? { apiFormat: value.apiFormat } : {}),
       ...(typeof value.stream === "boolean" ? { stream: value.stream } : {}),
@@ -1966,7 +2016,8 @@ function normalizeServiceEntry(serviceId: string, value: Record<string, unknown>
 
   return {
     service: serviceId,
-    ...(Array.isArray(value.models) ? { models: normalizeServiceModelIds(value.models) } : {}),
+    ...(models ? { models } : {}),
+    ...(Object.keys(modelCapabilities).length > 0 ? { modelCapabilities } : {}),
     ...(typeof value.temperature === "number" ? { temperature: value.temperature } : {}),
     ...(value.apiFormat === "chat" || value.apiFormat === "responses" ? { apiFormat: value.apiFormat } : {}),
     ...(typeof value.stream === "boolean" ? { stream: value.stream } : {}),
@@ -1981,15 +2032,10 @@ function normalizeServiceConfig(raw: unknown): ServiceConfigEntry[] {
   if (Array.isArray(raw)) {
     return raw
       .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
-      .map((entry) => ({
-        service: typeof entry.service === "string" && entry.service.length > 0 ? entry.service : "custom",
-        ...(typeof entry.name === "string" && entry.name.length > 0 ? { name: entry.name } : {}),
-        ...(typeof entry.baseUrl === "string" && entry.baseUrl.length > 0 ? { baseUrl: entry.baseUrl } : {}),
-        ...(Array.isArray(entry.models) ? { models: normalizeServiceModelIds(entry.models) } : {}),
-        ...(typeof entry.temperature === "number" ? { temperature: entry.temperature } : {}),
-        ...(entry.apiFormat === "chat" || entry.apiFormat === "responses" ? { apiFormat: entry.apiFormat } : {}),
-        ...(typeof entry.stream === "boolean" ? { stream: entry.stream } : {}),
-      }));
+      .map((entry) => normalizeServiceEntry(
+        typeof entry.service === "string" && entry.service.length > 0 ? entry.service : "custom",
+        entry,
+      ));
   }
 
   if (raw && typeof raw === "object") {
@@ -2010,6 +2056,9 @@ function mergeServiceConfig(existing: ServiceConfigEntry[], updates: ServiceConf
       ...previous,
       ...update,
       ...(update.models === undefined && previous?.models ? { models: previous.models } : {}),
+      ...(update.modelCapabilities === undefined && previous?.modelCapabilities
+        ? { modelCapabilities: previous.modelCapabilities }
+        : {}),
     });
   }
   return [...merged.values()];
@@ -2051,6 +2100,11 @@ function syncTopLevelLlmMirror(llm: Record<string, unknown>): void {
   if (selectedEntry.temperature !== undefined) llm.temperature = selectedEntry.temperature;
   if (selectedEntry.apiFormat !== undefined) llm.apiFormat = selectedEntry.apiFormat;
   if (selectedEntry.stream !== undefined) llm.stream = selectedEntry.stream;
+  if (selectedEntry.modelCapabilities && Object.keys(selectedEntry.modelCapabilities).length > 0) {
+    llm.modelCapabilities = selectedEntry.modelCapabilities;
+  } else {
+    delete llm.modelCapabilities;
+  }
 }
 
 async function loadRawConfig(root: string): Promise<Record<string, unknown>> {
@@ -2521,10 +2575,7 @@ async function fetchModelsFromServiceBaseUrl(
         authFailed: res.status === 401 || res.status === 403,
       };
     }
-    const json = await res.json() as { data?: Array<{ id: string }> };
-    return {
-      models: (json.data ?? []).map((m) => ({ id: m.id, name: m.id })),
-    };
+    return { models: normalizeProbedModels(await res.json()) };
   } catch (error) {
     return {
       models: [],

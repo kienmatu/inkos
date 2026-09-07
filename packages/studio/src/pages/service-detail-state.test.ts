@@ -68,6 +68,46 @@ describe("matchServiceConfigEntryForDetail", () => {
 });
 
 describe("saveServiceConfig", () => {
+  it("persists live capabilities beside legacy model ids", async () => {
+    const bodies: unknown[] = [];
+    const fetchJsonImpl = vi.fn(async (path: string, init?: { body?: string }) => {
+      if (init?.body) bodies.push(JSON.parse(init.body));
+      if (path.endsWith("/secret") || path === "/services/config") return { ok: true };
+      throw new Error(`unexpected path: ${path}`);
+    });
+
+    await saveServiceConfig({
+      effectiveServiceId: "custom:9router",
+      serviceId: "custom",
+      isCustom: true,
+      resolvedCustomName: "9router",
+      apiKey: "",
+      baseUrl: "http://localhost:20128/v1",
+      apiFormat: "chat",
+      stream: true,
+      temperature: "0.7",
+      detectedModel: "cx/gpt-5.4",
+      verifiedProbe: {
+        apiKey: "",
+        baseUrl: "http://localhost:20128/v1",
+        apiFormat: "chat",
+        stream: true,
+        models: [{ id: "cx/gpt-5.4", maxOutput: 128_000, contextWindow: 400_000 }],
+        selectedModel: "cx/gpt-5.4",
+      },
+      fetchJsonImpl: fetchJsonImpl as never,
+    });
+
+    expect(bodies[1]).toMatchObject({
+      services: [{
+        models: ["cx/gpt-5.4"],
+        modelCapabilities: {
+          "cx/gpt-5.4": { maxOutput: 128_000, contextWindow: 400_000 },
+        },
+      }],
+    });
+  });
+
   it("shows a plain error when API key is empty", async () => {
     await expect(saveServiceConfig({
       effectiveServiceId: "openai",

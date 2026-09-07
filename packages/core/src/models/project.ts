@@ -1,11 +1,26 @@
 import { z } from "zod";
 
 // C1 (v2.0.0 breaking): `maxTokens` 字段已被 providers bank 接管；zod 用 strip mode 静默丢弃老配置里的 `maxTokens`。
+export const ModelCapabilitySchema = z.object({
+  maxOutput: z.number().int().positive().optional(),
+  contextWindow: z.number().int().positive().optional(),
+}).refine(
+  (value) => value.maxOutput === undefined
+    || value.contextWindow === undefined
+    || value.maxOutput <= value.contextWindow,
+  { message: "maxOutput cannot exceed contextWindow" },
+);
+
+export type ModelCapability = z.infer<typeof ModelCapabilitySchema>;
+
+const ModelCapabilitiesSchema = z.record(z.string().min(1), ModelCapabilitySchema);
+
 const LLMServiceEntrySchema = z.object({
   service: z.string().min(1),
   name: z.string().min(1).optional(),
   baseUrl: z.string().url().optional(),
   models: z.array(z.string().min(1)).optional(),
+  modelCapabilities: ModelCapabilitiesSchema.optional(),
   temperature: z.number().min(0).max(2).optional(),
   apiFormat: z.enum(["chat", "responses"]).optional(),
   stream: z.boolean().optional(),
@@ -35,6 +50,7 @@ export const LLMConfigSchema = z.object({
   apiFormat: z.enum(["chat", "responses"]).default("chat"),
   stream: z.boolean().default(true),
   services: z.array(LLMServiceEntrySchema).optional(),
+  modelCapabilities: ModelCapabilitiesSchema.optional(),
   defaultModel: z.string().min(1).optional(),
   cover: LLMCoverConfigSchema,
 });
