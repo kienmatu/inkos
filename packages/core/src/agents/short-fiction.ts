@@ -592,7 +592,8 @@ export function parseShortFictionBatchDraft(
     || fallbackTitle,
   ) || fallbackTitle;
   const openingHook = extractTaggedBlock(rawContent, "SHORT_FICTION_OPENING_HOOK")
-    || extractTaggedBlock(rawContent, "OPENING_HOOK");
+    || extractTaggedBlock(rawContent, "OPENING_HOOK")
+    || extractMarkdownOpeningHook(rawContent, language);
 
   const chapters: ShortFictionChapter[] = [];
   for (let number = 1; number <= expectedChapters; number += 1) {
@@ -718,6 +719,12 @@ function extractTaggedBlocks(raw: string, tag: string): string[] {
 
 function extractFirstHeading(raw: string): string {
   return raw.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? "";
+}
+
+function extractMarkdownOpeningHook(raw: string, language: ShortFictionLanguage): string {
+  const heading = language === "en" ? "Opening Hook" : "开篇钩子";
+  const pattern = new RegExp(`^##[ \\t]*${heading}[ \\t]*\\r?\\n([\\s\\S]*?)(?=^##[ \\t]+|(?![\\s\\S]))`, "m");
+  return pattern.exec(raw)?.[1]?.trim() ?? "";
 }
 
 function extractMarkdownChapterTitle(raw: string, number: number): string {

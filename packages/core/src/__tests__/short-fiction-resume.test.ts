@@ -55,6 +55,20 @@ const EN_CHECKPOINT_WITHOUT_CHAPTER_1 = [
   }),
 ].join("\n\n");
 
+function completeMarkdown(chapterCount: number, language: "en" | "zh", openingHook?: string): string {
+  const title = language === "en" ? "Checkpoint Story" : "检查点故事";
+  const hookHeading = language === "en" ? "Opening Hook" : "开篇钩子";
+  return [
+    `# ${title}`,
+    openingHook ? `## ${hookHeading}\n\n${openingHook}` : "",
+    ...Array.from({ length: chapterCount }, (_, index) => {
+      const chapter = index + 1;
+      const heading = language === "en" ? `Chapter ${chapter}: Part ${chapter}` : `第${chapter}章 第${chapter}部分`;
+      return `## ${heading}\n\nChapter ${chapter} has complete prose.`;
+    }),
+  ].filter(Boolean).join("\n\n");
+}
+
 function ctx(projectRoot: string) {
   return { client: { provider: "openai" } as never, model: "fake", projectRoot };
 }
@@ -134,6 +148,22 @@ describe("short fiction resume + failure marker (C2)", () => {
       .toEqual(original.chapters.map(({ number, title, content }) => ({ number, title, content })));
   });
 
+  it.each([
+    ["en", "The elevator opens onto a floor erased from every plan."],
+    ["zh", "电梯打开时，门外是图纸上不存在的楼层。"],
+  ] as const)("round-trips a rendered %s opening hook", (language, openingHook) => {
+    const parsed = parseShortFictionBatchDraft(completeMarkdown(CH, language, openingHook), {
+      expectedChapters: CH,
+      language,
+    });
+
+    expect(parsed.openingHook).toBe(openingHook);
+    expect(parseShortFictionBatchDraft(renderShortFictionDraftMarkdown(parsed, language), {
+      expectedChapters: CH,
+      language,
+    }).openingHook).toBe(openingHook);
+  });
+
   it("resumes from an existing outline/v002.md, skipping the three outline stages", async () => {
     await mkdir(join(root, "shorts", "elevator", "outline"), { recursive: true });
     await writeFile(join(root, "shorts", "elevator", "outline", "v002.md"), "## 既有大纲\n12章完整方案", "utf-8");
@@ -174,6 +204,38 @@ describe("short fiction resume + failure marker (C2)", () => {
     expect(writeDraft).not.toHaveBeenCalled();
     expect(reviewDraft).toHaveBeenCalledOnce();
     expect(progress).toContain("Resuming from existing complete draft (skipping chapter generation)...");
+  });
+
+  it("preserves a rendered opening hook across a failed review and runner retry", async () => {
+    const openingHook = "The elevator opens onto a floor erased from every plan.";
+    await writeDraftCheckpoint(completeMarkdown(CH, "en", openingHook));
+    const writeDraft = vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft");
+    const reviewDraft = vi.spyOn(ShortFictionDraftReviewerAgent.prototype, "reviewDraft")
+      .mockRejectedValueOnce(new Error("review interrupted"))
+      .mockImplementationOnce(async (input) => {
+        expect(input.draft.openingHook).toBe(openingHook);
+        return "looks fine";
+      });
+    const checkpoint = parseShortFictionBatchDraft(completeMarkdown(CH, "en", openingHook), {
+      expectedChapters: CH,
+      language: "en",
+    });
+    vi.spyOn(ShortFictionDraftReviserAgent.prototype, "reviseDraft").mockResolvedValue(checkpoint);
+    vi.spyOn(ShortFictionPackagingAgent.prototype, "generatePackage").mockResolvedValue({
+      title: "Checkpoint Story", intro: "Hook", sellingPoints: ["Twist"], coverPrompt: "", rawContent: "",
+    });
+    const run = () => runShortFictionProduction({
+      projectRoot: root, direction: "Horror short", storyId: "elevator", language: "en" as const,
+      chapterCount: CH, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
+    });
+
+    await expect(run()).rejects.toThrow("review interrupted");
+    await run();
+
+    expect(writeDraft).not.toHaveBeenCalled();
+    expect(reviewDraft).toHaveBeenCalledTimes(2);
+    expect(await readFile(join(root, "shorts", "elevator", "final", "full.md"), "utf-8"))
+      .toContain(openingHook);
   });
 
   it.each([
@@ -217,6 +279,27 @@ describe("short fiction resume + failure marker (C2)", () => {
     expect(progress.some((message) => /checkpoint.*invalid.*regenerat/i.test(message))).toBe(true);
   });
 
+  it("rejects a saved checkpoint with a chapter beyond the requested inventory", async () => {
+    await writeDraftCheckpoint(completeMarkdown(9, "en"));
+    const complete = parseShortFictionBatchDraft(completeMarkdown(8, "en"), {
+      expectedChapters: 8,
+      language: "en",
+    });
+    const writeDraft = vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft").mockResolvedValue(complete);
+    vi.spyOn(ShortFictionDraftReviewerAgent.prototype, "reviewDraft").mockResolvedValue("looks fine");
+    vi.spyOn(ShortFictionDraftReviserAgent.prototype, "reviseDraft").mockResolvedValue(complete);
+    vi.spyOn(ShortFictionPackagingAgent.prototype, "generatePackage").mockResolvedValue({
+      title: "Checkpoint Story", intro: "Hook", sellingPoints: ["Twist"], coverPrompt: "", rawContent: "",
+    });
+
+    await runShortFictionProduction({
+      projectRoot: root, direction: "Horror short", storyId: "elevator", language: "en",
+      chapterCount: 8, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
+    });
+
+    expect(writeDraft).toHaveBeenCalledOnce();
+  });
+
   it.each([
     ["missing", undefined],
     ["malformed", "not a complete draft"],
@@ -245,6 +328,55 @@ describe("short fiction resume + failure marker (C2)", () => {
 
     expect(JSON.parse(await readFile(join(root, "shorts", "elevator", "status.json"), "utf-8")))
       .toMatchObject({ status: "failed" });
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["malformed", "not a complete draft"],
+  ])("does not preserve a stale cursor when outline creation fails before the inner draft block with a %s v1", async (_kind, checkpoint) => {
+    await mkdir(join(root, "shorts", "elevator", "final"), { recursive: true });
+    await writeFile(join(root, "shorts", "elevator", "final", "full.md"), "# stale final", "utf-8");
+    if (checkpoint !== undefined) {
+      await mkdir(join(root, "shorts", "elevator", "drafts", "v001"), { recursive: true });
+      await writeFile(join(root, "shorts", "elevator", "drafts", "v001", "full.md"), checkpoint, "utf-8");
+    }
+    await writeFile(join(root, "shorts", "elevator", "status.json"), JSON.stringify({
+      status: "needs-review", stage: "draft-review", resumeCursor: "draft-v001",
+    }), "utf-8");
+    vi.spyOn(ShortFictionOutlineAgent.prototype, "createOutline").mockRejectedValue(new Error("planner failed"));
+
+    await expect(runShortFictionProduction({
+      projectRoot: root, direction: "Horror short", storyId: "elevator", language: "en",
+      chapterCount: CH, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
+    })).rejects.toThrow("planner failed");
+
+    const status = JSON.parse(await readFile(join(root, "shorts", "elevator", "status.json"), "utf-8"));
+    expect(status).toMatchObject({ status: "failed" });
+    expect(status).not.toHaveProperty("resumeCursor");
+  });
+
+  it("forwards draft review batch progress through runner progress", async () => {
+    await mkdir(join(root, "shorts", "elevator", "outline"), { recursive: true });
+    await writeFile(join(root, "shorts", "elevator", "outline", "v002.md"), "## Existing outline", "utf-8");
+    const complete = parseShortFictionBatchDraft(DRAFT_MD, { expectedChapters: CH, language: "en" });
+    vi.spyOn(ShortFictionWriterAgent.prototype, "writeDraft").mockResolvedValue(complete);
+    vi.spyOn(ShortFictionDraftReviewerAgent.prototype, "reviewDraft").mockImplementation(async (input) => {
+      input.onBatchProgress?.({ batch: 1, totalBatches: 4, chapters: [1, 2] });
+      return "looks fine";
+    });
+    vi.spyOn(ShortFictionDraftReviserAgent.prototype, "reviseDraft").mockResolvedValue(complete);
+    vi.spyOn(ShortFictionPackagingAgent.prototype, "generatePackage").mockResolvedValue({
+      title: "Checkpoint Story", intro: "Hook", sellingPoints: ["Twist"], coverPrompt: "", rawContent: "",
+    });
+    const progress: string[] = [];
+
+    await runShortFictionProduction({
+      projectRoot: root, direction: "Horror short", storyId: "elevator", language: "en",
+      chapterCount: CH, charsPerChapter: 1000, cover: false, runtimes: runtimes(root),
+      onProgress: (message) => progress.push(message),
+    });
+
+    expect(progress).toContain("Reviewing chapters 1-2 (batch 1/4)...");
   });
 
   it("publishes the complete v1 final artifacts and review cursor before draft review starts", async () => {

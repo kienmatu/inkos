@@ -164,7 +164,21 @@ export async function runShortFictionProduction(
     if (providedStoryId) {
       const baseDir = join(outDir, providedStoryId);
       const existingRun = await readShortRunResumeState(root, join(baseDir, "status.json"));
-      if (existingRun?.status !== "needs-review" || existingRun.resumeCursor !== "draft-v001") {
+      const expectedChapters = options.chapterCount ?? SHORT_FICTION_DEFAULT_CHAPTERS;
+      const checkpointPublished = Number.isInteger(expectedChapters)
+        && expectedChapters >= SHORT_FICTION_MIN_CHAPTERS
+        && expectedChapters <= SHORT_FICTION_MAX_CHAPTERS
+        && await hasValidatedPublishedDraftCheckpoint(
+          root,
+          baseDir,
+          expectedChapters,
+          options.language ?? "en",
+        );
+      if (
+        existingRun?.status !== "needs-review"
+        || existingRun.resumeCursor !== "draft-v001"
+        || !checkpointPublished
+      ) {
         await writeShortRunSnapshot(root, baseDir, {
           storyId: providedStoryId,
           status: "failed",
@@ -409,6 +423,7 @@ async function produceShort(
       chapterCount,
       charsPerChapter,
       language,
+      onBatchProgress: (info) => options.onProgress?.(batchProgressMessage("Reviewing", info)),
     });
     await writeText(root, join(baseDir, "reviews", "draft-v001.md"), draftReview);
 
@@ -621,6 +636,9 @@ async function tryLoadCompleteDraftCheckpoint(
   const raw = await tryReadProjectText(root, join(baseDir, "drafts", "v001", "full.md"));
   if (raw === undefined) return undefined;
   try {
+    if (!hasExactPersistedChapterInventory(raw, expectedChapters)) {
+      throw new Error("Saved draft chapter inventory does not match the requested chapter count.");
+    }
     const draft = parseShortFictionBatchDraft(raw, { expectedChapters, language });
     validateShortFictionDraftForFinal(draft, { expectedChapters });
     return draft;
@@ -628,6 +646,30 @@ async function tryLoadCompleteDraftCheckpoint(
     onProgress?.("Existing draft checkpoint is invalid; regenerating full draft...");
     return undefined;
   }
+}
+
+function hasExactPersistedChapterInventory(raw: string, expectedChapters: number): boolean {
+  const headings = Array.from(raw.matchAll(
+    /^##[ \t]*(?:第[ \t]*(\d+)[ \t]*章(?:[ \t]+.*)?|Chapter[ \t]+(\d+)(?!\d)(?:[ \t]+.*|[ \t]*[:：.\-–—][ \t]*.*)?)$/gim,
+  ));
+  const numbers = headings.map((match) => Number(match[1] ?? match[2]));
+  return numbers.length === expectedChapters
+    && numbers.every((number, index) => number === index + 1);
+}
+
+async function hasValidatedPublishedDraftCheckpoint(
+  root: string,
+  baseDir: string,
+  expectedChapters: number,
+  language: ShortFictionLanguage,
+): Promise<boolean> {
+  const checkpoint = await tryLoadCompleteDraftCheckpoint(root, baseDir, expectedChapters, language);
+  if (!checkpoint) return false;
+  const [finalMarkdown, finalJson] = await Promise.all([
+    tryReadProjectText(root, join(baseDir, "final", "full.md")),
+    tryReadProjectText(root, join(baseDir, "final", "short-story.json")),
+  ]);
+  return finalMarkdown !== undefined && finalJson !== undefined;
 }
 
 function draftReviewCheckpointArtifacts(baseDir: string): string[] {
