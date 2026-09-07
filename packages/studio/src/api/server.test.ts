@@ -147,12 +147,19 @@ const listModelsForServiceMock = vi.fn(async (service: string, apiKey?: string, 
     signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) return [];
-  const json = await res.json() as { data?: Array<{ id: string }> };
+  const json = await res.json() as {
+    data?: Array<{
+      id: string;
+      context_length?: number;
+      max_completion_tokens?: number;
+    }>;
+  };
   return (json.data ?? []).map((model) => ({
     id: model.id,
     name: model.id,
     reasoning: false,
-    contextWindow: 0,
+    contextWindow: model.context_length ?? 0,
+    ...(model.max_completion_tokens !== undefined ? { maxOutput: model.max_completion_tokens } : {}),
   }));
 });
 const endpointIdsByGroup = {
@@ -409,6 +416,7 @@ vi.mock("@kienmatu/inkos-core", async (importOriginal) => {
     listModelsForService: listModelsForServiceMock,
     getAllEndpoints: getAllEndpointsMock,
     probeModelsFromUpstream: probeModelsFromUpstreamMock,
+    normalizeProbedModels: actual.normalizeProbedModels,
     fetchWithProxy: vi.fn((input: Parameters<typeof fetch>[0], init?: RequestInit) => fetch(input, init)),
     GLOBAL_ENV_PATH: join(tmpdir(), "inkos-global.env"),
     SessionKindSchema: actual.SessionKindSchema,
@@ -1726,12 +1734,20 @@ describe("createStudioServer daemon lifecycle", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ data: [{ id: "corp-chat" }] }),
+        json: async () => ({ data: [{
+          id: "corp-chat",
+          context_length: 400_000,
+          max_completion_tokens: 128_000,
+        }] }),
         text: async () => "",
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ data: [{ id: "corp-chat" }] }),
+        json: async () => ({ data: [{
+          id: "corp-chat",
+          context_length: 400_000,
+          max_completion_tokens: 128_000,
+        }] }),
       });
     vi.stubGlobal("fetch", fetchMock as typeof fetch);
 
@@ -1746,13 +1762,23 @@ describe("createStudioServer daemon lifecycle", () => {
     expect(testResponse.status).toBe(200);
     await expect(testResponse.json()).resolves.toMatchObject({
       ok: true,
-      models: [{ id: "corp-chat", name: "corp-chat" }],
+      models: [{
+        id: "corp-chat",
+        name: "corp-chat",
+        contextWindow: 400_000,
+        maxOutput: 128_000,
+      }],
     });
 
     const modelsResponse = await app.request("http://localhost/api/v1/services/custom%3A%E5%86%85%E7%BD%91GPT/models");
     expect(modelsResponse.status).toBe(200);
     await expect(modelsResponse.json()).resolves.toMatchObject({
-      models: [{ id: "corp-chat", name: "corp-chat" }],
+      models: [{
+        id: "corp-chat",
+        name: "corp-chat",
+        contextWindow: 400_000,
+        maxOutput: 128_000,
+      }],
     });
   });
 

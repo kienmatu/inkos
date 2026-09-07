@@ -1,4 +1,4 @@
-import type { LLMConfig } from "../models/project.js";
+import type { LLMConfig, ModelCapability } from "../models/project.js";
 import {
   streamSimple as piStreamSimple,
   completeSimple as piCompleteSimple,
@@ -280,6 +280,7 @@ export interface LLMClient {
   readonly proxyUrl?: string;
   readonly _piModel?: PiModel<PiApi>;
   readonly _apiKey?: string;
+  readonly _modelCapabilities?: Readonly<Record<string, ModelCapability>>;
   readonly defaults: {
     readonly temperature: number;
     /**
@@ -298,14 +299,38 @@ export interface LLMClient {
   };
 }
 
+export interface ResolvedModelCapability {
+  readonly maxOutput?: number;
+  readonly contextWindow?: number;
+  readonly source: "live" | "static" | "unknown";
+}
+
+export function resolveModelCapability(client: LLMClient, model: string): ResolvedModelCapability {
+  const liveEntry = Object.entries(client._modelCapabilities ?? {})
+    .find(([id]) => id.toLowerCase() === model.toLowerCase())?.[1];
+  if (liveEntry) return { ...liveEntry, source: "live" };
+
+  const card = lookupModel(client.service ?? "custom", model);
+  return card
+    ? {
+        maxOutput: card.maxOutput,
+        contextWindow: card.contextWindowTokens,
+        source: "static",
+      }
+    : { source: "unknown" };
+}
+
 // === Factory ===
 
 export function createLLMClient(config: LLMConfig): LLMClient {
   // C1 (v2.0.0)：config.maxTokens / maxTokensCap 已删除；defaults.maxTokens 完全从 modelCard 推导。
   const _earlyCard = lookupModel(config.service ?? "custom", config.model);
+  const liveCapabilities = Object.freeze({ ...(config.modelCapabilities ?? {}) });
+  const selectedLive = Object.entries(liveCapabilities)
+    .find(([id]) => id.toLowerCase() === config.model.toLowerCase())?.[1];
   const defaults = {
     temperature: config.temperature ?? 0.7,
-    maxTokens: _earlyCard?.maxOutput ?? UNKNOWN_MODEL_FALLBACK_MAX_TOKENS,
+    maxTokens: selectedLive?.maxOutput ?? _earlyCard?.maxOutput ?? UNKNOWN_MODEL_FALLBACK_MAX_TOKENS,
     thinkingBudget: config.thinkingBudget ?? 0,
     extra: config.extra ?? {},
   };
@@ -351,8 +376,8 @@ export function createLLMClient(config: LLMConfig): LLMClient {
     reasoning: (config.thinkingBudget ?? 0) > 0,
     input: ["text"] as ("text" | "image")[],
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: modelCard?.contextWindowTokens ?? 128_000,
-    maxTokens: modelCard?.maxOutput ?? UNKNOWN_MODEL_FALLBACK_MAX_TOKENS,
+    contextWindow: selectedLive?.contextWindow ?? modelCard?.contextWindowTokens ?? 128_000,
+    maxTokens: selectedLive?.maxOutput ?? modelCard?.maxOutput ?? UNKNOWN_MODEL_FALLBACK_MAX_TOKENS,
     ...(extraHeaders ? { headers: extraHeaders } : {}),
     ...(compat ? { compat } : {}),
   };
@@ -366,6 +391,7 @@ export function createLLMClient(config: LLMConfig): LLMClient {
     proxyUrl: config.proxyUrl,
     _piModel: piModel,
     _apiKey: config.apiKey,
+    _modelCapabilities: liveCapabilities,
     defaults,
   };
 }

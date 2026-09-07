@@ -28,6 +28,34 @@ describe("resolveEffectiveLLMConfig", () => {
     await writeFile(join(root, ".inkos", "secrets.json"), JSON.stringify({ services }, null, 2), "utf-8");
   }
 
+  it("carries selected custom-service model capabilities into runtime config", async () => {
+    await writeProject({
+      configSource: "studio",
+      service: "custom:9router",
+      services: [{
+        service: "custom",
+        name: "9router",
+        baseUrl: "http://localhost:20128/v1",
+        models: ["cx/gpt-5.4"],
+        modelCapabilities: {
+          "cx/gpt-5.4": { maxOutput: 128_000, contextWindow: 400_000 },
+        },
+      }],
+      defaultModel: "cx/gpt-5.4",
+    });
+
+    const result = await resolveEffectiveLLMConfig({
+      consumer: "studio",
+      projectRoot: root,
+      envLayers: { global: {}, project: {}, process: {} },
+      requireApiKey: false,
+    });
+
+    expect(result.llm.modelCapabilities).toEqual({
+      "cx/gpt-5.4": { maxOutput: 128_000, contextWindow: 400_000 },
+    });
+  });
+
   it("Studio consumer 使用 Studio/project 配置，并忽略旧顶层 model/baseUrl", async () => {
     await writeProject({
       configSource: "studio",

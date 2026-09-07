@@ -4,6 +4,8 @@ import { tr } from "../lib/app-language";
 export interface ServiceDetailModelInfo {
   readonly id: string;
   readonly name?: string;
+  readonly maxOutput?: number;
+  readonly contextWindow?: number;
 }
 
 export function mergeServiceDetailModels(
@@ -206,6 +208,13 @@ export async function saveServiceConfig(args: {
 
   const detectedModel = probe.selectedModel ?? args.detectedModel;
   const savedModels = mergeServiceDetailModels(probe.models, args.configuredModels);
+  const modelCapabilities = Object.fromEntries(savedModels.flatMap((model) => {
+    const capability = {
+      ...(model.maxOutput !== undefined ? { maxOutput: model.maxOutput } : {}),
+      ...(model.contextWindow !== undefined ? { contextWindow: model.contextWindow } : {}),
+    };
+    return Object.keys(capability).length > 0 ? [[model.id, capability]] : [];
+  }));
   const detectedConfig = probe.detected ?? null;
   const savedApiFormat = detectedConfig?.apiFormat ?? args.apiFormat;
   const savedStream = typeof detectedConfig?.stream === "boolean" ? detectedConfig.stream : args.stream;
@@ -230,6 +239,7 @@ export async function saveServiceConfig(args: {
           apiFormat: savedApiFormat,
           stream: savedStream,
           models: savedModels.map((model) => model.id),
+          ...(Object.keys(modelCapabilities).length > 0 ? { modelCapabilities } : {}),
           ...(args.isCustom ? {
             name: args.resolvedCustomName,
             baseUrl: savedBaseUrl,

@@ -290,18 +290,18 @@ describe("resolveChaptersPerBatch", () => {
   // recomputed at ~1,300-2,000 tokens for English, not the ~4,096 the fixed
   // batch-of-3 constant used to assume.
   it.each([
-    ["zh", 900, 2],
-    ["zh", 1000, 2],
-    ["zh", 1200, 1],
-    ["en", 600, 1],
-    ["en", 650, 1],
-    ["en", 800, 1],
+    ["zh", 900, 6],
+    ["zh", 1000, 6],
+    ["zh", 1200, 6],
+    ["en", 900, 6],
+    ["en", 1200, 4],
+    ["en", 1500, 3],
   ] as const)("%s at %d chars/words per chapter batches %d at a time", (language, charsPerChapter, expected) => {
     expect(resolveChaptersPerBatch(charsPerChapter, language)).toBe(expected);
   });
 
   it("defaults to en when no language is given", () => {
-    expect(resolveChaptersPerBatch(1000)).toBe(1);
+    expect(resolveChaptersPerBatch(1000)).toBe(5);
   });
 
   it("clamps to the maximum even when chapters are short enough to fit more", () => {
@@ -309,7 +309,7 @@ describe("resolveChaptersPerBatch", () => {
     // 20 chapters in one call — but no legal chapter length ever reaches the
     // clamp, so this deliberately illegal short length is what exercises it.
     expect(resolveChaptersPerBatch(100, "zh")).toBe(SHORT_FICTION_MAX_CHAPTERS_PER_BATCH);
-    expect(SHORT_FICTION_MAX_CHAPTERS_PER_BATCH).toBe(3);
+    expect(SHORT_FICTION_MAX_CHAPTERS_PER_BATCH).toBe(6);
   });
 
   it("never returns less than one chapter per batch", () => {
@@ -357,7 +357,28 @@ describe("stripOuterCodeFence", () => {
 });
 
 describe("writeDraft batching", () => {
-  it("issues six calls for a 12-chapter story with non-overlapping ranges", async () => {
+  it("executes explicit semantic groups instead of mechanically filling capacity", async () => {
+    const agent = writerAgent();
+    const seen: number[][] = [];
+    spyChat(agent).mockImplementation((...args: unknown[]) => {
+      const group = requestedChapters(args, 8);
+      seen.push(group);
+      return Promise.resolve({ content: batchReply(group, group[0] === 1), usage: undefined });
+    });
+
+    await agent.writeDraft({
+      direction: "phase change at chapter six",
+      outlineMarkdown: "## Plan",
+      chapterCount: 8,
+      charsPerChapter: 1200,
+      language: "en",
+      chapterGroups: [[1, 2, 3, 4, 5], [6, 7, 8]],
+    });
+
+    expect(seen).toEqual([[1, 2, 3, 4, 5], [6, 7, 8]]);
+  });
+
+  it("uses the unknown-model 10k fallback for a 12-chapter Chinese story", async () => {
     const agent = writerAgent();
     const chat = spyChat(agent);
     const seen: number[][] = [];
@@ -371,13 +392,13 @@ describe("writeDraft batching", () => {
       direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
     });
 
-    expect(seen).toEqual([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12]]);
+    expect(seen).toEqual([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]]);
     expect(draft.chapters).toHaveLength(12);
     expect(draft.chapters.every((c) => c.content.trim().length > 0)).toBe(true);
     expect(draft.storyTitle).toBe("电梯多一层");
   });
 
-  it("ends a 13-chapter story with a one-chapter batch", async () => {
+  it("balances a 13-chapter fallback without a singleton tail", async () => {
     const agent = writerAgent();
     const seen: number[][] = [];
     spyChat(agent).mockImplementation((...args: unknown[]) => {
@@ -390,7 +411,7 @@ describe("writeDraft batching", () => {
       direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 13, charsPerChapter: 1000, language: "zh",
     });
 
-    expect(seen).toEqual([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12], [13]]);
+    expect(seen).toEqual([[1, 2, 3, 4, 5], [6, 7, 8, 9], [10, 11, 12, 13]]);
   });
 
   it("gives later batches the earlier prose without asking to rewrite it, and without claiming a truncation", async () => {
@@ -443,9 +464,7 @@ describe("writeDraft batching", () => {
       onBatchProgress: (info) => seen.push(`${info.batch}/${info.totalBatches}:${info.chapters.join(",")}`),
     });
 
-    expect(seen).toEqual([
-      "1/6:1,2", "2/6:3,4", "3/6:5,6", "4/6:7,8", "5/6:9,10", "6/6:11,12",
-    ]);
+    expect(seen).toEqual(["1/2:1,2,3,4,5,6", "2/2:7,8,9,10,11,12"]);
   });
 });
 
@@ -459,8 +478,8 @@ describe("adaptive batch halving", () => {
     chat.mockImplementation((...args: unknown[]) => {
       const group = requestedChapters(args, 12);
       seen.push(group);
-      // Chapters 5-6 as a group of two is too big; halves succeed.
-      if (group.length === 2 && group[0] === 5) {
+      // The second six-chapter group is too big; semantic-order halves succeed.
+      if (group.length === 6 && group[0] === 7) {
         return Promise.reject(new PartialResponseError(
           "half", new Error("model reached the output limit (length)"), "output-limit",
         ));
@@ -472,7 +491,12 @@ describe("adaptive batch halving", () => {
       direction: "恐怖短篇", outlineMarkdown: "## 方案", chapterCount: 12, charsPerChapter: 1000, language: "zh",
     });
 
-    expect(seen).toEqual([[1, 2], [3, 4], [5, 6], [5], [6], [7, 8], [9, 10], [11, 12]]);
+    expect(seen).toEqual([
+      [1, 2, 3, 4, 5, 6],
+      [7, 8, 9, 10, 11, 12],
+      [7, 8, 9],
+      [10, 11, 12],
+    ]);
     expect(draft.chapters).toHaveLength(12);
     expect(draft.chapters.every((c) => c.content.trim().length > 0)).toBe(true);
   });
@@ -500,7 +524,7 @@ describe("adaptive batch halving", () => {
     const chat = spyChat(agent);
     chat.mockImplementation((...args: unknown[]) => {
       const group = requestedChapters(args, 12);
-      if (group[0] === 3) return Promise.reject(new Error("401 unauthorized"));
+      if (group[0] === 7) return Promise.reject(new Error("401 unauthorized"));
       return Promise.resolve({ content: batchReply(group, group[0] === 1), usage: undefined });
     });
 
@@ -536,7 +560,7 @@ describe("reviseDraft batching", () => {
     });
   }
 
-  it("issues six calls for a 12-chapter revision and merges into a full draft", async () => {
+  it("uses the same balanced fallback groups for revision", async () => {
     const agent = reviserAgent();
     const chat = spyChat(agent);
     const seen: number[][] = [];
@@ -567,14 +591,10 @@ describe("reviseDraft batching", () => {
       draft: v1, review: "第六章反扑不够",
     });
 
-    expect(seen).toEqual([[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], [11, 12]]);
+    expect(seen).toEqual([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]]);
     // The seed writer prompt is never ranged — every batch asks for all 12
     // chapters in that turn, matching the unranged v1Markdown assistant turn.
     expect(seedRanges).toEqual([
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
       [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
       [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
     ]);
@@ -615,7 +635,7 @@ describe("reviseDraft batching", () => {
 });
 
 describe("continueDraft chunking", () => {
-  it("repairs ten missing chapters in five calls, keeping the repair framing", async () => {
+  it("repairs missing chapters inside their capacity-safe groups", async () => {
     const partial = parseShortFictionBatchDraft(
       [
         "=== SHORT_FICTION_TITLE ===",
@@ -643,7 +663,7 @@ describe("continueDraft chunking", () => {
       draft: partial,
     });
 
-    expect(seen).toEqual([[3, 4], [5, 6], [7, 8], [9, 10], [11, 12]]);
+    expect(seen).toEqual([[3, 4, 5, 6], [7, 8, 9, 10, 11, 12]]);
     expect(repaired.chapters.every((c) => c.content.trim().length > 0)).toBe(true);
     expect(userText(chat.mock.calls[0] as unknown[])).toContain("被截断");
   });

@@ -101,6 +101,18 @@ describe("short-fiction English prompt branch", () => {
     expect(prompt).toContain("650 words per chapter");
   });
 
+  it("asks the outline model to choose phase-aligned ranges within the capacity ceiling", () => {
+    const prompt = buildShortFictionOutlineUserPrompt({
+      ...OUTLINE_INPUT,
+      chapterCount: 8,
+      maxChaptersPerBatch: 6,
+    }, "en");
+
+    expect(prompt).toContain("=== SHORT_FICTION_BATCH_PLAN ===");
+    expect(prompt).toContain("2 to 6 contiguous chapters");
+    expect(prompt).toContain("new narrative phase");
+  });
+
   // AGENTS.md "Language defaults in code": a function that takes a language
   // and can be called without one must default to "en", so this used to be
   // "keeps the zh default identical to the explicit zh branch" — that was the
@@ -134,6 +146,23 @@ She pressed the button five times before the panel finally went dark.
 `;
 
 describe("short-fiction English parsing and rendering", () => {
+  it("parses model-authored semantic ranges from the outline", () => {
+    const batches = [
+      { from: 1, to: 5, phase: "Pressure", reason: "Chapter 6 changes phase." },
+      { from: 6, to: 8, phase: "Payoff", reason: "Keep the ending together." },
+    ];
+    const outline = parseShortFictionOutline([
+      "=== SHORT_FICTION_PLAN_TITLE ===",
+      "The Ledger",
+      "=== SHORT_FICTION_PLAN ===",
+      "Eight chapter plan.",
+      "=== SHORT_FICTION_BATCH_PLAN ===",
+      JSON.stringify({ batches }),
+    ].join("\n"), "en");
+
+    expect(outline.proposedBatches).toEqual(batches);
+  });
+
   it("counts en chapter length in words, not characters", () => {
     const draft = parseShortFictionBatchDraft(EN_TWO_CHAPTER_DRAFT, { expectedChapters: 2, language: "en" });
     // "The elevator doors opened onto a hallway that was not on any blueprint." = 13 words

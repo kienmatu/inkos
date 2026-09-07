@@ -479,7 +479,7 @@ export {
 export * from "./agent/index.js";
 
 // LLM
-export { createLLMClient, chatCompletion, createStreamMonitor, PartialResponseError, type LLMClient, type LLMResponse, type LLMMessage, type StreamProgress, type OnStreamProgress } from "./llm/provider.js";
+export { createLLMClient, chatCompletion, createStreamMonitor, PartialResponseError, resolveModelCapability, type LLMClient, type LLMResponse, type LLMMessage, type StreamProgress, type OnStreamProgress, type ResolvedModelCapability } from "./llm/provider.js";
 export {
   SERVICE_PRESETS,
   SERVICE_TO_PI_PROVIDER,
@@ -505,10 +505,23 @@ export {
 } from "./llm/cover-providers.js";
 export { migrateConfig, type MigrationResult } from "./llm/config-migration.js";
 export { getAllEndpoints, getEndpoint, type InkosEndpoint, type InkosModel, type EndpointGroup } from "./llm/providers/index.js";
-export { probeModelsFromUpstream, type ProbedModel } from "./llm/providers/probe.js";
+export { normalizeProbedModel, normalizeProbedModels, probeModelsFromUpstream, type ProbedModel } from "./llm/providers/probe.js";
 
 // Agents
 export { BaseAgent, type AgentContext } from "./agents/base.js";
+export {
+  parseShortFictionSemanticBatchPlan,
+  resolveSemanticChapterGroups,
+  resolveShortFictionBatchCapacity,
+  SHORT_FICTION_BATCH_USABLE_RATIO,
+  SHORT_FICTION_MAX_SEMANTIC_BATCH_CHAPTERS,
+  SHORT_FICTION_MIN_SEMANTIC_BATCH_CHAPTERS,
+  SHORT_FICTION_UNKNOWN_MODEL_OUTPUT_TOKENS,
+  type ResolvedSemanticChapterGroups,
+  type ShortFictionBatchCapacity,
+  type ShortFictionBatchCapacityInput,
+  type ShortFictionSemanticBatch,
+} from "./agents/short-fiction-batching.js";
 export { ArchitectAgent, type ArchitectOutput } from "./agents/architect.js";
 export { WriterAgent, type WriteChapterInput, type WriteChapterOutput, type TokenUsage } from "./agents/writer.js";
 export { ContinuityAuditor, type AuditResult, type AuditIssue } from "./agents/continuity.js";

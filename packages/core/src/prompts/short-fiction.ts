@@ -20,6 +20,7 @@ export interface ShortFictionOutlinePromptInput {
   readonly chapterCount: number;
   readonly charsPerChapter: number;
   readonly reference?: ShortFictionReferencePromptInput;
+  readonly maxChaptersPerBatch?: number;
 }
 
 export interface ShortFictionOutlineReviewPromptInput {
@@ -28,6 +29,7 @@ export interface ShortFictionOutlineReviewPromptInput {
     readonly rawContent: string;
   };
   readonly reference?: ShortFictionReferencePromptInput;
+  readonly maxChaptersPerBatch?: number;
 }
 
 export interface ShortFictionOutlineRevisionPromptInput extends ShortFictionOutlineReviewPromptInput {
@@ -95,7 +97,7 @@ export function buildShortFictionOutlineSystemPrompt(language: ShortFictionLangu
       "You are the managing editor for short web fiction. Your job is to turn one creative direction into a complete short-story plan.",
       "Work only from this direction and any reference text the user supplied; never claim to have read, quoted, or inherited material that was not provided.",
       "Content comes first: the title, the opening, the pressure on the protagonist, the evidence/relationship/identity leverage, the escalation chain, the reversal chain, and the payoff landing must be strong enough to carry a single-pass full draft.",
-      "Do not over-structure and do not output JSON/YAML. Write human-readable Markdown, but the chapter plan must be dense enough that a writer can draft the whole story in one pass.",
+      "Do not over-structure. Write human-readable Markdown except for the required tagged batch-plan JSON block; the chapter plan must be dense enough that a writer can draft the whole story in one pass.",
       `A short defaults to ${SHORT_FICTION_MIN_CHAPTERS}-${SHORT_FICTION_MAX_CHAPTERS} chapters at roughly ${SHORT_FICTION_EN_DEFAULT_WORDS_PER_CHAPTER} words per chapter (accepted range ${SHORT_FICTION_EN_MIN_WORDS_PER_CHAPTER}-${SHORT_FICTION_EN_MAX_WORDS_PER_CHAPTER} words). The story must be complete — not the first five chapters of a novel starter kit.`,
       "A platform-ready English title is concrete and promises a specific reversal — for example \"The Ledger She Kept\", \"Nine Days to Prove It\", \"What the Night Shift Saw\". Avoid abstract one-word titles and avoid literary summaries of the theme.",
       "Return only the final story plan for the writer; do not place task restatement, analysis, or internal reasoning in the deliverable.",
@@ -116,6 +118,7 @@ export function buildShortFictionOutlineUserPrompt(
   language: ShortFictionLanguage = "en",
 ): string {
   if (language === "en") {
+    const maxChaptersPerBatch = input.maxChaptersPerBatch ?? 6;
     return [
       "## Creative Direction",
       input.direction,
@@ -127,6 +130,7 @@ export function buildShortFictionOutlineUserPrompt(
       "## Deliverable",
       "Start with one platform-ready clickable title, then the full story plan. The plan must make clear why the protagonist is pinned down, what payoff the reader is waiting for, how the protagonist turns the tables, how evidence/relationships/identity/rules escalate step by step, why the antagonist strikes back, and how the ending lands.",
       "The chapter plan must spell out, chapter by chapter: the direction of the chapter title, the key on-page scene, the characters' actions, the escalation or payoff, and the reason to keep reading at the chapter break.",
+      `Choose production batches of 2 to ${maxChaptersPerBatch} contiguous chapters. Start a new batch at a new narrative phase; keep tightly coupled setup/payoff and action/reaction beats together when they fit. Capacity is a ceiling, not a target: if chapter 6 begins a new phase, prefer chapters 1-5 followed by a batch beginning at chapter 6 instead of filling a six-chapter batch mechanically. Cover every chapter exactly once, in order, with no gaps or overlaps.`,
       "Tags are allowed, but do not enumerate a tag table; tags serve premise selection and writing — they never replace the story.",
       "",
       "## Output Format",
@@ -134,6 +138,8 @@ export function buildShortFictionOutlineUserPrompt(
       "Exactly one platform-ready title on a single line",
       "=== SHORT_FICTION_PLAN ===",
       "The full story plan in Markdown, covering: genre/audience, title direction, the opening hook, characters and relationships, the core pressure, how the protagonist wins, the escalation chain, the reversal chain, the ending payoff, and the chapter-by-chapter plan.",
+      "=== SHORT_FICTION_BATCH_PLAN ===",
+      `One-line JSON only: {"batches":[{"from":1,"to":5,"phase":"phase label","reason":"why the next chapter starts a new phase"}]}. Every range must contain 2 to ${maxChaptersPerBatch} chapters and cover the complete story exactly once.`,
     ].filter(Boolean).join("\n");
   }
   return [
@@ -193,6 +199,7 @@ export function buildShortFictionOutlineReviewUserPrompt(
       "- Is the outline dense enough, or will the writer run out of material in the back half?",
       "- Do the key scenes contain character action, counterattack, and payoff, instead of bare result summaries?",
       "- Will readers be thrown out of the story by timeline, relationship, evidence-access, physical-state, or common-sense problems?",
+      "- Do the proposed production batches cover every chapter exactly once, stay within the stated size limit, and begin at genuine narrative-phase transitions rather than mechanical counts?",
     ].filter(Boolean).join("\n");
   }
   return [
@@ -217,6 +224,7 @@ export function buildShortFictionOutlineRevisionFollowup(
   language: ShortFictionLanguage = "en",
 ): string {
   if (language === "en") {
+    const maxChaptersPerBatch = input.maxChaptersPerBatch ?? 6;
     return [
       "Based on the outline review above, produce the complete second version of the story plan.",
       "This is round two of the same project: do not start over from scratch, and do not output a list of edits instead of the plan.",
@@ -231,6 +239,8 @@ export function buildShortFictionOutlineRevisionFollowup(
       "Exactly one platform-ready title on a single line",
       "=== SHORT_FICTION_PLAN ===",
       "The complete second-version story plan in Markdown.",
+      "=== SHORT_FICTION_BATCH_PLAN ===",
+      `One-line JSON only, corrected to cover every chapter exactly once in contiguous ranges of 2 to ${maxChaptersPerBatch}: {"batches":[{"from":1,"to":5,"phase":"phase label","reason":"why this boundary preserves narrative continuity"}]}`,
     ].join("\n");
   }
   return [

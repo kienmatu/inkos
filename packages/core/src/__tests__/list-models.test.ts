@@ -33,13 +33,23 @@ describe("listModelsForService (B8)", () => {
   it("custom service 走 live probe + bank 补元数据", async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ data: [{ id: "gpt-4o" }, { id: "my-proxy-model" }] }),
+      json: async () => ({ data: [
+        { id: "gpt-4o" },
+        { id: "cx/gpt-5.4", context_length: 400_000, max_completion_tokens: 128_000 },
+        { id: "my-proxy-model" },
+      ] }),
     } as any) as typeof fetch;
     const models = await listModelsForService("custom", "sk-test", "https://myproxy.example/v1");
     // gpt-4o 命中 openai provider，拿到元数据
     const gpt = models.find((m) => m.id === "gpt-4o");
     expect(gpt).toBeDefined();
     expect(gpt?.maxOutput).toBe(4096);
+    expect(models.find((m) => m.id === "cx/gpt-5.4")).toEqual({
+      id: "cx/gpt-5.4",
+      name: "cx/gpt-5.4",
+      contextWindow: 400_000,
+      maxOutput: 128_000,
+    });
     // 自定义 id 没元数据也保留
     expect(models.some((m) => m.id === "my-proxy-model")).toBe(true);
   });

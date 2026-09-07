@@ -79,7 +79,14 @@ export function ServiceDetailPage({ serviceId, nav }: { serviceId: string; nav: 
         if (matched.apiFormat === "chat" || matched.apiFormat === "responses") setApiFormat(matched.apiFormat);
         if (typeof matched.stream === "boolean") setStream(matched.stream);
         if (Array.isArray(matched.models)) {
-          setConfiguredModels(mergeServiceDetailModels(matched.models.filter((model): model is string => typeof model === "string")));
+          const capabilities = matched.modelCapabilities && typeof matched.modelCapabilities === "object"
+            ? matched.modelCapabilities as Record<string, Omit<ModelInfo, "id" | "name">>
+            : {};
+          setConfiguredModels(mergeServiceDetailModels(
+            matched.models
+              .filter((model): model is string => typeof model === "string")
+              .map((id) => ({ id, ...(capabilities[id] ?? {}) })),
+          ));
         }
       })
       .catch(() => {});
