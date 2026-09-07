@@ -1054,6 +1054,29 @@ describe("createLLMClient per-call maxTokens not capped (v2.0.0)", () => {
 });
 
 describe("createLLMClient with providers lookup", () => {
+  it("prefers exact live capabilities for a namespaced 9router model", async () => {
+    const { createLLMClient, resolveModelCapability } = await import("../llm/provider.js");
+    const { LLMConfigSchema } = await import("../models/project.js");
+    const client = createLLMClient(LLMConfigSchema.parse({
+      provider: "custom",
+      service: "custom",
+      model: "cx/gpt-5.4",
+      apiKey: "",
+      baseUrl: "http://localhost:20128/v1",
+      modelCapabilities: {
+        "cx/gpt-5.4": { maxOutput: 128_000, contextWindow: 400_000 },
+      },
+    }));
+
+    expect(resolveModelCapability(client, "cx/gpt-5.4")).toEqual({
+      maxOutput: 128_000,
+      contextWindow: 400_000,
+      source: "live",
+    });
+    expect(client.defaults.maxTokens).toBe(128_000);
+    expect(client._piModel?.contextWindow).toBe(400_000);
+  });
+
   it("anthropic + claude-sonnet-4-6 拿到 modelCard 的 maxOutput (64000)，不是未知模型兜底", async () => {
     const { createLLMClient } = await import("../llm/provider.js");
     const { LLMConfigSchema } = await import("../models/project.js");

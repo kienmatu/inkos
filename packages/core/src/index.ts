@@ -479,7 +479,7 @@ export {
 export * from "./agent/index.js";
 
 // LLM
-export { createLLMClient, chatCompletion, createStreamMonitor, PartialResponseError, type LLMClient, type LLMResponse, type LLMMessage, type StreamProgress, type OnStreamProgress } from "./llm/provider.js";
+export { createLLMClient, chatCompletion, createStreamMonitor, PartialResponseError, resolveModelCapability, type LLMClient, type LLMResponse, type LLMMessage, type StreamProgress, type OnStreamProgress, type ResolvedModelCapability } from "./llm/provider.js";
 export {
   SERVICE_PRESETS,
   SERVICE_TO_PI_PROVIDER,
