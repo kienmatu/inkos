@@ -178,7 +178,12 @@ export async function listModelsForService(
       const { lookupModel } = await import("./providers/lookup.js");
       for (const m of probed) {
         const card = lookupModel(service, m.id);
-        byId.set(m.id, card ? toModelInfo(card) : { id: m.id, name: m.name, contextWindow: m.contextWindow });
+        byId.set(m.id, card ? toModelInfo(card) : {
+          id: m.id,
+          name: m.name,
+          contextWindow: m.contextWindow,
+          ...(m.maxOutput !== undefined ? { maxOutput: m.maxOutput } : {}),
+        });
       }
     }
   }
