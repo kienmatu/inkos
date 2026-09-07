@@ -74,4 +74,47 @@ describe("probeModelsFromUpstream", () => {
     const result = await probeModelsFromUpstream("https://api.example.com/v1", "sk-test");
     expect(result).toEqual([{ id: "valid", name: "valid", contextWindow: 0 }]);
   });
+
+  it("preserves 9router output and context limits", async () => {
+    (globalThis.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [{
+          id: "cx/gpt-5.4",
+          context_length: 400_000,
+          max_completion_tokens: 128_000,
+        }],
+      }),
+    });
+
+    const result = await probeModelsFromUpstream("http://localhost:20128/v1", "");
+
+    expect(result).toEqual([{
+      id: "cx/gpt-5.4",
+      name: "cx/gpt-5.4",
+      contextWindow: 400_000,
+      maxOutput: 128_000,
+    }]);
+  });
+
+  it("keeps a model but drops inconsistent capability metadata", async () => {
+    (globalThis.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [{
+          id: "custom/model",
+          context_length: 4_096,
+          max_completion_tokens: 8_192,
+        }],
+      }),
+    });
+
+    const result = await probeModelsFromUpstream("https://api.example.com/v1", "");
+
+    expect(result).toEqual([{
+      id: "custom/model",
+      name: "custom/model",
+      contextWindow: 4_096,
+    }]);
+  });
 });
