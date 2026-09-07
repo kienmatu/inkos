@@ -2,6 +2,10 @@
 
 [中文](CHANGELOG.zh.md) | English
 
+## Unreleased
+
+- Short-fiction draft and revision batches now follow reviewed narrative-phase boundaries within live or static model output capacity, support two to six chapters per call, preserve OpenAI-compatible `/models` limits such as 9router's `max_completion_tokens`, and use a 10,000-token fallback for unknown models.
+
 ## v1.8.0
 
 ### Release Focus
