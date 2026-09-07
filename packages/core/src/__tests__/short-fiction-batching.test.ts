@@ -715,6 +715,38 @@ function requestedReviewChapters(call: unknown[], chapterCount: number): number[
 }
 
 describe("reviewDraft batching", () => {
+  it("keeps Chinese review on the single-call legacy prompt path", async () => {
+    const agent = new ShortFictionDraftReviewerAgent({
+      client: { provider: "openai" } as never,
+      model: "fake",
+      projectRoot: "/tmp/does-not-matter",
+    });
+    const chat = spyChat(agent).mockResolvedValue({ content: "中文审稿意见", usage: undefined });
+    const progress = vi.fn();
+
+    const review = await agent.reviewDraft({
+      direction: "快递员发现包裹是证据",
+      outlineMarkdown: "## 方案\n八章完整方案",
+      chapterCount: 8,
+      charsPerChapter: 1000,
+      language: "zh",
+      draft: parseShortFictionBatchDraft(reviewDraftMarkdown(8), { expectedChapters: 8, language: "zh" }),
+      onBatchProgress: progress,
+    });
+
+    expect(chat).toHaveBeenCalledOnce();
+    const prompt = userText(chat.mock.calls[0] as unknown[]);
+    expect(prompt).toContain("## 创作方向");
+    expect(prompt).toContain("## 原故事方案");
+    expect(prompt).toContain("## 待审正文");
+    expect(prompt).toContain("## 审稿要求");
+    expect(prompt).toContain("PROSE_FOR_CHAPTER_1");
+    expect(prompt).toContain("PROSE_FOR_CHAPTER_8");
+    expect(prompt).not.toContain("## Assigned Chapter Range");
+    expect(progress).not.toHaveBeenCalled();
+    expect(review).toBe("中文审稿意见");
+  });
+
   it("reviews two-chapter sections before synthesizing without sending the full prose again", async () => {
     const agent = new ShortFictionDraftReviewerAgent({
       client: { provider: "openai" } as never,

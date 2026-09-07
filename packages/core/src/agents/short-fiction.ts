@@ -7,6 +7,7 @@ import {
   buildShortFictionDraftReviewSystemPrompt,
   buildShortFictionDraftReviewSynthesisUserPrompt,
   buildShortFictionDraftSectionReviewUserPrompt,
+  buildShortFictionDraftReviewUserPrompt,
   buildShortFictionDraftContinuationUserPrompt,
   buildShortFictionDraftRevisionFollowup,
   buildShortFictionOutlineReviewSystemPrompt,
@@ -379,6 +380,19 @@ export class ShortFictionDraftReviewerAgent extends BaseAgent {
   }
 
   async reviewDraft(input: ShortFictionDraftReviewInput): Promise<string> {
+    if (input.language === "zh") {
+      const response = await retryShortFictionCall(() =>
+        this.chat([
+          { role: "system", content: buildShortFictionDraftReviewSystemPrompt(input.language) },
+          { role: "user", content: buildShortFictionDraftReviewUserPrompt({
+            ...input,
+            draftMarkdown: renderShortFictionDraftMarkdown(input.draft, input.language),
+          }, input.language) },
+        ], { temperature: 0.3, maxTokens: 8192 }), this.name, this.log);
+
+      return response.content.trim();
+    }
+
     const groups = chunkChapters(
       input.draft.chapters.map((chapter) => chapter.number),
       SHORT_FICTION_REVIEW_GROUP_SIZE,
