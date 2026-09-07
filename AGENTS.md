@@ -153,15 +153,19 @@ publish order all have to move together.
 ./release.sh --help          # usage, flags, and the five steps
 ./release.sh minor --dry-run # bump, build, test, then revert — touches no registry
 ./release.sh minor           # the real thing
+./release.sh --resume        # finish a partially published release at HEAD
 ```
 
 The version argument is `patch` (default), `minor`, `major`, or an explicit version.
-`0.1.3` goes to `0.1.4`, `0.2.0`, and `1.0.0` respectively.
+The npm `latest` versions are the source of truth: from `1.1.0`, the only valid next
+versions are `1.1.1`, `1.2.0`, and `2.0.0`. An explicit version must be one of those
+three, so stale local manifests cannot accidentally skip releases.
 
 What the script guarantees, and why each step exists:
 
-1. **Preflight** — refuses a dirty working tree, so unrelated work cannot ride along in the
-   version commit, and refuses a tag that already exists.
+1. **Preflight** — refuses a dirty working tree, mismatched local or npm package versions,
+   an invalid npm login, missing package ownership, or a tag that already exists. These
+   checks run before the script changes a manifest or Git reference.
 2. **Bump** — delegates to `scripts/set-package-versions.mjs --keep-workspace-protocol`,
    which rewrites the root manifest and every package manifest to the same version.
    Internal dependencies stay on `workspace:*`, because this tree gets committed and
@@ -173,7 +177,9 @@ What the script guarantees, and why each step exists:
    reaches the registry, so a published version always has a commit behind it.
 5. **Publish** — `core` then `studio` then `cli`. Dependents resolve the new core from the
    registry, so it has to be there first. `prepack` rewrites `workspace:*` to the real
-   version and `postpack` restores it.
+   version and `postpack` restores it. If publishing stops partway through, `--resume`
+   verifies the tag at `HEAD`, rechecks version continuity, skips exact versions already
+   on npm, and publishes only the missing packages.
 
 Pushing is opt-in (`--push`); without it the script prints the push commands and stops, so
 a botched release stays local.

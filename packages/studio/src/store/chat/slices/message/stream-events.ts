@@ -1,6 +1,6 @@
 import type { StateCreator } from "zustand";
 import type { ChatStore, Message, MessageActions, MessagePart, PipelineStage, ToolExecution } from "../../types";
-import { shouldRefreshSidebarForTool } from "../../message-policy";
+import { shouldRefreshSidebarForExecutionTransition } from "../../message-policy";
 import { tr } from "../../../../lib/app-language";
 import {
   deriveFlat,
@@ -384,6 +384,10 @@ export function attachSessionStreamListeners({
       // 正在跑的聊天流关掉，本轮增量全部丢失。
       const chatStreaming = Boolean(get().sessions[sessionId]?.isChatStreaming);
       const keepStream = running || chatStreaming;
+      const shouldRefreshSidebar = shouldRefreshSidebarForExecutionTransition(
+        get().sessions[sessionId]?.messages ?? [],
+        execution,
+      );
       set((state) => ({
         sessions: updateSession(state.sessions, sessionId, (runtime) => ({
           messages: mergeTaskExecution(runtime.messages, execution),
@@ -392,6 +396,7 @@ export function attachSessionStreamListeners({
           stream: keepStream ? runtime.stream : null,
         })),
       }));
+      if (shouldRefreshSidebar) get().bumpBookDataVersion();
       if (!keepStream) streamEs.close();
     } catch {
       // ignore
@@ -545,6 +550,14 @@ export function attachSessionStreamListeners({
       if (!sessionMatchesEvent(sessionId, data) || !data?.tool) return;
       flushTextDeltas();
       flushProgressThrottles();
+      const shouldRefreshSidebar = shouldRefreshSidebarForExecutionTransition(
+        get().sessions[sessionId]?.messages ?? [],
+        {
+          id: data.id as string,
+          tool: data.tool as string,
+          status: data.isError ? "error" : "completed",
+        },
+      );
       set((state) => ({
         sessions: updateSession(state.sessions, sessionId, (runtime) => {
           // 按 execution id 全量定位：并行聊天时任务卡在更早的消息里
@@ -567,9 +580,7 @@ export function attachSessionStreamListeners({
         }),
       }));
 
-      if (shouldRefreshSidebarForTool(data.tool as string)) {
-        get().bumpBookDataVersion();
-      }
+      if (shouldRefreshSidebar) get().bumpBookDataVersion();
     } catch {
       // ignore
     }
