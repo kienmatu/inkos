@@ -270,6 +270,7 @@ describe("buildAgentSystemPrompt", () => {
       expect(prompt).toContain("shorts/<storyId>/status.json");
       expect(prompt).toContain("shorts/<storyId>/drafts/v001/full.md");
       expect(prompt).toContain("most recent self-contained shortRun confirmation");
+      expect(prompt).toContain("stored storyId from conversation history");
       expect(prompt).toContain("propose_action with action=short_run");
       expect(prompt).toContain("Never ask the user to upload or paste a draft that InkOS already saved");
       expect(prompt).toContain("Never review or rewrite chapters directly in conversational text");

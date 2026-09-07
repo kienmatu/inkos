@@ -142,7 +142,7 @@ export async function runShortFictionProduction(
   const providedStoryId = options.storyId
     ? safeSegment(options.storyId)
     : options.title?.trim()
-      ? safeSegment(slugify(options.title))
+      ? shortStoryIdFromTitle(options.title)
       : undefined;
 
   // A stable storyId lets a re-run resume from disk instead of redoing finished
@@ -1285,6 +1285,10 @@ function boundedInteger(value: number | undefined, fallback: number, name: strin
     throw new Error(`${name} must be an integer between ${min} and ${max}.`);
   }
   return parsed;
+}
+
+export function shortStoryIdFromTitle(title: string): string {
+  return safeSegment(slugify(title));
 }
 
 function slugify(value: string): string {
