@@ -78,9 +78,9 @@ if [ "$1" = "whoami" ]; then
   printf '%s\\n' kienmatu
   exit 0
 fi
-if [ "$1 $2" = "owner ls" ]; then
-  [ "$FAKE_NPM_SCENARIO" = "no-access" ] && printf '%s\\n' '{"kienmatu-other":"other@example.com"}' && exit 0
-  printf '%s\\n' '{"kienmatu":"owner@example.com"}'
+if [ "$1 $2 $3" = "access list packages" ]; then
+  [ "$FAKE_NPM_SCENARIO" = "no-access" ] && printf '%s\\n' '{"@kienmatu/inkos-core":"read-only","@kienmatu/inkos-studio":"read-write","@kienmatu/inkos":"read-write"}' && exit 0
+  printf '%s\\n' '{"@kienmatu/inkos-core":"read-write","@kienmatu/inkos-studio":"read-write","@kienmatu/inkos":"read-write"}'
   exit 0
 fi
 if [ "$1" = "view" ]; then
@@ -212,13 +212,18 @@ describe.skipIf(process.platform === "win32")("release flow", () => {
     expect(await readVersion(fixture.root)).toBe("3.0.0");
   });
 
-  it("checks package ownership before changing package versions", async () => {
+  it("checks read-write package access before changing package versions", async () => {
     const fixture = await createReleaseFixture("1.1.0", "no-access");
 
     expect(() => runRelease(fixture.root, fixture.env, ["patch", "--yes"])).toThrow(
-      /npm user kienmatu does not own @kienmatu\/inkos-core/i,
+      /npm user kienmatu does not have read-write access to @kienmatu\/inkos-core/i,
     );
     expect(await readVersion(fixture.root)).toBe("1.1.0");
+
+    const commands = await readCommands(fixture.commandLog);
+    expect(commands).toContainEqual([
+      "access", "list", "packages", "kienmatu", "--json", "--registry", "https://registry.npmjs.org/",
+    ]);
   });
 
   it("refuses local package manifests that do not share one version", async () => {
