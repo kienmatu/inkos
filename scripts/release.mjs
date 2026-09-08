@@ -121,15 +121,6 @@ function parseJsonOutput(output, description) {
   }
 }
 
-function containsExactJsonValue(value, expected) {
-  if (typeof value === "string") return value === expected;
-  if (Array.isArray(value)) return value.some((item) => containsExactJsonValue(item, expected));
-  if (value && typeof value === "object") {
-    return Object.hasOwn(value, expected) || Object.values(value).some((item) => containsExactJsonValue(item, expected));
-  }
-  return false;
-}
-
 function allowedNextVersions(current) {
   const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(current);
   if (!match) throw new Error(`npm latest is not a stable semantic version: ${current}`);
@@ -182,16 +173,16 @@ function verifyNpmAccess() {
     throw new Error(`npm authentication failed. Run: npm login --registry=${REGISTRY}`);
   }
 
+  let output;
+  try {
+    output = capture("npm", ["access", "list", "packages", identity, "--json", "--registry", REGISTRY]);
+  } catch {
+    throw new Error(`npm user ${identity} cannot verify package access.`);
+  }
+  const access = parseJsonOutput(output, `npm package access for ${identity}`);
   for (const { name } of PUBLISH_PACKAGES) {
-    let output;
-    try {
-      output = capture("npm", ["owner", "ls", name, "--json", "--registry", REGISTRY]);
-    } catch {
-      throw new Error(`npm user ${identity} cannot verify ownership of ${name}.`);
-    }
-    const owners = parseJsonOutput(output, `npm owners for ${name}`);
-    if (!containsExactJsonValue(owners, identity)) {
-      throw new Error(`npm user ${identity} does not own ${name}.`);
+    if (!access || typeof access !== "object" || Array.isArray(access) || access[name] !== "read-write") {
+      throw new Error(`npm user ${identity} does not have read-write access to ${name}.`);
     }
   }
 }
